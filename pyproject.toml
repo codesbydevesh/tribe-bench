@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tribe-bench"
+version = "0.1.0"
+description = "Research toolkit and benchmark suite for TRIBE v2 brain encoding model"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+    "h5py>=3.8",
+    "pyyaml>=6.0",
+    "tqdm>=4.65",
+    "matplotlib>=3.7",
+    "nilearn>=0.10",
+    "mne>=1.4",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.0",
+    "tribev2",
+]
+dev = [
+    "pytest>=7.0",
+    "ruff>=0.1",
+]
+
+[tool.setuptools.packages.find]
+include = ["tribe_tools*", "brainlens*", "neurogenre*", "scalelaw*", "neurocheck*"]

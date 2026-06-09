@@ -1,0 +1,425 @@
+# NeuroCheck Claims Database for TRIBE v2 Benchmarking
+# Each claim is a well-established neuroscience finding testable via
+# brain encoding model comparisons in specific ROIs.
+# Atlas: Glasser HCP-MMP1 (Glasser et al., 2016)
+# -----------------------------------------------------------
+
+- id: "NC001"
+  claim: "The fusiform face area responds more strongly to faces than to non-face objects."
+  citation: "Kanwisher et al., 1997, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.17-11-04302.1997"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "FFC"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Photographs of human faces (frontal and three-quarter views)"
+      source: "CelebA dataset or FERET face database"
+    stimulus_b:
+      description: "Photographs of common non-face objects (tools, furniture, vehicles)"
+      source: "ImageNet or COCO dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 1.2
+  difficulty: "easy"
+  notes: "One of the most replicated findings in cognitive neuroscience. FFC in HCP-MMP1 corresponds to the classical fusiform face area (FFA)."
+
+- id: "NC002"
+  claim: "The parahippocampal place area responds more strongly to scenes and buildings than to faces."
+  citation: "Epstein & Kanwisher, 1998, Nature"
+  doi: "10.1038/33402"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "PHA1"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Photographs of indoor and outdoor scenes (rooms, landscapes, cityscapes)"
+      source: "Places365 dataset"
+    stimulus_b:
+      description: "Photographs of human faces (frontal views)"
+      source: "CelebA dataset or FERET face database"
+    direction: "a_greater_than_b"
+    expected_effect_size: 1.0
+  difficulty: "easy"
+  notes: "PHA1 in HCP-MMP1 maps onto the parahippocampal place area (PPA). Scene selectivity is robust and large in effect size."
+
+- id: "NC003"
+  claim: "Area MT/V5 responds more strongly to coherent visual motion than to static or flickering stimuli."
+  citation: "Zeki et al., 1991, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.11-03-00641.1991"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "MT"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Coherently moving random dot kinematograms (100% coherence)"
+      source: "Procedurally generated random dot kinematograms"
+    stimulus_b:
+      description: "Static random dot patterns matched for luminance and density"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 1.5
+  difficulty: "easy"
+  notes: "MT in HCP-MMP1 corresponds to classical V5/MT. Motion selectivity here is among the most robust findings in visual neuroscience."
+
+- id: "NC004"
+  claim: "Primary visual cortex (V1) responds more strongly to high-contrast visual stimuli than to a uniform gray baseline."
+  citation: "Tootell et al., 1998, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.18-17-06838.1998"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "V1"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "High-contrast flickering checkerboard patterns (full field)"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Uniform mean-luminance gray screen"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 2.0
+  difficulty: "easy"
+  notes: "V1 activation to visual stimulation is the most basic and reliable fMRI finding. Extremely large effect sizes expected."
+
+- id: "NC005"
+  claim: "Lateral occipital cortex responds more strongly to intact objects than to scrambled versions of the same images."
+  citation: "Malach et al., 1995, Proceedings of the National Academy of Sciences"
+  doi: "10.1073/pnas.92.18.8135"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "LO1"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Photographs of intact everyday objects on uniform backgrounds"
+      source: "ImageNet or COCO dataset"
+    stimulus_b:
+      description: "Phase-scrambled versions of the same object images preserving spatial frequency content"
+      source: "Phase-scrambled from stimulus_a"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.9
+  difficulty: "easy"
+  notes: "LO1 in HCP-MMP1 falls within the lateral occipital complex (LOC). Object selectivity over scrambled controls is well established."
+
+- id: "NC006"
+  claim: "Primary auditory cortex responds more strongly to intelligible speech than to spectrally matched noise."
+  citation: "Binder et al., 2000, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.20-01-00286.2000"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "A1"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Clear natural speech sentences spoken by native speakers"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Spectrally rotated or noise-vocoded unintelligible versions of the same sentences"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "A1 shows some speech preference but the effect is modest compared to higher auditory areas. The stronger effects are in belt regions."
+
+- id: "NC007"
+  claim: "The auditory belt regions respond more strongly to natural sounds than to pure tones."
+  citation: "Wessinger et al., 2001, Journal of Cognitive Neuroscience"
+  doi: "10.1162/089892901564315"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "LBelt"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Natural environmental sounds (animal vocalizations, instruments, impact sounds)"
+      source: "ESC-50 environmental sound dataset"
+    stimulus_b:
+      description: "Pure sinusoidal tones matched in duration and RMS amplitude"
+      source: "Synthesized sinusoidal tones"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "Lateral belt areas prefer complex spectrotemporal structure over simple tones. LBelt in HCP-MMP1 corresponds to lateral belt of auditory cortex."
+
+- id: "NC008"
+  claim: "Broca's area (BA 44/45) activates more strongly for syntactically complex sentences than for simple word lists."
+  citation: "Friederici et al., 2006, Cerebral Cortex"
+  doi: "10.1093/cercor/bhj064"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "44"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Syntactically complex sentences with embedded clauses and long-distance dependencies"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Unstructured lists of content words matched in length and word frequency"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "Area 44 in HCP-MMP1 corresponds to pars opercularis of the inferior frontal gyrus (Broca's area). Syntactic processing here is well established."
+
+- id: "NC009"
+  claim: "The posterior superior temporal sulcus responds more strongly to speech than to non-vocal environmental sounds."
+  citation: "Belin et al., 2000, Nature"
+  doi: "10.1038/35002078"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "STSdp"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Human vocal sounds including speech, laughter, and non-linguistic vocalizations"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Environmental sounds (machinery, nature sounds, musical instruments) matched in duration and energy"
+      source: "ESC-50 environmental sound dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.8
+  difficulty: "medium"
+  notes: "STSdp in HCP-MMP1 overlaps with the temporal voice area (TVA). Voice selectivity along the STS is robustly replicated."
+
+- id: "NC010"
+  claim: "Area 45 (pars triangularis) responds more strongly to semantically meaningful sentences than to pseudoword strings."
+  citation: "Dapretto & Bookheimer, 1999, Neuron"
+  doi: "10.1016/S0896-6273(00)80948-8"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "45"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Semantically coherent sentences describing everyday events"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Phonotactically legal pseudoword strings matched for syllable count and prosodic contour"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "Area 45 in HCP-MMP1 maps to pars triangularis. It is implicated in semantic retrieval and controlled semantic processing."
+
+- id: "NC011"
+  claim: "The extrastriate body area (lateral occipital) responds more strongly to images of human bodies than to other object categories."
+  citation: "Downing et al., 2001, Science"
+  doi: "10.1126/science.1063414"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "LO2"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Photographs of headless human bodies and body parts (hands, feet, torsos)"
+      source: "COCO person keypoints or custom photographs"
+    stimulus_b:
+      description: "Photographs of non-body objects (tools, chairs, bottles) matched for size and visual complexity"
+      source: "ImageNet or COCO dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.8
+  difficulty: "medium"
+  notes: "LO2 in HCP-MMP1 approximates the extrastriate body area (EBA). Body selectivity is reliable, though somewhat weaker than face or place selectivity."
+
+- id: "NC012"
+  claim: "The amygdala and STS respond more strongly to fearful faces than to neutral faces."
+  citation: "Vuilleumier et al., 2001, Neuron"
+  doi: "10.1016/S0896-6273(01)00328-2"
+  category: "emotion"
+  roi:
+    atlas: "glasser"
+    region: "STSva"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Photographs of faces expressing fear (validated from Ekman or similar sets)"
+      source: "Ekman POFA or NimStim face set"
+    stimulus_b:
+      description: "Photographs of faces with neutral expressions matched for identity, luminance, and contrast"
+      source: "Ekman POFA or NimStim face set"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "medium"
+  notes: "STSva in HCP-MMP1 captures part of the face-responsive STS region sensitive to dynamic and emotional face properties. Amygdala is subcortical and not in HCP-MMP1, so we test the cortical component."
+
+- id: "NC013"
+  claim: "The frontal eye fields show greater activation during saccadic eye movements than during fixation."
+  citation: "Paus, 1996, Neuropsychologia"
+  doi: "10.1016/0028-3932(95)00145-X"
+  category: "memory_attention"
+  roi:
+    atlas: "glasser"
+    region: "FEF"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Visually guided saccade task with unpredictable target locations"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Central fixation on a stable crosshair with no peripheral targets"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.9
+  difficulty: "easy"
+  notes: "FEF in HCP-MMP1 corresponds to the frontal eye fields. Saccade-related activation is one of the most reliable motor/attention findings."
+
+- id: "NC014"
+  claim: "The temporo-parieto-occipital junction responds more strongly to spoken narratives than to reversed speech."
+  citation: "Hickok & Poeppel, 2007, Nature Reviews Neuroscience"
+  doi: "10.1038/nrn2113"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "TPOJ1"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Continuous spoken narratives in the listener's native language"
+      source: "LibriVox audiobook recordings"
+    stimulus_b:
+      description: "Time-reversed versions of the same speech recordings preserving spectral content"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.8
+  difficulty: "medium"
+  notes: "TPOJ1 in HCP-MMP1 approximates the posterior portion of Wernicke's area. The dual-stream model places phonological-semantic mapping here."
+
+- id: "NC015"
+  claim: "Area V4 shows greater activation for colored stimuli than for luminance-matched achromatic versions."
+  citation: "Bartels & Zeki, 2000, European Journal of Neuroscience"
+  doi: "10.1046/j.1460-9568.2000.00068.x"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "V4"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Mondrian-style color displays with high chromatic saturation"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Achromatic (grayscale) versions of the same Mondrian patterns matched for luminance contrast"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "V4 in HCP-MMP1 is the ventral visual area implicated in color processing. Zeki's work established color selectivity in this region."
+
+- id: "NC016"
+  claim: "Audiovisual speech (seeing and hearing a talker) produces greater activation in STS than auditory-only speech."
+  citation: "Calvert et al., 2000, Science"
+  doi: "10.1126/science.290.5490.350"
+  category: "multisensory"
+  roi:
+    atlas: "glasser"
+    region: "STSdp"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Audiovisual speech clips showing a talker's face synchronized with the auditory speech signal"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Auditory-only speech from the same clips with a fixation cross replacing the visual input"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "STSdp is a key hub for multisensory integration. Superadditive or enhanced responses for congruent audiovisual speech are well documented."
+
+- id: "NC017"
+  claim: "Parahippocampal areas respond more strongly during episodic memory encoding of scenes than during a perceptual baseline task."
+  citation: "Brewer et al., 1998, Science"
+  doi: "10.1126/science.281.5380.1185"
+  category: "memory_attention"
+  roi:
+    atlas: "glasser"
+    region: "PHA2"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Novel scene photographs viewed with intentional encoding instructions (remember for later test)"
+      source: "Places365 dataset"
+    stimulus_b:
+      description: "Repeated presentation of a single familiar scene with no encoding demand"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "PHA2 in HCP-MMP1 falls within the parahippocampal region implicated in both scene perception and memory encoding. Subsequent memory effects are reliable here."
+
+- id: "NC018"
+  claim: "MST responds more strongly to optic flow patterns than to random incoherent motion."
+  citation: "Morrone et al., 2000, Nature Neuroscience"
+  doi: "10.1038/81575"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "MST"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Expanding and contracting radial optic flow patterns simulating self-motion"
+      source: "Procedurally generated radial flow fields"
+    stimulus_b:
+      description: "Random dot motion with matched speed distribution but zero global coherence"
+      source: "Procedurally generated random dot kinematograms"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "MST in HCP-MMP1 is dorsal and anterior to MT. It is specialized for complex motion including optic flow, consistent with heading perception."
+
+- id: "NC019"
+  claim: "Anterior prefrontal cortex shows greater activation during relational reasoning than simple visual matching."
+  citation: "Christoff et al., 2001, NeuroImage"
+  doi: "10.1006/nimg.2001.0752"
+  category: "memory_attention"
+  roi:
+    atlas: "glasser"
+    region: "10r"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Relational reasoning problems requiring integration of two dimensions (e.g., Raven's matrices with relational complexity)"
+      source: "Adapted from Raven's Progressive Matrices"
+    stimulus_b:
+      description: "Simple perceptual matching tasks using the same visual stimuli but requiring only feature detection"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "Area 10r in HCP-MMP1 corresponds to rostral prefrontal cortex (BA 10). It is reliably activated by tasks requiring relational integration and higher-order reasoning."
+
+- id: "NC020"
+  claim: "Emotional prosody in speech produces greater activation in right STS than neutral prosody."
+  citation: "Grandjean et al., 2005, Neuropsychologia"
+  doi: "10.1016/j.neuropsychologia.2004.07.015"
+  category: "emotion"
+  roi:
+    atlas: "glasser"
+    region: "STSvp"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Spoken sentences with angry prosody (semantically neutral content, emotional intonation)"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "The same sentences spoken with neutral flat prosody by the same speakers"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "STSvp in HCP-MMP1 captures the ventral posterior STS, which shows right-hemisphere dominance for processing emotional prosody. Effect sizes are modest, making this a harder test."
