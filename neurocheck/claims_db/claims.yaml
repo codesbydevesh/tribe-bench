@@ -323,7 +323,7 @@
   claim: "Audiovisual speech (seeing and hearing a talker) produces greater activation in STS than auditory-only speech."
   citation: "Calvert et al., 2000, Science"
   doi: "10.1126/science.290.5490.350"
-  category: "multisensory"
+  category: "multimodal"
   roi:
     atlas: "glasser"
     region: "STSdp"
@@ -385,7 +385,7 @@
 - id: "NC019"
   claim: "Anterior prefrontal cortex shows greater activation during relational reasoning than simple visual matching."
   citation: "Christoff et al., 2001, NeuroImage"
-  doi: "10.1006/nimg.2001.0752"
+  doi: "10.1006/nimg.2001.0922"
   category: "memory_attention"
   roi:
     atlas: "glasser"
@@ -423,3 +423,649 @@
     expected_effect_size: 0.5
   difficulty: "hard"
   notes: "STSvp in HCP-MMP1 captures the ventral posterior STS, which shows right-hemisphere dominance for processing emotional prosody. Effect sizes are modest, making this a harder test."
+
+# ---------- visual_selectivity (2 more) ----------
+
+- id: "NC021"
+  claim: "The visual word form area in ventral occipitotemporal cortex responds more strongly to written words than to consonant strings."
+  citation: "Cohen et al., 2002, Brain"
+  doi: "10.1093/brain/awf094"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "FFC"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Images of visually presented real English words in standard font"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Consonant strings matched in length and visual complexity but lacking orthographic structure"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.8
+  difficulty: "medium"
+  notes: "Left FFC in HCP-MMP1 overlaps with the visual word form area (VWFA). Word-selective responses over unpronounceable strings are well replicated across scripts and languages."
+
+- id: "NC022"
+  claim: "Area V3A responds more strongly to three-dimensional structure-from-motion stimuli than to two-dimensional moving patterns."
+  citation: "Vanduffel et al., 2002, Science"
+  doi: "10.1126/science.1073574"
+  category: "visual_selectivity"
+  roi:
+    atlas: "glasser"
+    region: "V3A"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Random dot displays that define a rotating three-dimensional shape via structure-from-motion"
+      source: "Procedurally generated random dot kinematograms"
+    stimulus_b:
+      description: "Two-dimensional translating random dot patterns matched for dot density and average speed"
+      source: "Procedurally generated random dot kinematograms"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "V3 in HCP-MMP1 includes the dorsal V3/V3A complex. Sensitivity to depth from motion in this region is established in both human and macaque imaging."
+
+# ---------- auditory_processing (5 more) ----------
+
+- id: "NC023"
+  claim: "The medial belt of auditory cortex shows tonotopic organization, responding more strongly to best-frequency tones than to non-preferred frequencies."
+  citation: "Formisano et al., 2003, Neuron"
+  doi: "10.1016/S0896-6273(03)00669-X"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "MBelt"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Pure tones at the preferred best frequency of the medial belt (approximately 1-4 kHz)"
+      source: "Synthesized sinusoidal tones"
+    stimulus_b:
+      description: "Pure tones at a non-preferred frequency (e.g., 8 kHz or higher) matched for duration and intensity"
+      source: "Synthesized sinusoidal tones"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "hard"
+  notes: "MBelt in HCP-MMP1 is the medial belt of auditory cortex. Tonotopic gradients in human auditory cortex have been demonstrated with high-resolution fMRI."
+
+- id: "NC024"
+  claim: "The posterior belt of auditory cortex responds more strongly to speech sounds than to amplitude-matched white noise bursts."
+  citation: "Scott et al., 2000, Brain"
+  doi: "10.1093/brain/123.12.2400"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "PBelt"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Natural speech sentences spoken clearly by native speakers"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "White noise bursts matched in duration and RMS amplitude to the speech stimuli"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "PBelt in HCP-MMP1 corresponds to the posterior belt region of auditory cortex. This region shows preference for spectrotemporally complex stimuli over simple noise."
+
+- id: "NC025"
+  claim: "The retro-insular cortex responds more strongly to auditory stimuli than to silence, serving as a secondary auditory processing hub."
+  citation: "Kaas & Hackett, 2000, Proceedings of the National Academy of Sciences"
+  doi: "10.1073/pnas.97.22.11793"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "RI"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Broadband natural environmental sounds including animal calls and human speech"
+      source: "ESC-50 environmental sound dataset"
+    stimulus_b:
+      description: "Silence with matched trial structure and visual fixation"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "RI in HCP-MMP1 is the retro-insular area, part of the auditory cortical hierarchy. It reliably activates to sound stimuli and is considered part of the extended auditory cortex."
+
+- id: "NC026"
+  claim: "The anterior superior temporal region responds more strongly to human speech than to spectrally rotated speech."
+  citation: "Narain et al., 2003, Cerebral Cortex"
+  doi: "10.1093/cercor/bhg083"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "STSda"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Clear spoken sentences in the listener's native language"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Spectrally rotated versions of the same sentences, preserving temporal envelope but destroying intelligibility"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "STSda in HCP-MMP1 captures the dorsal anterior STS region. Anterior temporal regions show sensitivity to speech intelligibility beyond low-level acoustics."
+
+- id: "NC027"
+  claim: "Primary auditory cortex (A1) responds more strongly to pure tones than to silence, with robust frequency tuning."
+  citation: "Wessinger et al., 2001, Journal of Cognitive Neuroscience"
+  doi: "10.1162/089892901564315"
+  category: "auditory_processing"
+  roi:
+    atlas: "glasser"
+    region: "A1"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Pure sinusoidal tones at various frequencies (250 Hz to 8 kHz) presented in blocks"
+      source: "Synthesized sinusoidal tones"
+    stimulus_b:
+      description: "Silence with matched trial timing and visual fixation"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 1.5
+  difficulty: "easy"
+  notes: "A1 in HCP-MMP1 is primary auditory cortex. Activation to tones versus silence is the most basic and reliable auditory fMRI finding, analogous to V1 checkerboard activation."
+
+# ---------- language (5 more) ----------
+
+- id: "NC028"
+  claim: "The angular gyrus responds more strongly to meaningful sentences than to lists of unrelated words."
+  citation: "Binder et al., 2009, Journal of Neurophysiology"
+  doi: "10.1152/jn.00923.2008"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "PGs"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Spoken sentences with coherent semantic content describing everyday scenarios"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Spoken lists of unrelated concrete nouns matched in word count and presentation rate"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "PGs in HCP-MMP1 overlaps with the angular gyrus (BA 39). This region is a key hub for combinatorial semantic processing and sentence-level meaning integration."
+
+- id: "NC029"
+  claim: "Anterior temporal cortex responds more strongly to intelligible speech than to unintelligible speech with matched acoustic complexity."
+  citation: "Scott et al., 2000, Brain"
+  doi: "10.1093/brain/123.12.2400"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "TE1a"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Clear spoken sentences in the listener's native language"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Noise-vocoded speech with one channel, preserving temporal envelope but eliminating intelligibility"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "TE1a in HCP-MMP1 captures the anterior temporal lobe region. The anterior STS/STG shows a well-replicated intelligibility gradient for speech processing."
+
+- id: "NC030"
+  claim: "The inferior frontal sulcus region responds more strongly to sentences with syntactic violations than to grammatically correct sentences."
+  citation: "Friederici et al., 2003, Cerebral Cortex"
+  doi: "10.1093/cercor/13.2.170"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "IFSa"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Spoken sentences containing syntactic phrase structure violations that are passively listened to"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Grammatically correct spoken sentences matched for length and lexical content"
+      source: "LibriSpeech or custom recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "IFSa in HCP-MMP1 covers the anterior inferior frontal sulcus. Passive listening to syntactic violations reliably activates left IFG regions without requiring active production."
+
+- id: "NC031"
+  claim: "The posterior superior temporal gyrus responds more strongly to phonemic contrasts than to acoustically matched non-speech analogues."
+  citation: "Liebenthal et al., 2005, Cerebral Cortex"
+  doi: "10.1093/cercor/bhi018"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "A5"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Spoken syllables varying along a phonemic continuum (e.g., /ba/ to /da/)"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Non-speech sinusoidal analogues preserving the formant frequency trajectories but perceived as non-speech"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "A5 in HCP-MMP1 covers the posterior superior temporal gyrus region involved in phonemic categorization. This area shows speech-specific responses beyond acoustic complexity."
+
+- id: "NC032"
+  claim: "The temporal pole responds more strongly to familiar proper names than to unfamiliar names during auditory presentation."
+  citation: "Damasio et al., 1996, Nature"
+  doi: "10.1038/380499a0"
+  category: "language"
+  roi:
+    atlas: "glasser"
+    region: "TGd"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Auditorily presented famous proper names (well-known public figures)"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Auditorily presented unfamiliar proper names matched for phonological length and syllable structure"
+      source: "Derived from stimulus_a recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "TGd in HCP-MMP1 captures the dorsal temporal pole. Temporal pole involvement in proper name retrieval and person-specific semantic knowledge is well established across lesion and imaging studies."
+
+# ---------- multimodal (5 more) ----------
+
+- id: "NC033"
+  claim: "The intraparietal sulcus responds more strongly to spatially congruent audiovisual stimuli than to auditory-only stimuli."
+  citation: "Bremmer et al., 2001, Journal of Neurophysiology"
+  doi: "10.1152/jn.2001.86.5.2388"
+  category: "multimodal"
+  roi:
+    atlas: "glasser"
+    region: "VIP"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Spatially congruent audiovisual stimuli with a visual flash and auditory beep at the same location"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Auditory-only beeps at matched locations with no accompanying visual stimulus"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "VIP in HCP-MMP1 corresponds to the ventral intraparietal area. This region is a well-established multisensory convergence zone in both macaque and human neuroimaging."
+
+- id: "NC034"
+  claim: "The superior temporal sulcus shows enhanced activation for congruent audiovisual object events compared to incongruent pairings."
+  citation: "Beauchamp et al., 2004, Neuron"
+  doi: "10.1016/S0896-6273(04)00070-4"
+  category: "multimodal"
+  roi:
+    atlas: "glasser"
+    region: "STSvp"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Congruent audiovisual clips of common objects producing their characteristic sounds (e.g., dog barking with video of dog)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Incongruent audiovisual clips where the sound is mismatched with the visual object (e.g., dog video with piano sound)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "STSvp in HCP-MMP1 captures the ventral posterior STS. Congruency effects for audiovisual object identity in STS are robust across multiple studies."
+
+- id: "NC035"
+  claim: "The posterior STS shows stronger activation during lip-reading (silent speech) than during viewing non-biological mouth movements."
+  citation: "Calvert et al., 1997, Science"
+  doi: "10.1126/science.276.5312.593"
+  category: "multimodal"
+  roi:
+    atlas: "glasser"
+    region: "STSdp"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Silent video clips of a person speaking (lip-reading condition with no audio)"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Video clips of non-biological mouth-like movements (e.g., opening and closing geometric shapes) matched for motion energy"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "STSdp in HCP-MMP1 captures the posterior STS region. Visual speech perception engages this region even without auditory input, demonstrating its role in cross-modal speech processing."
+
+- id: "NC036"
+  claim: "The temporo-parietal-occipital junction shows greater activation for combined auditory and visual semantic stimuli than for visual-only stimuli."
+  citation: "Beauchamp et al., 2004, Nature Neuroscience"
+  doi: "10.1038/nn1333"
+  category: "multimodal"
+  roi:
+    atlas: "glasser"
+    region: "TPOJ2"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Videos of tool use paired with their characteristic action sounds (e.g., hammer striking nail with impact sound)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "The same tool-use videos presented silently with no auditory input"
+      source: "Kinetics-700 or UCF-101 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "TPOJ2 in HCP-MMP1 captures the temporo-parietal-occipital junction. This region integrates auditory and visual information for meaningful multisensory object events."
+
+- id: "NC037"
+  claim: "The STS territory responds more strongly to dynamic face-voice person stimuli than to static face photographs."
+  citation: "Watson et al., 2014, Cortex"
+  doi: "10.1016/j.cortex.2013.07.011"
+  category: "multimodal"
+  roi:
+    atlas: "glasser"
+    region: "STV"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Video clips of people speaking with synchronized audio showing dynamic facial and vocal information"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Static photographs of the same individuals with neutral expressions and no audio"
+      source: "CelebA dataset or FERET face database"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "STV in HCP-MMP1 is the superior temporal visual area. It preferentially responds to dynamic person stimuli integrating face and voice information over static faces."
+
+# ---------- emotion (3 more) ----------
+
+- id: "NC038"
+  claim: "The orbitofrontal cortex responds more strongly to pleasant odor-associated visual stimuli than to neutral visual stimuli."
+  citation: "Kringelbach et al., 2003, Cerebral Cortex"
+  doi: "10.1093/cercor/13.10.1064"
+  category: "emotion"
+  roi:
+    atlas: "glasser"
+    region: "OFC"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Photographs of appetizing food items (cakes, fruits, cooked meals)"
+      source: "ImageNet or COCO dataset"
+    stimulus_b:
+      description: "Photographs of neutral non-food objects matched for visual complexity and color content"
+      source: "ImageNet or COCO dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "OFC in HCP-MMP1 captures the orbital frontal cortex. This region is reliably activated by reward-associated stimuli including food images, as shown in meta-analyses of reward processing."
+
+- id: "NC039"
+  claim: "The anterior insula cortex responds more strongly to disgust expressions than to neutral expressions in faces."
+  citation: "Phillips et al., 1997, Nature"
+  doi: "10.1038/39051"
+  category: "emotion"
+  roi:
+    atlas: "glasser"
+    region: "FOP1"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Photographs of faces expressing disgust (validated from standardized expression sets)"
+      source: "Ekman POFA or NimStim face set"
+    stimulus_b:
+      description: "Photographs of faces with neutral expressions matched for identity, luminance, and contrast"
+      source: "Ekman POFA or NimStim face set"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "FOP1 in HCP-MMP1 covers the frontal opercular region adjacent to the anterior insula. Disgust-selective responses in the insula/opercular cortex are one of the most replicated findings in affective neuroscience."
+
+- id: "NC040"
+  claim: "The medial prefrontal cortex responds more strongly to emotionally valenced visual scenes than to neutral scenes."
+  citation: "Phan et al., 2002, NeuroImage"
+  doi: "10.1006/nimg.2002.1087"
+  category: "emotion"
+  roi:
+    atlas: "glasser"
+    region: "p32"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Photographs of emotionally arousing scenes (positive and negative combined)"
+      source: "OASIS (Open Affective Standardized Image Set)"
+    stimulus_b:
+      description: "Photographs of emotionally neutral scenes matched for visual complexity and content category"
+      source: "OASIS (Open Affective Standardized Image Set)"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "p32 in HCP-MMP1 corresponds to pregenual cingulate cortex (BA 32). Meta-analyses consistently identify medial PFC activation for emotional vs. neutral stimuli."
+
+# ---------- motor_perception (5 more) ----------
+
+- id: "NC041"
+  claim: "The posterior STS responds more strongly to biological motion (point-light walkers) than to scrambled point-light displays."
+  citation: "Grossman et al., 2000, Journal of Cognitive Neuroscience"
+  doi: "10.1162/089892900562417"
+  category: "motor_perception"
+  roi:
+    atlas: "glasser"
+    region: "TPOJ3"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Point-light displays of human walking and other biological actions"
+      source: "Procedurally generated point-light displays"
+    stimulus_b:
+      description: "Spatially scrambled point-light displays with identical local motion trajectories but disrupted global configuration"
+      source: "Procedurally generated point-light displays"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.8
+  difficulty: "medium"
+  notes: "TPOJ3 in HCP-MMP1 covers the posterior STS territory classically associated with biological motion perception. This finding is among the most replicated in social vision."
+
+- id: "NC042"
+  claim: "Premotor cortex shows greater activation during observation of grasping actions than during observation of static hand postures."
+  citation: "Caspers et al., 2010, NeuroImage"
+  doi: "10.1016/j.neuroimage.2009.12.112"
+  category: "motor_perception"
+  roi:
+    atlas: "glasser"
+    region: "6v"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Video clips of a hand reaching and grasping objects (precision grip and whole-hand prehension)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Static photographs of hands in resting posture near the same objects"
+      source: "ImageNet or COCO dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "Area 6v in HCP-MMP1 corresponds to ventral premotor cortex. Action observation activates premotor cortex via the mirror neuron system, as established by Caspers et al. meta-analysis."
+
+- id: "NC043"
+  claim: "The anterior intraparietal sulcus responds more strongly to three-dimensional graspable objects than to flat two-dimensional shapes."
+  citation: "Culham et al., 2003, Experimental Brain Research"
+  doi: "10.1007/s00221-002-1239-4"
+  category: "motor_perception"
+  roi:
+    atlas: "glasser"
+    region: "AIP"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Photographs of three-dimensional graspable objects (tools, cups, bottles) shown at reachable distance"
+      source: "ImageNet or COCO dataset"
+    stimulus_b:
+      description: "Flat two-dimensional geometric shapes matched for overall size and luminance"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "AIP in HCP-MMP1 is the anterior intraparietal area. It is homologous to macaque AIP and is reliably activated by graspable objects and grasp planning."
+
+- id: "NC044"
+  claim: "The supplementary motor area shows greater activation during observation of sequential motor actions than during observation of static scenes."
+  citation: "Buccino et al., 2001, European Journal of Neuroscience"
+  doi: "10.1111/j.1460-9568.2001.01385.x"
+  category: "motor_perception"
+  roi:
+    atlas: "glasser"
+    region: "6mp"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Video clips of complex sequential hand actions (assembling objects, cooking gestures)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Static scene images from the same videos showing objects without any human action"
+      source: "Places365 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "medium"
+  notes: "Area 6mp in HCP-MMP1 covers the supplementary motor area. SMA activation during action observation of complex sequences is consistent with its role in motor planning and sequencing."
+
+- id: "NC045"
+  claim: "The inferior parietal lobule (PFt) responds more strongly to observation of tool-use actions than to observation of meaningless hand movements."
+  citation: "Peeters et al., 2009, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.3876-08.2009"
+  category: "motor_perception"
+  roi:
+    atlas: "glasser"
+    region: "PFt"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Video clips of skilled tool-use actions (hammering, screwing, cutting with scissors)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Video clips of meaningless hand waving and finger wiggling movements matched for motion energy"
+      source: "Kinetics-700 or UCF-101 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "PFt in HCP-MMP1 covers the anterior supramarginal gyrus region. This area is implicated in understanding tool-use actions and is part of the human mirror neuron system."
+
+# ---------- memory_attention (1 more) ----------
+
+- id: "NC046"
+  claim: "The intraparietal sulcus responds more strongly to numerically large sets of objects than to single objects."
+  citation: "Piazza et al., 2004, Neuron"
+  doi: "10.1016/j.neuron.2004.10.014"
+  category: "memory_attention"
+  roi:
+    atlas: "glasser"
+    region: "IP1"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Visual displays of large numerosities (16-32 dots) passively viewed"
+      source: "Procedurally generated"
+    stimulus_b:
+      description: "Visual displays of a single dot matched for overall luminance and display area"
+      source: "Procedurally generated"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "IP1 in HCP-MMP1 covers the anterior intraparietal sulcus. Numerosity-dependent activation in IPS during passive viewing is well replicated and does not require active counting or decision-making."
+
+# ---------- high_level_cognition (4 more) ----------
+
+- id: "NC047"
+  claim: "The temporo-parietal junction responds more strongly to stories requiring mental state inference than to stories with only physical event descriptions."
+  citation: "Saxe & Kanwisher, 2003, NeuroImage"
+  doi: "10.1016/S1053-8119(03)00230-1"
+  category: "high_level_cognition"
+  roi:
+    atlas: "glasser"
+    region: "PGp"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Short auditory narratives requiring inference about characters' beliefs, desires, and mental states (theory of mind stories)"
+      source: "LibriSpeech or custom recordings"
+    stimulus_b:
+      description: "Short auditory narratives describing physical events and mechanical causation with no mental state content"
+      source: "LibriSpeech or custom recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.7
+  difficulty: "medium"
+  notes: "PGp in HCP-MMP1 captures the posterior angular gyrus at the TPJ. This region is the most selective cortical area for theory of mind, consistently identified across dozens of studies."
+
+- id: "NC048"
+  claim: "The posterior superior temporal sulcus responds more strongly to videos of social interactions between two people than to videos of a single person performing the same actions alone."
+  citation: "Isik et al., 2017, Proceedings of the National Academy of Sciences"
+  doi: "10.1073/pnas.1714471114"
+  category: "high_level_cognition"
+  roi:
+    atlas: "glasser"
+    region: "STSdp"
+    hemisphere: "right"
+  contrast:
+    stimulus_a:
+      description: "Short video clips depicting two people engaged in social interactions (helping, hindering, communicating)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Video clips of a single person performing similar physical actions alone without any social partner"
+      source: "Kinetics-700 or UCF-101 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.6
+  difficulty: "medium"
+  notes: "STSdp in HCP-MMP1 captures the posterior STS. This region distinguishes social from non-social action content during passive viewing, without requiring explicit social judgments."
+
+- id: "NC049"
+  claim: "The lateral prefrontal cortex responds more strongly to videos of humans using tools than to videos of humans making non-functional hand movements."
+  citation: "Johnson-Frey et al., 2005, Cerebral Cortex"
+  doi: "10.1093/cercor/bhh169"
+  category: "high_level_cognition"
+  roi:
+    atlas: "glasser"
+    region: "p9-46v"
+    hemisphere: "left"
+  contrast:
+    stimulus_a:
+      description: "Video clips showing skilled tool use (hammering, cutting, writing with pen)"
+      source: "Kinetics-700 or UCF-101 dataset"
+    stimulus_b:
+      description: "Video clips showing non-functional hand movements matched for overall motion energy"
+      source: "Kinetics-700 or UCF-101 dataset"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "p9-46v in HCP-MMP1 covers the ventrolateral prefrontal cortex. This region is activated during passive observation of tool use, reflecting semantic knowledge of object function."
+
+- id: "NC050"
+  claim: "The medial prefrontal cortex responds more strongly to narrative videos depicting moral transgressions than to videos depicting neutral everyday events."
+  citation: "Moll et al., 2002, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.22-07-02730.2002"
+  category: "high_level_cognition"
+  roi:
+    atlas: "glasser"
+    region: "d32"
+    hemisphere: "both"
+  contrast:
+    stimulus_a:
+      description: "Short video clips depicting intentional moral transgressions (theft, deception, harm to others)"
+      source: "Kinetics-700 or custom recordings"
+    stimulus_b:
+      description: "Video clips depicting neutral everyday activities (walking, cooking, reading) matched for duration and visual complexity"
+      source: "Kinetics-700 or custom recordings"
+    direction: "a_greater_than_b"
+    expected_effect_size: 0.5
+  difficulty: "hard"
+  notes: "d32 in HCP-MMP1 corresponds to dorsal area 32 in mPFC. Moll et al. showed that passive viewing of moral scenes activates medial OFC/mPFC without requiring explicit judgments."

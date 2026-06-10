@@ -244,4 +244,34 @@ The hash approach gives unique, flat, human-readable keys.
 
 ---
 
+### D011: Claims batch 2 quality review and DOI verification (2026-06-09)
+
+**Decision:** All claim DOIs must be verified against CrossRef/doi.org before
+acceptance. LLM-generated DOIs have a ~37% hallucination rate (11/30 wrong in
+batch 2). Category "multisensory" renamed to "multimodal" for consistency.
+5 cognitive-state-dependent claims dropped and replaced with stimulus-driven ones.
+
+**Alternatives:**
+- Accept LLM-generated DOIs as-is (37% error rate found)
+- Manually curate all claims without LLM assistance (too slow)
+
+**Reasoning:** Three Musketeers review of batch 2 (NC021-NC050) found 11/30 DOIs
+pointing to wrong papers. Root cause: LLMs generate plausible DOI formats but
+can't reliably recall exact article identifiers. The DOI prefix (publisher code)
+was usually correct but the article-specific suffix was fabricated.
+
+Additionally, 5 claims (NC030, NC046, NC048, NC049, NC050) required active
+cognitive tasks (verb generation, oddball detection, self-referential judgment,
+rest-vs-task, n-back) that TRIBE v2 cannot test because it processes passive
+video/audio/text stimuli, not task-evoked brain states.
+
+**Implications:**
+- Future claims must include DOI verification step
+- Category validation added to claims.py
+- All 50 claims now have verified DOIs and are testable with passive stimuli
+
+**Revisit if:** CrossRef API integration is added to validation pipeline.
+
+---
+
 <!-- Add new decisions above this line -->

@@ -1,18 +1,19 @@
 # War Room — Project Command Center
 
-Last updated: 2026-06-08
-Updated by: Post Three Musketeers review & fix session
+Last updated: 2026-06-09
+Updated by: Session 3 claims completion + Three Musketeers review
 
 ---
 
-## Overall Status: PHASE 1 — CODE COMPLETE (CPU), AWAITING GPU TEST
+## Overall Status: PHASE 1 — ALL CPU WORK COMPLETE, AWAITING GPU TEST
 
-All code that can be written without a GPU is done. 37 project files exist.
-tribe_tools/ (6 modules), BrainLens MVP (5 files), NeuroCheck claims (20/50),
-Kaggle notebook, and full ops system. Three Musketeers review found 11 bugs —
-all fixed and verified.
+All code and content that can be produced without a GPU is done. 37 project files.
+tribe_tools/ (6 modules), BrainLens MVP (5 files), NeuroCheck claims (50/50
+verified with DOIs), Kaggle notebook, and full ops system. Two Three Musketeers
+reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
+11 wrong DOIs + 5 infeasible claims (all fixed, replacements written).
 
-**Next milestone:** GPU smoke test on Kaggle (Session 3).
+**Next milestone:** GPU smoke test on Kaggle.
 
 ---
 
@@ -48,9 +49,9 @@ all fixed and verified.
 **Next action:** After NeuroGenre
 
 ### NeuroCheck (Build 4 — Flagship)
-**Status:** 20/50 claims written. Schema validated with atlas + source fields.
-**Blocked by:** Nothing. Remaining 30 claims are zero-compute.
-**Next action:** Write 30 more claims (Session 3)
+**Status:** 50/50 claims written and verified. DOIs verified via web search. Category validation in claims.py.
+**Blocked by:** GPU for benchmark run
+**Next action:** Begin scoring pipeline after GPU smoke test passes
 
 ### Compute Access
 **Status:** NO APPLICATIONS SUBMITTED
@@ -81,9 +82,10 @@ all fixed and verified.
 3. ~~Write BrainLens MVP~~ DONE
 4. ~~Start NeuroCheck claims database (first 20 claims)~~ DONE
 5. ~~Write Kaggle notebook skeleton~~ DONE
-6. Complete 50 claims (30 more)
-7. Run GPU smoke test on Kaggle
-8. Fix any issues found on GPU (especially G018 — features_to_use path)
+6. ~~Complete 50 claims (30 more)~~ DONE
+7. ~~Three Musketeers review + fix 11 DOIs, 5 claims replaced~~ DONE
+8. Run GPU smoke test on Kaggle
+9. Fix any issues found on GPU (especially G018 — features_to_use path)
 
 ---
 
@@ -109,3 +111,5 @@ all fixed and verified.
 | 2026-06-08 | Updated PLAN.md and all ops files with source code findings | Removed Phase 2 T4 hack, corrected all API contracts and shapes, closed 6 knowledge gaps, added 3 new gaps | PLAN.md, ops/interface-contracts.md, ops/knowledge-gaps.md, ops/pre-mortem.md, ops/compute-playbook.md, ops/war-room.md, ops/decision-log.md |
 | 2026-06-08 | Built all CPU code: skeleton, tribe_tools/ (6), BrainLens (5), NeuroCheck claims (20), Kaggle notebook | pyproject.toml build-backend fix, fsaverage5=10242/hemi confirmed | 37 files created |
 | 2026-06-08 | Three Musketeers review: found 11 bugs, fixed all | D009: features_to_use mutation for ablation, similarity-based attribution fallback, HDF5-safe cache keys | model.py, inference.py, viz.py, cache.py, atlas.py, attribution.py, claims.py, claims.yaml, interface-contracts.md, knowledge-gaps.md |
+| 2026-06-09 | Wrote 30 claims (NC021-NC050), completed 50/50 | 8 category targets hit | claims.yaml |
+| 2026-06-09 | Three Musketeers review #2: found 11 wrong DOIs, 5 infeasible claims | D011: DOI verification required, category renamed multisensory→multimodal, 5 claims replaced with stimulus-driven alternatives | claims.yaml, claims.py, decision-log.md |

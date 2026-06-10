@@ -2,10 +2,10 @@
 
 ---
 
-## Overall Completion: 33%
+## Overall Completion: 45%
 
 ```
-[██████▌░░░░░░░░░░░░░] 33%
+[█████████░░░░░░░░░░░] 45%
 ```
 
 ---
@@ -19,7 +19,7 @@
 | 3 | Project skeleton (pyproject, gitignore, README) | 3% | pyproject.toml, .gitignore, README.md, all dirs | YES |
 | 4 | tribe_tools/ shared library (6 modules) | 12% | All 6 modules written, imports verified | YES |
 | 5 | BrainLens MVP (inference, attribution, viz, CLI) | 8% | 4 modules + CLI, all tested | YES |
-| 6 | NeuroCheck claims database (50 claims) | 12% | 20/50 claims written and validated | PARTIAL (5%) |
+| 6 | NeuroCheck claims database (50 claims) | 12% | 50/50 claims written and validated | YES |
 | 7 | GPU smoke test (Kaggle T4) | 5% | — | NO |
 | 8 | BrainLens demo on Kaggle (first brain map) | 5% | — | NO |
 | 9 | BrainLens on HuggingFace ZeroGPU | 5% | — | NO |
@@ -62,13 +62,21 @@
 - P7-P9: Dead import, missing lru_cache, wrong attribution fallback
 - P10-P11: Ops docs synced
 
-### Session 3 (next)
+### Session 3 (2026-06-09) — IN PROGRESS
 **Goal:** Finish claims + first GPU test
-- [ ] Complete 50 claims (#6)
+- [x] Complete 50 claims (#6): 30 new claims (NC021-NC050), all 8 categories hit targets
+- [x] Three Musketeers review #2: found 11/30 wrong DOIs (37% error rate), 5 infeasible claims
+- [x] Fixed all 11 DOIs (verified via CrossRef/web search)
+- [x] Replaced 5 cognitive-state claims with stimulus-driven alternatives
+- [x] Fixed 4 wrong journal names (NC026, NC034, NC036, NC037)
+- [x] Fixed NC022 region (V3→V3A), NC038 first author (Rolls→Kringelbach), NC044 (review→empirical)
+- [x] Fixed NC040 source (IAPS→OASIS), renamed multisensory→multimodal category
+- [x] Added category validation to claims.py
 - [ ] Run smoke test on Kaggle (#7)
 - [ ] Fix any issues found on GPU
 
-**Target:** 38% → 50%
+**Progress so far:** 33% → 45% (claims complete + reviewed, GPU test remaining)
+**Target:** 45% → 50%
 
 ### Session 4
 **Goal:** First real results

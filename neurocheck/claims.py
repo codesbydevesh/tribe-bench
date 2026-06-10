@@ -112,6 +112,11 @@ def validate_claims(path: Optional[Path] = None) -> list[str]:
     ids = set()
     valid_directions = {"a_greater_than_b", "b_greater_than_a"}
     valid_difficulties = {"easy", "medium", "hard"}
+    valid_categories = {
+        "visual_selectivity", "auditory_processing", "language",
+        "multimodal", "emotion", "motor_perception",
+        "memory_attention", "high_level_cognition",
+    }
 
     for claim in claims:
         prefix = f"[{claim.id}]"
@@ -140,5 +145,8 @@ def validate_claims(path: Optional[Path] = None) -> list[str]:
 
         if claim.difficulty not in valid_difficulties:
             errors.append(f"{prefix} Invalid difficulty: {claim.difficulty}")
+
+        if claim.category not in valid_categories:
+            errors.append(f"{prefix} Invalid category: {claim.category}")
 
     return errors
