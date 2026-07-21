@@ -274,4 +274,76 @@ video/audio/text stimuli, not task-evoked brain states.
 
 ---
 
+### D012: Reshape to NeuroCheck-first; cut NeuroGenre and ScaleLaw (2026-07-21)
+
+**Decision:** Narrow the project from four builds to one primary deliverable — NeuroCheck
+as a published benchmark dataset. Cut NeuroGenre and ScaleLaw indefinitely. Keep BrainLens
+only if the GPU smoke test confirms modality ablation works (D013).
+
+**Alternatives:**
+- Keep all four builds (the original "standard toolkit" empire)
+- Kill the project entirely (it went dormant ~6 weeks)
+
+**Reasoning:** Strategic re-assessment 2026-07-21 (`ops/assessment-2026-07-21.md`). The
+NeuroCheck 50-claim DB is the only real, ~90%-done, publishable-without-GPU asset (verified:
+48 unique DOIs, correct landmark citations). NeuroGenre carries ~35% risk genres don't
+cluster; ScaleLaw's StudyForrest fsaverage5/HRF alignment is a ~30%-fail swamp. The
+"four-build standard toolkit" is scope creep for a solo, no-GPU operator. The realistic prize
+is a bioRxiv preprint (~75%) and a portfolio/hiring story (~60%), both anchored on NeuroCheck.
+
+**Implications:** Effort concentrates on the NeuroCheck scoring pipeline + resource paper +
+DOI re-verification. NeuroGenre/ScaleLaw marked CUT in war-room. The niche is reframed from
+"the standard toolkit for in-silico neuroscience" to "the first DOI-verified sanity-check
+benchmark for brain-encoding models."
+
+**Revisit if:** A NeuroCheck preprint ships and there's appetite/collaborator interest to
+expand; or the smoke test reveals something that changes the calculus.
+
+---
+
+### D013: GPU smoke test is the gate before any more build code (2026-07-21)
+
+**Decision:** Run a <=1hr Kaggle smoke test (install deps + one `model.predict()` + the
+G018 ablation kill/confirm + per-extractor VRAM logging for G005) BEFORE writing any further
+build code.
+
+**Alternatives:**
+- Keep building the scoring pipeline / BrainLens on faith
+- Assume the ablation path works because the discovery code exists
+
+**Reasoning:** Nothing has ever run on a GPU; every "COMPLETE" is CPU-import-only. The
+upstream source has no supported inference-time modality-mask API (`tribev2/model.py:190`
+zeros only absent-from-batch modalities; `:212` is training-only dropout). Our
+`_find_features_to_use()` probes 4 attribute paths on hope. One hour converts the whole
+project from "hope" to "de-risked" — or tells us exactly what to cut (BrainLens).
+
+**Implications:** This test closes G018 and G005 in one session. If ablation outputs are
+identical (full vs modality-removed), BrainLens is dropped and the project is NeuroCheck-only.
+
+**Revisit if:** Never — this is basic due diligence before committing more effort.
+
+---
+
+### D014: MCP "neural-engagement" tool is the standout follow-on direction (2026-07-21)
+
+**Decision:** Record — but do not start yet — an MCP tool that wraps TRIBE to return
+predicted per-region cortical engagement (visual/auditory/language/emotion ROI scores) as
+structured JSON callable by any agent, with a "neural-atypicality" headline score. Hold it
+as the follow-on once the model is confirmed to run.
+
+**Alternatives:** Pursue it now (premature — depends on the smoke test); ignore it.
+
+**Reasoning:** It is the highest-strategic-ROI creative idea from the assessment: it fuses
+the operator's day job (building MCP tool-servers) with this project, is a differentiated
+portfolio artifact almost nobody else can credibly build, stays license-clean as a research
+demo, and needs little compute (ZeroGPU drip or cached precompute).
+
+**Implications:** Sequenced after D013 passes and after the NeuroCheck resource paper.
+Pairs with the normative-deviation scorer (assessment idea #7) as its headline metric.
+
+**Revisit if:** The smoke test fails (no working inference) — then this is not buildable as
+described.
+
+---
+
 <!-- Add new decisions above this line -->

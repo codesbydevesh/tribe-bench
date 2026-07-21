@@ -23,17 +23,27 @@ pip-installable, what's the install path?
 **Priority:** CRITICAL — can't install tribev2 without these
 **How to close:** Try `pip install neuralset neuraltrain exca` on Kaggle.
 Check if they're in the tribev2 repo's setup.py/pyproject.toml dependencies.
-**Status:** OPEN
+**Status:** CLOSED 2026-07-21 — all three are real, public, pure-Python (`py3-none-any`)
+PyPI wheels from Meta FAIR (`facebookresearch/neuroai`), version 0.0.2. NOT private/internal.
+The existential "DOA on free hardware" risk is resolved false. Remaining nuance (confirm at
+first install, not a blocker): `neuralset 0.0.2` requires Python >=3.12 — if Kaggle is on
+3.11, install via uv/conda. "Exists on PyPI" is not yet "installs cleanly with all transitive
+deps on a T4" — the smoke test confirms that.
 
 ### G018: features_to_use mutation path on TribeModel
 **Question:** What is the exact attribute path to `features_to_use` on a loaded
 TribeModel instance? Our code probes multiple candidate paths (`model.data.features_to_use`,
 `model.xp.cfg.data.features_to_use`, etc.) but we need GPU verification.
-**Priority:** HIGH — blocks BrainLens modality ablation
+**Priority:** HIGH — blocks BrainLens modality ablation. **NOW THE TOP LIVE RISK
+(2026-07-21)** now that G016 is closed. Upstream has NO supported inference-time mask API:
+`tribev2/model.py:190` zeros a modality only when it is absent from the batch; `:212` is
+training-only `modality_dropout`. If none of the 4 probed paths work, BrainLens produces
+identical maps for every modality and the demo is fake → pivot to NeuroCheck-only (D012/D013).
 **How to close:** Load TribeModel on GPU and inspect `dir(model)`, `dir(model.data)`,
 etc. to find where `features_to_use` lives. Then verify that mutating it before
-`model.predict()` controls which extractors run.
-**Status:** OPEN — code has discovery logic in `_find_features_to_use()`, needs GPU test
+`model.predict()` controls which extractors run — assert full vs modality-removed outputs DIFFER.
+**Status:** OPEN — code has discovery logic in `_find_features_to_use()`, needs the <=1hr GPU
+smoke test (D013).
 
 ---
 
@@ -121,3 +131,4 @@ submissions. How do we get one? Can any of the 5 groups endorse us?
 | G006 | Does nilearn provide Glasser on fsaverage5? | WRONG QUESTION — TRIBE v2 uses MNE, not nilearn. `get_hcp_labels()` in utils.py calls `mne.datasets.fetch_hcp_mmp_parcellation()` and maps to fsaverage5. Our atlas.py wraps these MNE-based functions directly. | 2026-06-08 |
 | G008 | What is TRIBE v2's vertex ordering? | Left hemisphere first (indices 0 to expected_size-1), right hemisphere second (indices expected_size to 2*expected_size-1). Confirmed in utils.py:242 `index_offset = expected_size if hemi == "right" else 0`. | 2026-06-08 |
 | G017 | Exact feature names for features_to_mask? | Feature names are "video", "audio", "text" — confirmed from main.py:98-100 `data.video_feature`, `data.audio_feature`, `data.text_feature`. The `features_to_mask` config uses these names (main.py:486-504). However, `features_to_mask` only works at model construction time, not at inference. For runtime ablation, mutate `features_to_use` instead. | 2026-06-08 |
+| G016 | neuralset/neuraltrain/exca pip-installable? | YES — all three are real, public, pure-Python (`py3-none-any`) PyPI wheels from Meta FAIR (`facebookresearch/neuroai`), v0.0.2. NOT private. Existential "DOA on free hardware" risk resolved false. `neuralset 0.0.2` needs Python >=3.12; confirm clean install (transitive deps) at first Kaggle run. | 2026-07-21 |

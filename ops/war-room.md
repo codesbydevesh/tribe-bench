@@ -1,19 +1,31 @@
 # War Room — Project Command Center
 
-Last updated: 2026-06-09
-Updated by: Session 3 claims completion + Three Musketeers review
+Last updated: 2026-07-21
+Updated by: Session 4 — resumption + strategic re-assessment (deep-reasoning pass)
 
 ---
 
-## Overall Status: PHASE 1 — ALL CPU WORK COMPLETE, AWAITING GPU TEST
+## Overall Status: RESUMED AFTER ~6 WEEKS DORMANT — RESHAPED TO NeuroCheck-FIRST
 
-All code and content that can be produced without a GPU is done. 37 project files.
-tribe_tools/ (6 modules), BrainLens MVP (5 files), NeuroCheck claims (50/50
-verified with DOIs), Kaggle notebook, and full ops system. Two Three Musketeers
-reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
-11 wrong DOIs + 5 infeasible claims (all fixed, replacements written).
+All CPU-producible code and content is done (~1,413 LOC + the 50-claim DB), but
+**nothing has ever run on a GPU** and three of four builds are still stubs. A full
+strategic re-assessment on 2026-07-21 (see `ops/assessment-2026-07-21.md`) reshaped
+scope. Headlines:
 
-**Next milestone:** GPU smoke test on Kaggle.
+- **G016 (existential dep risk) is effectively DEAD** — `neuralset`/`neuraltrain`/`exca`
+  are real public Meta PyPI wheels (0.0.2, `py3-none-any`), not private libs. Confirm at
+  first `pip install`; `neuralset 0.0.2` needs Python >=3.12.
+- **Top live risk is now G018** — modality ablation has no supported inference-time API
+  upstream (`tribev2/model.py:190` zeros only absent-from-batch modalities; `:212` is
+  training-only dropout). BrainLens depends on it. The <=1hr Kaggle smoke test kills or
+  confirms this.
+- **Scope reshaped: NeuroCheck-first.** Ship the DOI-verified benchmark dataset as a
+  bioRxiv/HF resource. **NeuroGenre and ScaleLaw are CUT.** BrainLens kept only if the
+  ablation test passes. Standout follow-on = an MCP "neural-engagement" tool (idea #1).
+- The 50-claim DB commit (`ddb57cf`) is now **pushed** to `codesbydevesh/tribe-bench`.
+
+**Next milestone:** the <=1hr GPU smoke test on Kaggle (install + one predict + the
+ablation kill/confirm + per-extractor VRAM). See assessment §"Biggest live risk".
 
 ---
 
@@ -39,14 +51,14 @@ reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
 **Next action:** Run on Kaggle with a test video
 
 ### NeuroGenre (Build 2)
-**Status:** NOT STARTED
-**Blocked by:** tribe_tools/ GPU validation + clip manifest
-**Next action:** After BrainLens demo on GPU
+**Status:** CUT (2026-07-21, D012) — deprioritized indefinitely. 35% chance genres
+don't cluster; not worth the risk vs the NeuroCheck-first focus.
+**Next action:** none. Revisit only after a NeuroCheck preprint ships.
 
 ### ScaleLaw (Build 3)
-**Status:** NOT STARTED
-**Blocked by:** StudyForrest data download + GPU
-**Next action:** After NeuroGenre
+**Status:** CUT (2026-07-21, D012) — deprioritized indefinitely. StudyForrest
+fsaverage5 alignment + HRF timing is a ~30%-fail swamp.
+**Next action:** none. Revisit only after a NeuroCheck preprint ships.
 
 ### NeuroCheck (Build 4 — Flagship)
 **Status:** 50/50 claims written and verified. DOIs verified via web search. Category validation in claims.py.
@@ -70,12 +82,12 @@ reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
 **Next action:** After BrainLens runs on GPU
 
 ### Papers
-**Status:** NOT STARTED
-**Next action:** NeuroCheck benchmark design paper can start after 50 claims curated
+**Status:** NOT STARTED (but 50 claims are ready — design paper is now unblocked)
+**Next action:** Draft NeuroCheck benchmark design paper outline
 
 ---
 
-## What To Work On Next (Priority Order)
+## What To Work On Next (Priority Order — reshaped 2026-07-21)
 
 1. ~~Write project skeleton~~ DONE
 2. ~~Write tribe_tools/ shared library~~ DONE
@@ -84,8 +96,15 @@ reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
 5. ~~Write Kaggle notebook skeleton~~ DONE
 6. ~~Complete 50 claims (30 more)~~ DONE
 7. ~~Three Musketeers review + fix 11 DOIs, 5 claims replaced~~ DONE
-8. Run GPU smoke test on Kaggle
-9. Fix any issues found on GPU (especially G018 — features_to_use path)
+8. ~~Push the 50-claim DB commit to GitHub (backup)~~ DONE 2026-07-21
+9. **Run the <=1hr GPU smoke test on Kaggle** — install deps + one `predict()` +
+   the G018 ablation kill/confirm + per-extractor VRAM (G005). THE gate for everything.
+10. **CrossRef-verify all 50 DOIs programmatically + de-dupe the 2 collisions** (CPU,
+    no GPU — can do tonight). Makes the DB bulletproof and becomes a paper supplement.
+11. Get HF gated approval for LLaMA 3.2-3B (G011 — one click).
+12. Write the NeuroCheck scoring pipeline (only real code left for the flagship).
+13. Ship the NeuroCheck resource paper (bioRxiv) + HF Dataset — before model scoring.
+14. BrainLens on ZeroGPU drip demo — ONLY if step 9 confirms ablation works.
 
 ---
 
@@ -94,10 +113,10 @@ reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
 | Blocker | Impact | Resolution |
 |---------|--------|------------|
 | ~~Haven't read TRIBE v2 source code~~ | ~~Can't write model.py~~ | **RESOLVED 2026-06-08.** Source read, source-of-truth.md populated. |
-| ~~features_to_mask API path unclear~~ | ~~Blocks BrainLens~~ | **PARTIALLY RESOLVED 2026-06-08.** Code uses `_find_features_to_use()` discovery. G017 closed (names are "video","audio","text"). G018 still open — needs GPU to confirm attribute path. |
-| neuralset/neuraltrain pip availability unknown | Can't test on GPU | Try pip install on Kaggle (G016). First GPU session priority. |
-| No GPU access tested yet | Can't validate inference | Run smoke test on Kaggle as first GPU task |
-| No HuggingFace auth token | Can't load LLaMA 3.2 | Set up HF account, request access |
+| ~~features_to_mask API path unclear~~ | ~~Blocks BrainLens~~ | **PARTIALLY RESOLVED 2026-06-08.** Code uses `_find_features_to_use()` discovery. G017 closed. G018 still open — needs GPU to confirm the ablation path. NOW THE TOP LIVE RISK. |
+| ~~neuralset/neuraltrain/exca pip availability unknown~~ | ~~Can't test on GPU~~ | **RESOLVED 2026-07-21 (G016 closed).** All three are public Meta PyPI wheels (0.0.2, `py3-none-any`). Confirm clean install on Kaggle; `neuralset` needs Python >=3.12. |
+| No GPU access tested yet | Can't validate inference (G018, G005) | Run the <=1hr smoke test on Kaggle as the first GPU task. THE gate. |
+| No HuggingFace auth token | Can't load LLaMA 3.2 (G011) | Set up HF account, request LLaMA 3.2-3B gated access (one click). |
 
 ---
 
@@ -113,3 +132,4 @@ reviews completed: Session 2 found 11 code bugs (all fixed), Session 3 found
 | 2026-06-08 | Three Musketeers review: found 11 bugs, fixed all | D009: features_to_use mutation for ablation, similarity-based attribution fallback, HDF5-safe cache keys | model.py, inference.py, viz.py, cache.py, atlas.py, attribution.py, claims.py, claims.yaml, interface-contracts.md, knowledge-gaps.md |
 | 2026-06-09 | Wrote 30 claims (NC021-NC050), completed 50/50 | 8 category targets hit | claims.yaml |
 | 2026-06-09 | Three Musketeers review #2: found 11 wrong DOIs, 5 infeasible claims | D011: DOI verification required, category renamed multisensory→multimodal, 5 claims replaced with stimulus-driven alternatives | claims.yaml, claims.py, decision-log.md |
+| 2026-07-21 | Resumed after ~6 weeks dormant. Deep-reasoning strategic re-assessment. Pushed the 50-claim DB commit to GitHub. | D012 (reshape NeuroCheck-first; cut NeuroGenre/ScaleLaw), D013 (smoke-test-first gate), D014 (MCP neural-engagement tool as standout direction). G016 closed (deps are public wheels). G018 elevated to top risk. TRIBE v2 dated to May 2026 (~2mo old), weakening the first-mover thesis. | assessment-2026-07-21.md, war-room.md, decision-log.md, knowledge-gaps.md, progress.md |

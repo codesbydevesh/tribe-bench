@@ -78,26 +78,31 @@
 **Progress so far:** 33% → 45% (claims complete + reviewed, GPU test remaining)
 **Target:** 45% → 50%
 
-### Session 4
-**Goal:** First real results
-- [ ] BrainLens demo on Kaggle (#8) — first brain map ever generated
-- [ ] Deploy to HuggingFace (#9)
+### Session 4 (2026-07-21) — RESUMPTION + STRATEGIC RE-ASSESSMENT
+**Goal:** Re-orient after ~6 weeks dormant; decide whether to continue and how.
+- [x] Deep-reasoning strategic re-assessment → `ops/assessment-2026-07-21.md`
+- [x] Pushed the 50-claim DB commit (`ddb57cf`) to `codesbydevesh/tribe-bench` (backup)
+- [x] Closed G016 (deps are public Meta PyPI wheels — existential risk gone)
+- [x] Reshaped scope: NeuroCheck-first; NeuroGenre + ScaleLaw CUT (D012)
+- [x] Logged D012/D013/D014; elevated G018 to top live risk
+- [ ] The <=1hr GPU smoke test on Kaggle (D013) — still the gate for everything
 
-**Target:** 50% → 60%
+**% NOTE (honest):** the 45% is unchanged and, per the assessment, was always generous —
+the remaining ~55% all needs a GPU that has never run. The weighted map below still counts
+NeuroGenre/ScaleLaw milestones that are now CUT (D012), so the old 100% denominator no
+longer reflects the plan. Treat the bar as historical. The real near-term target is a
+NeuroCheck bioRxiv preprint + HF Dataset, not a percentage.
 
-### Session 5-6
-**Goal:** Batch science
-- [ ] NeuroGenre 60-clip batch (#10)
-- [ ] NeuroCheck run on GPU (#12)
+### Next: First real results (post-smoke-test)
+- [ ] The <=1hr Kaggle smoke test (install + one predict + G018 ablation kill/confirm + G005 VRAM)
+- [ ] CrossRef-verify all 50 DOIs + de-dupe the 2 collisions (CPU, no GPU)
+- [ ] NeuroCheck scoring pipeline (only real code left for the flagship)
+- [ ] NeuroCheck resource paper (bioRxiv) + HF Dataset — before model scoring
+- [ ] NeuroCheck run on GPU (#12), then results-paper v2
+- [ ] BrainLens ZeroGPU drip demo (#8/#9) — ONLY if the ablation test passes
 
-**Target:** 60% → 78%
-
-### Session 7-8
-**Goal:** Papers
-- [ ] ScaleLaw replication (#11)
-- [ ] Write and submit papers (#13, #14)
-
-**Target:** 78% → 100%
+~~NeuroGenre 60-clip batch (#10)~~ CUT (D012)
+~~ScaleLaw replication (#11)~~ CUT (D012)
 
 ---
 
