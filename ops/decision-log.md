@@ -382,4 +382,28 @@ the original failure mode).
 
 ---
 
+### D016: Make the tribe-bench GitHub repo public (2026-07-21)
+
+**Decision:** Flip `codesbydevesh/tribe-bench` from private to public.
+
+**Alternatives:**
+- Keep private + upload the folder as a Kaggle Dataset to mount it
+- Keep private + use a `GH_TOKEN` Kaggle secret for a tokenized clone
+
+**Reasoning:** The smoke-test notebook runs on Kaggle and needs the tribe-bench package
+installed there. A public repo clones with a plain `git clone` (no token, no dataset upload)
+— the simplest path for a solo operator. The content (MIT code + CC-BY claims) is destined
+to be public anyway, and per the assessment an open "research infrastructure" posture is a
+trust signal, not a risk. The notebook's clone cell was updated to clone directly, with the
+dataset-mount and `GH_TOKEN` paths kept as fallbacks in case it goes private again.
+
+**Implications:** The code + 50-claim DB are now publicly visible. No secrets are in the repo
+(verified). Can be flipped back to private anytime without breaking the notebook (fallbacks
+remain).
+
+**Revisit if:** We want the work private again before a formal release (flip back; the
+notebook still works via dataset/token).
+
+---
+
 <!-- Add new decisions above this line -->

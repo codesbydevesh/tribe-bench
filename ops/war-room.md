@@ -1,7 +1,13 @@
 # War Room — Project Command Center
 
-Last updated: 2026-07-21
-Updated by: Session 4 — resumption + strategic re-assessment (deep-reasoning pass)
+Last updated: 2026-07-21 (Session 5)
+Updated by: Session 5 — DOI audit + fixes, smoke-test notebook hardened, run environment set up
+
+> **PICK UP HERE (next session): the run environment is fully set up — just RUN it.**
+> Open the Quick-Saved Kaggle notebook → confirm GPU T4 x2 + Internet On + the `HF_TOKEN`
+> secret is attached → **Run All** (~15-30 min) → paste back the final RECORD block +
+> the step-8 ABLATION VERDICT. First confirm the LLaMA-3.2 access shows approved (not
+> pending) on the HF model page. This single run closes G016/G005/G018.
 
 ---
 
@@ -101,8 +107,11 @@ smoke test; ship the resource paper + HF Dataset (DOI report as supplement).
 6. ~~Complete 50 claims (30 more)~~ DONE
 7. ~~Three Musketeers review + fix 11 DOIs, 5 claims replaced~~ DONE
 8. ~~Push the 50-claim DB commit to GitHub (backup)~~ DONE 2026-07-21
-9. **Run the <=1hr GPU smoke test on Kaggle** — install deps + one `predict()` +
-   the G018 ablation kill/confirm + per-extractor VRAM (G005). THE gate for everything.
+9. **Run the <=1hr GPU smoke test on Kaggle** — THE gate for everything. Notebook is
+   hardened (Fable source-review; 4 run-killers fixed; per-extractor VRAM + no-WhisperX
+   fallback added) and Quick-Saved on Kaggle. Environment READY: Kaggle GPU unlocked,
+   HF account + LLaMA-3.2 access requested + `HF_TOKEN` secret attached, repo public so
+   it clones directly. Only action left = open notebook → Run All → paste results.
 10. **CrossRef-verify all 50 DOIs programmatically + de-dupe the 2 collisions** (CPU,
     no GPU — can do tonight). Makes the DB bulletproof and becomes a paper supplement.
 11. Get HF gated approval for LLaMA 3.2-3B (G011 — one click).
@@ -137,3 +146,4 @@ smoke test; ship the resource paper + HF Dataset (DOI report as supplement).
 | 2026-06-09 | Wrote 30 claims (NC021-NC050), completed 50/50 | 8 category targets hit | claims.yaml |
 | 2026-06-09 | Three Musketeers review #2: found 11 wrong DOIs, 5 infeasible claims | D011: DOI verification required, category renamed multisensory→multimodal, 5 claims replaced with stimulus-driven alternatives | claims.yaml, claims.py, decision-log.md |
 | 2026-07-21 | Resumed after ~6 weeks dormant. Deep-reasoning strategic re-assessment. Pushed the 50-claim DB commit to GitHub. | D012 (reshape NeuroCheck-first; cut NeuroGenre/ScaleLaw), D013 (smoke-test-first gate), D014 (MCP neural-engagement tool as standout direction). G016 closed (deps are public wheels). G018 elevated to top risk. TRIBE v2 dated to May 2026 (~2mo old), weakening the first-mover thesis. | assessment-2026-07-21.md, war-room.md, decision-log.md, knowledge-gaps.md, progress.md |
+| 2026-07-21 (Session 5) | CrossRef DOI audit: 17 of 50 claims had broken/mis-attributed citations — all fixed, 50/50 now resolve+match (D015). Built + hardened the smoke-test notebook (Fable source-review found 4 run-killers; from_pretrained + features_to_use ablation confirmed correct vs source; per-extractor VRAM + no-WhisperX fallback added; zero wrapper fixes needed). Made repo public for Kaggle (D016). Set up the full run environment (Kaggle GPU, HF account + LLaMA access + HF_TOKEN secret, notebook Quick-Saved). | D015 (DOI audit), D016 (repo public). Next = Run All on Kaggle. | scripts/verify_dois.py, resolve_dois.py, patch_dois.py, doi_verification_report.md, claims.yaml, notebooks/01_setup_test.ipynb, decision-log.md, war-room.md, progress.md |

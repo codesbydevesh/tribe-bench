@@ -93,6 +93,20 @@ NeuroGenre/ScaleLaw milestones that are now CUT (D012), so the old 100% denomina
 longer reflects the plan. Treat the bar as historical. The real near-term target is a
 NeuroCheck bioRxiv preprint + HF Dataset, not a percentage.
 
+### Session 5 (2026-07-21) — DB HARDENED + GATE READY TO RUN
+**Goal:** Make the flagship DB bulletproof and get the smoke test genuinely runnable.
+- [x] CrossRef DOI audit + fixed 17 broken/mis-attributed claims → 50/50 resolve+match (D015)
+- [x] Added DOI tooling: verify_dois.py / resolve_dois.py / patch_dois.py + clean report
+- [x] Rebuilt + hardened the smoke-test notebook (Fable source-review; 4 run-killers fixed;
+      from_pretrained + ablation confirmed correct; per-extractor VRAM + no-WhisperX fallback)
+- [x] Made repo public for Kaggle (D016); notebook clones directly
+- [x] Set up the run environment: Kaggle GPU unlocked, HF account + LLaMA-3.2 access
+      requested + `HF_TOKEN` secret attached, notebook imported + Quick-Saved
+- [ ] Actually RUN it on Kaggle (Run All) — the only remaining action, needs a GPU session
+
+**Note:** no % change — still pre-GPU. But the flagship DB is now publishable-grade and the
+gate is one click away from an answer. Everything backed up on GitHub (public).
+
 ### Next: First real results (post-smoke-test)
 - [ ] The <=1hr Kaggle smoke test (install + one predict + G018 ablation kill/confirm + G005 VRAM)
 - [ ] CrossRef-verify all 50 DOIs + de-dupe the 2 collisions (CPU, no GPU)
