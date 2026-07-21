@@ -346,4 +346,40 @@ described.
 
 ---
 
+### D015: Full CrossRef DOI audit — 17 of 50 claims had broken or mis-attributed citations (2026-07-21)
+
+**Decision:** Machine-verify every claim DOI against CrossRef before the NeuroCheck resource
+paper, and fix all failures. Ship the verification tooling + clean report as a paper
+supplement.
+
+**What the audit found (this is worse than "typo'd DOIs"):**
+- 34/50 clean on first pass. **17 claims needed correction.**
+- 10 DOIs did not resolve on CrossRef at all; 6 resolved to a *different paper* than the
+  citation; 2 pairs shared a DOI.
+- Several were not bad DOIs but **mis-attributed citations** — the wrong journal/year:
+  NC006 (J Neurosci → Cerebral Cortex), NC016 (Science → Current Biology), NC020
+  (Neuropsychologia → Nature Neuroscience), NC028 (J Neurophysiol → Cerebral Cortex),
+  NC033 (J Neurophysiol → Neuron), NC004 (Tootell 1998 → the actual V1-contrast paper,
+  Boynton 1996).
+- De-duplicated shared sources: NC027 → Humphries 2010 (A1 tonotopy; Formisano is NC023's),
+  NC024 → Vouloumanos 2001 (posterior-belt speech vs nonspeech; Scott 2000 kept for NC029).
+
+**Reasoning:** D011 caught the 37% DOI-hallucination rate in claims batch 2 and hand-fixed
+it, but batch 1 and others were never machine-verified end-to-end. A reviewer running the
+same CrossRef check would have found ~16 bad references and discarded the benchmark. Every
+correction here was confirmed by a direct CrossRef lookup — no LLM-guessed DOIs (that was
+the original failure mode).
+
+**Implications:**
+- `scripts/verify_dois.py` (audit), `scripts/resolve_dois.py` (CrossRef candidate search),
+  `scripts/patch_dois.py` (line-anchored corrections) are now in the repo. Re-run
+  `verify_dois.py` before any claims release.
+- Result: **50/50 DOIs resolve and match their citation, zero duplicates.**
+- The clean `scripts/doi_verification_report.md` becomes a supplementary artifact — turns
+  the 37% scar into a credibility signal.
+
+**Revisit if:** New claims are added (re-run the verifier) or CrossRef metadata changes.
+
+---
+
 <!-- Add new decisions above this line -->

@@ -61,9 +61,13 @@ fsaverage5 alignment + HRF timing is a ~30%-fail swamp.
 **Next action:** none. Revisit only after a NeuroCheck preprint ships.
 
 ### NeuroCheck (Build 4 — Flagship)
-**Status:** 50/50 claims written and verified. DOIs verified via web search. Category validation in claims.py.
-**Blocked by:** GPU for benchmark run
-**Next action:** Begin scoring pipeline after GPU smoke test passes
+**Status:** 50/50 claims written. **DOIs now machine-verified against CrossRef (2026-07-21,
+D015): 17 claims had broken or mis-attributed citations — all fixed; 50/50 resolve + match,
+zero duplicates.** Verification tooling in `scripts/` (verify/resolve/patch). Category
+validation in claims.py.
+**Blocked by:** GPU for the benchmark scoring run.
+**Next action:** Write the scoring pipeline (only real code left for the flagship) after the
+smoke test; ship the resource paper + HF Dataset (DOI report as supplement).
 
 ### Compute Access
 **Status:** NO APPLICATIONS SUBMITTED

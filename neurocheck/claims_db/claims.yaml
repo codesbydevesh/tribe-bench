@@ -69,8 +69,8 @@
 
 - id: "NC004"
   claim: "Primary visual cortex (V1) responds more strongly to high-contrast visual stimuli than to a uniform gray baseline."
-  citation: "Tootell et al., 1998, Journal of Neuroscience"
-  doi: "10.1523/JNEUROSCI.18-17-06838.1998"
+  citation: "Boynton et al., 1996, Journal of Neuroscience"
+  doi: "10.1523/JNEUROSCI.16-13-04207.1996"
   category: "visual_selectivity"
   roi:
     atlas: "glasser"
@@ -111,8 +111,8 @@
 
 - id: "NC006"
   claim: "Primary auditory cortex responds more strongly to intelligible speech than to spectrally matched noise."
-  citation: "Binder et al., 2000, Journal of Neuroscience"
-  doi: "10.1523/JNEUROSCI.20-01-00286.2000"
+  citation: "Binder et al., 2000, Cerebral Cortex"
+  doi: "10.1093/cercor/10.5.512"
   category: "auditory_processing"
   roi:
     atlas: "glasser"
@@ -133,7 +133,7 @@
 - id: "NC007"
   claim: "The auditory belt regions respond more strongly to natural sounds than to pure tones."
   citation: "Wessinger et al., 2001, Journal of Cognitive Neuroscience"
-  doi: "10.1162/089892901564315"
+  doi: "10.1162/089892901564108"
   category: "auditory_processing"
   roi:
     atlas: "glasser"
@@ -154,7 +154,7 @@
 - id: "NC008"
   claim: "Broca's area (BA 44/45) activates more strongly for syntactically complex sentences than for simple word lists."
   citation: "Friederici et al., 2006, Cerebral Cortex"
-  doi: "10.1093/cercor/bhj064"
+  doi: "10.1093/cercor/bhj106"
   category: "language"
   roi:
     atlas: "glasser"
@@ -196,7 +196,7 @@
 - id: "NC010"
   claim: "Area 45 (pars triangularis) responds more strongly to semantically meaningful sentences than to pseudoword strings."
   citation: "Dapretto & Bookheimer, 1999, Neuron"
-  doi: "10.1016/S0896-6273(00)80948-8"
+  doi: "10.1016/S0896-6273(00)80855-7"
   category: "language"
   roi:
     atlas: "glasser"
@@ -259,7 +259,7 @@
 - id: "NC013"
   claim: "The frontal eye fields show greater activation during saccadic eye movements than during fixation."
   citation: "Paus, 1996, Neuropsychologia"
-  doi: "10.1016/0028-3932(95)00145-X"
+  doi: "10.1016/0028-3932(95)00134-4"
   category: "memory_attention"
   roi:
     atlas: "glasser"
@@ -301,7 +301,7 @@
 - id: "NC015"
   claim: "Area V4 shows greater activation for colored stimuli than for luminance-matched achromatic versions."
   citation: "Bartels & Zeki, 2000, European Journal of Neuroscience"
-  doi: "10.1046/j.1460-9568.2000.00068.x"
+  doi: "10.1046/j.1460-9568.2000.00905.x"
   category: "visual_selectivity"
   roi:
     atlas: "glasser"
@@ -321,8 +321,8 @@
 
 - id: "NC016"
   claim: "Audiovisual speech (seeing and hearing a talker) produces greater activation in STS than auditory-only speech."
-  citation: "Calvert et al., 2000, Science"
-  doi: "10.1126/science.290.5490.350"
+  citation: "Calvert et al., 2000, Current Biology"
+  doi: "10.1016/S0960-9822(00)00513-3"
   category: "multimodal"
   roi:
     atlas: "glasser"
@@ -364,7 +364,7 @@
 - id: "NC018"
   claim: "MST responds more strongly to optic flow patterns than to random incoherent motion."
   citation: "Morrone et al., 2000, Nature Neuroscience"
-  doi: "10.1038/81575"
+  doi: "10.1038/81860"
   category: "visual_selectivity"
   roi:
     atlas: "glasser"
@@ -405,8 +405,8 @@
 
 - id: "NC020"
   claim: "Emotional prosody in speech produces greater activation in right STS than neutral prosody."
-  citation: "Grandjean et al., 2005, Neuropsychologia"
-  doi: "10.1016/j.neuropsychologia.2004.07.015"
+  citation: "Grandjean et al., 2005, Nature Neuroscience"
+  doi: "10.1038/nn1392"
   category: "emotion"
   roi:
     atlas: "glasser"
@@ -493,8 +493,8 @@
 
 - id: "NC024"
   claim: "The posterior belt of auditory cortex responds more strongly to speech sounds than to amplitude-matched white noise bursts."
-  citation: "Scott et al., 2000, Brain"
-  doi: "10.1093/brain/123.12.2400"
+  citation: "Vouloumanos et al., 2001, Journal of Cognitive Neuroscience"
+  doi: "10.1162/089892901753165890"
   category: "auditory_processing"
   roi:
     atlas: "glasser"
@@ -556,8 +556,8 @@
 
 - id: "NC027"
   claim: "Primary auditory cortex (A1) responds more strongly to pure tones than to silence, with robust frequency tuning."
-  citation: "Wessinger et al., 2001, Journal of Cognitive Neuroscience"
-  doi: "10.1162/089892901564315"
+  citation: "Humphries et al., 2010, NeuroImage"
+  doi: "10.1016/j.neuroimage.2010.01.046"
   category: "auditory_processing"
   roi:
     atlas: "glasser"
@@ -579,8 +579,8 @@
 
 - id: "NC028"
   claim: "The angular gyrus responds more strongly to meaningful sentences than to lists of unrelated words."
-  citation: "Binder et al., 2009, Journal of Neurophysiology"
-  doi: "10.1152/jn.00923.2008"
+  citation: "Binder et al., 2009, Cerebral Cortex"
+  doi: "10.1093/cercor/bhp055"
   category: "language"
   roi:
     atlas: "glasser"
@@ -643,7 +643,7 @@
 - id: "NC031"
   claim: "The posterior superior temporal gyrus responds more strongly to phonemic contrasts than to acoustically matched non-speech analogues."
   citation: "Liebenthal et al., 2005, Cerebral Cortex"
-  doi: "10.1093/cercor/bhi018"
+  doi: "10.1093/cercor/bhi040"
   category: "language"
   roi:
     atlas: "glasser"
@@ -686,8 +686,8 @@
 
 - id: "NC033"
   claim: "The intraparietal sulcus responds more strongly to spatially congruent audiovisual stimuli than to auditory-only stimuli."
-  citation: "Bremmer et al., 2001, Journal of Neurophysiology"
-  doi: "10.1152/jn.2001.86.5.2388"
+  citation: "Bremmer et al., 2001, Neuron"
+  doi: "10.1016/S0896-6273(01)00198-2"
   category: "multimodal"
   roi:
     atlas: "glasser"
@@ -901,7 +901,7 @@
 - id: "NC043"
   claim: "The anterior intraparietal sulcus responds more strongly to three-dimensional graspable objects than to flat two-dimensional shapes."
   citation: "Culham et al., 2003, Experimental Brain Research"
-  doi: "10.1007/s00221-002-1239-4"
+  doi: "10.1007/s00221-003-1591-5"
   category: "motor_perception"
   roi:
     atlas: "glasser"
@@ -943,7 +943,7 @@
 - id: "NC045"
   claim: "The inferior parietal lobule (PFt) responds more strongly to observation of tool-use actions than to observation of meaningless hand movements."
   citation: "Peeters et al., 2009, Journal of Neuroscience"
-  doi: "10.1523/JNEUROSCI.3876-08.2009"
+  doi: "10.1523/JNEUROSCI.2040-09.2009"
   category: "motor_perception"
   roi:
     atlas: "glasser"
