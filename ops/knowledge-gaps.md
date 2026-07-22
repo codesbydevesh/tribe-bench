@@ -14,7 +14,11 @@ Our estimates (V-JEPA 2 ~10GB FP16, LLaMA ~5GB, Wav2Vec ~1GB) are guesses.
 **Priority:** HIGH — determines T4 feasibility
 **How to close:** Run smoke test on Kaggle with `torch.cuda.max_memory_allocated()`
 after each extractor runs and before `_free_extractor_model()` clears it.
-**Status:** OPEN — blocked by no GPU access yet
+**Status:** OPEN — first Kaggle run (2026-07-22) reached the model-load phase but was blocked
+by an import-shadow bug (the clone dir `/kaggle/working/tribev2` shadowed the package as a
+namespace package → `ModuleNotFoundError: tribev2.demo_utils`). Fixed 2026-07-22 (clone to
+`tribev2_src` + defensive guards). Notebook already instruments per-extractor VRAM via a
+`_free_extractor_model` hook — rerun will close this.
 
 ### G016: neuralset/neuraltrain pip availability
 **Question:** Are `neuralset`, `neuraltrain`, and `exca` pip-installable from
@@ -29,6 +33,11 @@ The existential "DOA on free hardware" risk is resolved false. Remaining nuance 
 first install, not a blocker): `neuralset 0.0.2` requires Python >=3.12 — if Kaggle is on
 3.11, install via uv/conda. "Exists on PyPI" is not yet "installs cleanly with all transitive
 deps on a T4" — the smoke test confirms that.
+**✅ CONFIRMED ON HARDWARE 2026-07-22 (first Kaggle run):** Kaggle is **Python 3.12.13** (so the
+>=3.12 caveat is moot), `git clone` + `pip install -e tribev2` returned **rc=0**, neuralset/
+neuraltrain/exca resolved, torch 2.6.0+cu124, 2× Tesla T4 15.6GB, ffmpeg + uvx present, numpy
+2.0.2, HF login OK. The install genuinely works on Kaggle's free image. **G016 fully closed —
+this was the ~40%-fatal pre-mortem risk, now empirically dead.**
 
 ### G018: features_to_use mutation path on TribeModel
 **Question:** What is the exact attribute path to `features_to_use` on a loaded
@@ -43,7 +52,8 @@ identical maps for every modality and the demo is fake → pivot to NeuroCheck-o
 etc. to find where `features_to_use` lives. Then verify that mutating it before
 `model.predict()` controls which extractors run — assert full vs modality-removed outputs DIFFER.
 **Status:** OPEN — code has discovery logic in `_find_features_to_use()`, needs the <=1hr GPU
-smoke test (D013).
+smoke test (D013). First run (2026-07-22) never reached this — blocked by the tribev2 import
+shadow (see G005), now fixed. Rerun pending.
 
 ---
 

@@ -165,6 +165,28 @@ runtime ablation, mutate `features_to_use` instead.
 
 ---
 
+## FIRST KAGGLE RUN — EMPIRICAL (2026-07-22)
+
+First real GPU run of the smoke-test notebook. Confirmed on Kaggle's free image:
+
+| Fact | Status | Source |
+|------|--------|--------|
+| Kaggle Python = 3.12.13 (satisfies `neuralset>=3.12`) | VERIFIED | run output |
+| `pip install -e tribev2` returns rc=0; neuralset/neuraltrain/exca resolve | VERIFIED | run output |
+| torch 2.6.0+cu124; CUDA available; 2× Tesla T4 15.6 GB | VERIFIED | run output |
+| ffmpeg + uvx on PATH; numpy 2.0.2 | VERIFIED | run output |
+| HuggingFace login via `HF_TOKEN` Kaggle secret works | VERIFIED | run output |
+| `tribe_tools.model` + all optional modules import on Kaggle | VERIFIED | run output |
+
+**BUG FOUND + FIXED (2026-07-22): tribev2 import shadowing.** Cloning to
+`/kaggle/working/tribev2` created a namespace package that shadowed the pip-installed one
+(cwd is on `sys.path`, clone root has no `__init__.py`), so `import tribev2` found the bare
+dir and `tribev2.demo_utils` was missing → model load failed with `ModuleNotFoundError`,
+despite install rc=0. **Fix:** clone to `/kaggle/working/tribev2_src`, `rmtree` any stale
+`tribev2` dir, drop it from `sys.modules`, `importlib.invalidate_caches()`, and a fail-fast
+import check. STILL UNMEASURED (rerun pending): per-extractor + overall VRAM (G005), the
+ablation verdict (G018).
+
 ## Verification Queue (Updated 2026-06-08)
 
 1. [x] Clone tribev2 repo

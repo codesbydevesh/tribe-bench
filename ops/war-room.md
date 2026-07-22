@@ -3,11 +3,15 @@
 Last updated: 2026-07-21 (Session 5)
 Updated by: Session 5 — DOI audit + fixes, smoke-test notebook hardened, run environment set up
 
-> **PICK UP HERE (next session): the run environment is fully set up — just RUN it.**
-> Open the Quick-Saved Kaggle notebook → confirm GPU T4 x2 + Internet On + the `HF_TOKEN`
-> secret is attached → **Run All** (~15-30 min) → paste back the final RECORD block +
-> the step-8 ABLATION VERDICT. First confirm the LLaMA-3.2 access shows approved (not
-> pending) on the HF model page. This single run closes G016/G005/G018.
+> **PICK UP HERE (next session): re-import the FIXED notebook and Run All.**
+> First Kaggle run (2026-07-22) got most of the way: **install works, G016 is empirically
+> DEAD** (Python 3.12.13, install rc=0, 2× T4, HF login OK — see source-of-truth "FIRST
+> KAGGLE RUN"). It was blocked only by an import-shadow bug (clone dir `tribev2` shadowed the
+> package) → model never loaded → G005/G018 still unmeasured. **FIXED 2026-07-22** (clone to
+> `tribev2_src` + guards + fail-fast check). NEXT: re-import the notebook from the GitHub link
+> (the fix is in the notebook file), attach `HF_TOKEN`, GPU T4 x2 + Internet On, stop any old
+> session, **Run All**. Watch cell 1 for `tribev2.demo_utils import: OK` (~2 min) → then it
+> should reach Phase 7/8 and finally give VRAM (G005) + the ablation verdict (G018).
 
 ---
 
