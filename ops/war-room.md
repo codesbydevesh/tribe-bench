@@ -3,20 +3,25 @@
 Last updated: 2026-07-21 (Session 5)
 Updated by: Session 5 — DOI audit + fixes, smoke-test notebook hardened, run environment set up
 
-> **PICK UP HERE (next session): Factory-reset the kernel, re-import the notebook, Run All.**
-> Run 1 (2026-07-22) proved **install works, G016 is empirically DEAD** (Python 3.12.13,
-> install rc=0, 2× T4, HF login OK). Run 2 (after the `tribev2_src` rename) STILL died at
-> **Phase 6** with `ModuleNotFoundError: No module named 'tribev2.demo_utils'` (Phase 4 wrapper
-> import passed). Diagnosis: `import tribev2` resolves but to a package without `demo_utils` —
-> the editable-install `.pth` doesn't activate mid-session, so the import can miss `tribev2_src`.
-> **cell-2 hardened v2 (2026-07-22):** now puts `tribev2_src` on `sys.path` explicitly (doesn't
-> trust the `.pth`), pops any cached `tribev2*`, and the fail-fast **asserts `tribev2.__file__`
-> is under `tribev2_src` and RAISES** (so Run All stops at Phase 1, not Phase 6). NEXT: commit +
-> push the notebook, then on Kaggle do **Factory reset** (clears stale sys.modules/.pth from the
-> failed runs), attach `HF_TOKEN`, GPU T4 x2 + Internet On, **Run All**. Watch cell-2 for
-> `tribev2 resolves to: /kaggle/working/tribev2_src/...` + `tribev2.demo_utils imports` → then
-> Phase 6 loads and Phase 7/8 finally give VRAM (G005) + the ablation verdict (G018).
-> G005/G018 still UNMEASURED (two failed loads, zero data recorded).
+> **✅ SMOKE TEST PASSED END-TO-END (2026-07-22) — the GO/NO-GO gate is GO.** All three
+> project-gating gaps are now CLOSED on a free Kaggle T4:
+> - **G016** (install) DEAD — Python 3.12.13, `pip install -e tribev2` rc=0, deps resolve.
+> - **G005** (fits T4?) YES — overall peak **11.12 GB / 15.6 GB** (text 7.17 / audio 10.19 /
+>   video 11.12; brain fwd 0.77). Load 13.7s, inference ~20 min (T4 video encode dominates).
+> - **G018** (ablation) **WORKS** — video-only vs full max abs diff 0.654 → **BrainLens's core
+>   mechanic is real; BrainLens is NOT cut.** Output shape `(31, 20484)`, path = `Data.features_to_use`.
+> Full numbers in source-of-truth "SECOND KAGGLE RUN"; the two fixes that got it there
+> (explicit sys.path for tribev2 + numpy 2.2.6 restart recipe) are in `discussions.md`.
+> **Notebook fixes are committed** (58a7a94 + f263748) but NOT the numpy-restart note; the
+> reliable run recipe = Run All → Restart & Clear → Run All.
+>
+> **PICK UP HERE (next session): move to building, the gate is behind us.** Priority order:
+> (1) **NeuroCheck scoring pipeline** — the only real code left for the flagship; now unblocked
+> (we can load the model + predict). (2) **Ship the NeuroCheck resource paper + HF Dataset**
+> (DOI-verified 50 claims are ready). (3) **BrainLens demo** — now green-lit by G018; render a
+> real modality brain map (the ablation already produces the arrays). Also: bake a
+> "loaded numpy != installed → raise 'restart now'" guard into notebook cell-2 so the restart
+> step is self-explaining.
 
 ---
 
@@ -39,8 +44,9 @@ scope. Headlines:
   ablation test passes. Standout follow-on = an MCP "neural-engagement" tool (idea #1).
 - The 50-claim DB commit (`ddb57cf`) is now **pushed** to `codesbydevesh/tribe-bench`.
 
-**Next milestone:** the <=1hr GPU smoke test on Kaggle (install + one predict + the
-ablation kill/confirm + per-extractor VRAM). See assessment §"Biggest live risk".
+**Next milestone:** ✅ DONE 2026-07-22 — the GPU smoke test PASSED (G016/G005/G018 all closed,
+BrainLens mechanic confirmed). New milestone: **build the NeuroCheck scoring pipeline** and ship
+the resource paper + HF Dataset.
 
 ---
 
@@ -61,9 +67,12 @@ ablation kill/confirm + per-extractor VRAM). See assessment §"Biggest live risk
 | video_utils.py | Done | ffmpeg wrappers |
 
 ### BrainLens (Build 1)
-**Status:** MVP COMPLETE (CPU). 5 files: inference.py, attribution.py, visualization.py, cli.py, __main__.py
-**Blocked by:** GPU for first brain map
-**Next action:** Run on Kaggle with a test video
+**Status:** MVP COMPLETE (CPU) + **ABLATION MECHANIC CONFIRMED LIVE (2026-07-22, G018 WORKS).**
+The one existential risk (does masking a modality change the output?) is cleared — video-only
+vs full differ by max abs diff 0.654. BrainLens is NOT cut. 5 files: inference.py,
+attribution.py, visualization.py, cli.py, __main__.py.
+**Blocked by:** nothing structural — needs a demo run to render a real modality brain map.
+**Next action:** produce a first RGB modality-attribution map from the ablation arrays.
 
 ### NeuroGenre (Build 2)
 **Status:** CUT (2026-07-21, D012) — deprioritized indefinitely. 35% chance genres
@@ -156,3 +165,4 @@ smoke test; ship the resource paper + HF Dataset (DOI report as supplement).
 | 2026-06-09 | Three Musketeers review #2: found 11 wrong DOIs, 5 infeasible claims | D011: DOI verification required, category renamed multisensory→multimodal, 5 claims replaced with stimulus-driven alternatives | claims.yaml, claims.py, decision-log.md |
 | 2026-07-21 | Resumed after ~6 weeks dormant. Deep-reasoning strategic re-assessment. Pushed the 50-claim DB commit to GitHub. | D012 (reshape NeuroCheck-first; cut NeuroGenre/ScaleLaw), D013 (smoke-test-first gate), D014 (MCP neural-engagement tool as standout direction). G016 closed (deps are public wheels). G018 elevated to top risk. TRIBE v2 dated to May 2026 (~2mo old), weakening the first-mover thesis. | assessment-2026-07-21.md, war-room.md, decision-log.md, knowledge-gaps.md, progress.md |
 | 2026-07-21 (Session 5) | CrossRef DOI audit: 17 of 50 claims had broken/mis-attributed citations — all fixed, 50/50 now resolve+match (D015). Built + hardened the smoke-test notebook (Fable source-review found 4 run-killers; from_pretrained + features_to_use ablation confirmed correct vs source; per-extractor VRAM + no-WhisperX fallback added; zero wrapper fixes needed). Made repo public for Kaggle (D016). Set up the full run environment (Kaggle GPU, HF account + LLaMA access + HF_TOKEN secret, notebook Quick-Saved). | D015 (DOI audit), D016 (repo public). Next = Run All on Kaggle. | scripts/verify_dois.py, resolve_dois.py, patch_dois.py, doi_verification_report.md, claims.yaml, notebooks/01_setup_test.ipynb, decision-log.md, war-room.md, progress.md |
+| 2026-07-22 (Session 6) | **GPU SMOKE TEST PASSED end-to-end on Kaggle T4 — the GO gate.** Debugged 3 failures live (tribev2 import shadow → fixed by explicit sys.path to tribev2_src; numpy `_center` ImportError → Kaggle pre-imports numpy 2.0.2, fixed via 2.2.6 + Restart recipe). Results: G016 dead, **G005 fits (11.12/15.6 GB)**, **G018 ablation WORKS (0.654 diff) → BrainLens alive**. Recorded to source-of-truth + knowledge-gaps; running debug log kept in discussions.md. | Smoke test = GO; BrainLens NOT cut; next = NeuroCheck scoring pipeline + paper/HF dataset. | notebooks/01_setup_test.ipynb (58a7a94, f263748), ops/war-room.md, source-of-truth.md, knowledge-gaps.md, discussions.md |

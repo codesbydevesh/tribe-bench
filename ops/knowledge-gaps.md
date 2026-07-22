@@ -14,11 +14,15 @@ Our estimates (V-JEPA 2 ~10GB FP16, LLaMA ~5GB, Wav2Vec ~1GB) are guesses.
 **Priority:** HIGH — determines T4 feasibility
 **How to close:** Run smoke test on Kaggle with `torch.cuda.max_memory_allocated()`
 after each extractor runs and before `_free_extractor_model()` clears it.
-**Status:** OPEN — first Kaggle run (2026-07-22) reached the model-load phase but was blocked
-by an import-shadow bug (the clone dir `/kaggle/working/tribev2` shadowed the package as a
-namespace package → `ModuleNotFoundError: tribev2.demo_utils`). Fixed 2026-07-22 (clone to
-`tribev2_src` + defensive guards). Notebook already instruments per-extractor VRAM via a
-`_free_extractor_model` hook — rerun will close this.
+**Status:** ✅ CLOSED 2026-07-22 (full Kaggle run). **Fits a T4 with headroom.** Overall peak
+**11.12 GB** on a 15.6 GB T4 (~4.5 GB free). Per-extractor peaks (brain model ~0.77 GB resident
+throughout, so these are stage totals): **text 7.17, audio 10.19, video 11.12 GB**; brain-model
+forward pass alone 0.77 GB. The V-JEPA2 video encoder is the high-water mark. Our pre-mortem
+guesses (video ~10, LLaMA ~5, Wav2Vec ~1) were in the right ballpark but the peak is higher
+(~11 GB) because the brain model stays resident during each extractor. Output `(31, 20484)`,
+load 13.7s, inference 1176.7s (~20 min, dominated by the T4 video encode + one-time weight
+downloads). Measured via the `_free_extractor_model` hook. Got here after fixing the import
+shadow + a numpy load-order issue (see source-of-truth "SECOND KAGGLE RUN").
 
 ### G016: neuralset/neuraltrain pip availability
 **Question:** Are `neuralset`, `neuraltrain`, and `exca` pip-installable from
@@ -51,9 +55,15 @@ identical maps for every modality and the demo is fake → pivot to NeuroCheck-o
 **How to close:** Load TribeModel on GPU and inspect `dir(model)`, `dir(model.data)`,
 etc. to find where `features_to_use` lives. Then verify that mutating it before
 `model.predict()` controls which extractors run — assert full vs modality-removed outputs DIFFER.
-**Status:** OPEN — code has discovery logic in `_find_features_to_use()`, needs the <=1hr GPU
-smoke test (D013). First run (2026-07-22) never reached this — blocked by the tribev2 import
-shadow (see G005), now fixed. Rerun pending.
+**Status:** ✅ CLOSED 2026-07-22 (full Kaggle run) — **ABLATION WORKS. BrainLens's core mechanic
+is real.** `_find_features_to_use()` resolved to `Data.features_to_use = ['text','audio','video']`
+(path #1, exactly as predicted from source). Masking audio+text (video-only pass) vs the full
+pass gave **`max abs diff 0.65430`** — clearly non-zero → mutating `features_to_use` before
+`predict()` genuinely controls which extractors run and changes the output. `features_to_mask`
+config confirmed inference-inert (`[]`). **BrainLens is NOT cut — the D012/D013 "pivot to
+NeuroCheck-only if ablation fails" contingency does NOT trigger.** Note: the video-only pass
+reused cached video features (fast, ~1s dataloader), so re-running ablations is cheap once the
+full pass is cached.
 
 ---
 
@@ -142,3 +152,7 @@ submissions. How do we get one? Can any of the 5 groups endorse us?
 | G008 | What is TRIBE v2's vertex ordering? | Left hemisphere first (indices 0 to expected_size-1), right hemisphere second (indices expected_size to 2*expected_size-1). Confirmed in utils.py:242 `index_offset = expected_size if hemi == "right" else 0`. | 2026-06-08 |
 | G017 | Exact feature names for features_to_mask? | Feature names are "video", "audio", "text" — confirmed from main.py:98-100 `data.video_feature`, `data.audio_feature`, `data.text_feature`. The `features_to_mask` config uses these names (main.py:486-504). However, `features_to_mask` only works at model construction time, not at inference. For runtime ablation, mutate `features_to_use` instead. | 2026-06-08 |
 | G016 | neuralset/neuraltrain/exca pip-installable? | YES — all three are real, public, pure-Python (`py3-none-any`) PyPI wheels from Meta FAIR (`facebookresearch/neuroai`), v0.0.2. NOT private. Existential "DOA on free hardware" risk resolved false. `neuralset 0.0.2` needs Python >=3.12; confirm clean install (transitive deps) at first Kaggle run. | 2026-07-21 |
+| G005 | Real peak VRAM per extractor on GPU? | FITS A T4. Overall peak 11.12 GB / 15.6 GB (per-extractor: text 7.17, audio 10.19, video 11.12; brain fwd 0.77). Video encoder = high-water mark. | 2026-07-22 |
+| G018 | features_to_use mutation path + does ablation change output? | WORKS. Path = `Data.features_to_use` (#1). Video-only vs full max abs diff 0.654 (non-zero) → masking controls extraction. BrainLens mechanic confirmed; NOT cut. | 2026-07-22 |
+| G011 | HF auth for LLaMA 3.2 | Resolved in practice — `HF_TOKEN` Kaggle secret + granted LLaMA-3.2 gated access; text extractor loaded LLaMA-3.2 fine in the 2026-07-22 run. | 2026-07-22 |
+| G013 | ffmpeg on Kaggle? | YES — `ffmpeg` (and `uvx`) present on PATH on the Kaggle T4 image (2026-07-22 run). | 2026-07-22 |

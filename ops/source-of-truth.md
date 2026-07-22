@@ -184,8 +184,32 @@ First real GPU run of the smoke-test notebook. Confirmed on Kaggle's free image:
 dir and `tribev2.demo_utils` was missing → model load failed with `ModuleNotFoundError`,
 despite install rc=0. **Fix:** clone to `/kaggle/working/tribev2_src`, `rmtree` any stale
 `tribev2` dir, drop it from `sys.modules`, `importlib.invalidate_caches()`, and a fail-fast
-import check. STILL UNMEASURED (rerun pending): per-extractor + overall VRAM (G005), the
-ablation verdict (G018).
+import check.
+
+## SECOND KAGGLE RUN — FULL SUCCESS (2026-07-22)
+
+The smoke test ran END TO END (Phase 1 → 9). Two more fixes were needed after the first run's
+import shadow: (1) resolve `tribev2` by putting `tribev2_src` on `sys.path` explicitly instead
+of trusting the editable `.pth`; (2) a numpy load-order issue — Kaggle pre-imports numpy 2.0.2
+at boot, tribev2's install upgrades it to 2.2.6 on disk mid-session → `_center` ImportError.
+Recipe that worked: Run All once (puts numpy 2.2.6 on disk) → Restart & Clear (NOT factory
+reset) → Run All. Then clean sail. **Empirical results (all VERIFIED on 2× Tesla T4 15.6 GB,
+torch 2.6.0+cu124, Python 3.12.13):**
+
+| Fact | Value | Gap |
+|------|-------|-----|
+| Output shape | `(31, 20484)` — 31 kept segments × 20,484 fsaverage5 vertices | — |
+| Model load time | 13.7 s | — |
+| Inference time (full pass) | 1176.7 s (~20 min; T4 video encode + one-time weight DLs dominate) | — |
+| Per-extractor peak VRAM | text 7.17 · audio 10.19 · video 11.12 GB (brain model ~0.77 GB resident) | G005 |
+| Brain-model forward peak | 0.77 GB | G005 |
+| **Overall peak VRAM** | **11.12 GB / 15.6 GB (fits, ~4.5 GB headroom)** | G005 |
+| `features_to_use` path | `Data.features_to_use = ['text','audio','video']` (probe path #1) | G018 |
+| **Modality ablation** | **WORKS — video-only vs full max abs diff 0.654 (non-zero)** | G018 |
+
+**Consequence:** G005 + G018 + G016 all CLOSED. TRIBE v2 installs, loads, fits a free T4, and
+the ablation mechanic BrainLens depends on is real → BrainLens is NOT cut. Everything the
+project was gated on is answered GO.
 
 ## Verification Queue (Updated 2026-06-08)
 
@@ -195,11 +219,11 @@ ablation verdict (G018).
 4. [x] Identify how to isolate each encoder's forward pass → ANSWER: already isolated as external extractors
 5. [x] Identify the exact tensor shapes at each stage boundary
 6. [x] Check if modality dropout = zeroing out one encoder's output → ANSWER: yes, per-sample random mask
-7. [ ] Check actual memory usage by loading model on GPU (needs GPU)
+7. [x] Check actual memory usage by loading model on GPU → DONE 2026-07-22: peak 11.12 GB on T4 (G005)
 8. [x] Read tribev2/utils.py — HCP atlas functions (get_hcp_labels, get_hcp_roi_indices, summarize_by_roi)
 
 Remaining:
 - [x] Check FSAVERAGE_SIZES dict for exact vertex count → ANSWER: 10,242 per hemisphere, 20,484 total
-- [ ] Verify neuralset/neuraltrain are pip-installable or if they're Meta-internal
-- [ ] Test `TribeModel.from_pretrained("facebook/tribev2")` on Kaggle
-- [ ] Measure actual VRAM per extractor on GPU
+- [x] Verify neuralset/neuraltrain are pip-installable → YES, public PyPI wheels (G016, 2026-07-22)
+- [x] Test `TribeModel.from_pretrained("facebook/tribev2")` on Kaggle → loads in 13.7s (2026-07-22)
+- [x] Measure actual VRAM per extractor on GPU → text 7.17 / audio 10.19 / video 11.12 GB (G005, 2026-07-22)
