@@ -3,15 +3,20 @@
 Last updated: 2026-07-21 (Session 5)
 Updated by: Session 5 — DOI audit + fixes, smoke-test notebook hardened, run environment set up
 
-> **PICK UP HERE (next session): re-import the FIXED notebook and Run All.**
-> First Kaggle run (2026-07-22) got most of the way: **install works, G016 is empirically
-> DEAD** (Python 3.12.13, install rc=0, 2× T4, HF login OK — see source-of-truth "FIRST
-> KAGGLE RUN"). It was blocked only by an import-shadow bug (clone dir `tribev2` shadowed the
-> package) → model never loaded → G005/G018 still unmeasured. **FIXED 2026-07-22** (clone to
-> `tribev2_src` + guards + fail-fast check). NEXT: re-import the notebook from the GitHub link
-> (the fix is in the notebook file), attach `HF_TOKEN`, GPU T4 x2 + Internet On, stop any old
-> session, **Run All**. Watch cell 1 for `tribev2.demo_utils import: OK` (~2 min) → then it
-> should reach Phase 7/8 and finally give VRAM (G005) + the ablation verdict (G018).
+> **PICK UP HERE (next session): Factory-reset the kernel, re-import the notebook, Run All.**
+> Run 1 (2026-07-22) proved **install works, G016 is empirically DEAD** (Python 3.12.13,
+> install rc=0, 2× T4, HF login OK). Run 2 (after the `tribev2_src` rename) STILL died at
+> **Phase 6** with `ModuleNotFoundError: No module named 'tribev2.demo_utils'` (Phase 4 wrapper
+> import passed). Diagnosis: `import tribev2` resolves but to a package without `demo_utils` —
+> the editable-install `.pth` doesn't activate mid-session, so the import can miss `tribev2_src`.
+> **cell-2 hardened v2 (2026-07-22):** now puts `tribev2_src` on `sys.path` explicitly (doesn't
+> trust the `.pth`), pops any cached `tribev2*`, and the fail-fast **asserts `tribev2.__file__`
+> is under `tribev2_src` and RAISES** (so Run All stops at Phase 1, not Phase 6). NEXT: commit +
+> push the notebook, then on Kaggle do **Factory reset** (clears stale sys.modules/.pth from the
+> failed runs), attach `HF_TOKEN`, GPU T4 x2 + Internet On, **Run All**. Watch cell-2 for
+> `tribev2 resolves to: /kaggle/working/tribev2_src/...` + `tribev2.demo_utils imports` → then
+> Phase 6 loads and Phase 7/8 finally give VRAM (G005) + the ablation verdict (G018).
+> G005/G018 still UNMEASURED (two failed loads, zero data recorded).
 
 ---
 
