@@ -55,9 +55,8 @@ def run_ablation(
         )
         results[modality] = (preds, segments)
 
-        # Cache
+        # Cache (save() persists immediately — no separate flush needed)
         if cache:
             cache.save(cache_key, preds)
-            cache.flush()
 
     return results

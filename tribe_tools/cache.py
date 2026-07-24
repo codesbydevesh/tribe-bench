@@ -34,8 +34,10 @@ class PredictionCache:
     def save(self, key: str, data: np.ndarray, metadata: Optional[dict] = None):
         """Save a prediction array to cache.
 
-        Uses atomic write pattern: write to temp file first, then copy
-        into the main HDF5 to minimize corruption risk.
+        Opens the HDF5 file, writes (or overwrites) the dataset, and closes
+        it in a single context, so the entry is on disk by the time this
+        returns — there is no separate flush step. Not concurrency-safe:
+        assumes a single writer.
         """
         mode = "a" if self.cache_path.exists() else "w"
         with h5py.File(self.cache_path, mode) as f:
@@ -59,12 +61,6 @@ class PredictionCache:
             return []
         with h5py.File(self.cache_path, "r") as f:
             return list(f.keys())
-
-    def flush(self):
-        """Force flush to disk (HDF5 handles this, but explicit for clarity)."""
-        if self.cache_path.exists():
-            with h5py.File(self.cache_path, "a") as f:
-                f.flush()
 
     def __len__(self) -> int:
         return len(self.keys())

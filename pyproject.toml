@@ -31,4 +31,8 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["tribe_tools*", "brainlens*", "neurogenre*", "scalelaw*", "neurocheck*"]
+include = ["tribe_tools*", "brainlens*", "neurocheck*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

@@ -406,4 +406,109 @@ notebook still works via dataset/token).
 
 ---
 
+### D017: Pivot to the fused "Corticall" flagship; retire the four-build empire (2026-07-23)
+
+**Decision:** Collapse the project from four builds (BrainLens, NeuroGenre, ScaleLaw, NeuroCheck)
+into ONE fused flagship: a runnable NeuroCheck benchmark that reports where TRIBE generalizes vs
+breaks, wrapped as a read-only agent-callable brain-response MCP instrument, fronted by a live HF
+Space. Papers fall out as byproducts.
+
+**Trigger:** the 2026-07-23 10-agent principal review (`ops/principal-review-2026-07-23.pdf`).
+
+**Reasoning:** Three external facts broke the old premise — (1) CortexLab already shipped a solo
+TRIBE toolkit, so "a toolkit on TRIBE" is taken; (2) TRIBE-derived "engagement scores" are already
+published as a failure (arXiv 2607.01400); (3) the benchmark has incumbents (Neurosynth, Brain-Score)
+to position against, not an empty field. The one uncontested lane is a read-only brain-response MCP —
+which the operator's MCP day-job makes uniquely credible. Critically, the NeuroCheck scoring harness
+is BOTH the paper's engine and the MCP backend, so "Great" (a citable finding) and "Legendary" (the
+live instrument) share one spine — no either/or, no doubled effort.
+
+**Implications:** All four review lenses agreed the load-bearing risk is construct validity (localizer
+contrasts vs a movie-trained model), so the direction is reframed to "where does it generalize / break"
+and gated on an in-distribution validation test (Phase 0) before any build. Roadmap:
+`.notes/plans/corticall/ROADMAP.md`.
+
+**Revisit if:** Gate 0 fails (TRIBE doesn't recover known maps in-distribution) → fall back to the
+NeuroCheck static-resource paper + the ablation-mechanic write-up.
+
+---
+
+### D018: Rename the initiative to "Corticall" — docs-level only (2026-07-23)
+
+**Decision:** Brand the initiative **Corticall** (cortical + call = the agent-callable cortex).
+Apply it in `.notes/`, the roadmap, and README positioning ONLY.
+
+**Reasoning:** "tribe-bench" reads as a generic harness and buries the instrument; a name that fuses
+cortex + agent-callable matches the reframe and is uncontested (CortexLab/BrainExplore/NeuroProbe are
+taken or collide). Full rationale: `.notes/plans/corticall/IDENTITY.md`.
+
+**Implications:** Import paths (`tribe_tools`, `brainlens`, `neurocheck`), the `pyproject` project name,
+and the GitHub repo are UNCHANGED so the working Kaggle pipeline doesn't break. The mechanical rename
+(package + repo + notebook clone URL) is a separate, deliberate follow-up PR if the name sticks.
+
+**Revisit if:** A better name surfaces (it's a find-and-replace across a few docs) or the mechanical
+rename is greenlit.
+
+---
+
+### D019: Adopt a `.notes/` operating system; demote `ops/` to durable reference (2026-07-23)
+
+**Decision:** Living state moves to `.notes/` (BRIEF_ME, LOOSE-ENDS, journal/, plans/), mirroring the
+Bridge repo's system. `ops/` keeps only durable reference (source-of-truth, interface-contracts,
+claims-protocol, compute-playbook, knowledge-gaps, decision-log); process-theater is moved to
+`ops/archive/`. `CLAUDE.md` stays evergreen and points to `.notes/BRIEF_ME.md` as the first read.
+
+**Reasoning:** The review found status + process ritual tangled into `CLAUDE.md` and a 15-file `ops/`
+around ~1,869 LOC — process-as-progress. Separating evergreen rules / durable facts / living state
+(the Bridge pattern the operator already uses) kills the clutter and makes "read this first" unambiguous.
+
+**Implications:** Session ritual now: read `.notes/BRIEF_ME.md` → `LOOSE-ENDS.md` → last journal(s) →
+`ROADMAP.md`. Update those at session end. Archived files remain in `ops/archive/` for history.
+
+**Revisit if:** The split creates friction in practice (fold back), or a second initiative needs its
+own `plans/` subtree.
+
+---
+
+### D020: Gate 0 — pre-registered in-distribution validation (GO/NO-GO for all of Corticall) (2026-07-23)
+
+**Decision:** Before any Phase-1 build, run Gate 0 — test whether TRIBE v2's as-trained (full trimodal)
+forward pass recovers **right-FFC (FFA) face-selectivity** on naturalistic movie clips. Pre-registered rule
+(full detail in `.notes/plans/corticall/GATE-0.md`):
+- Stimuli: 4 face + 4 scene ~20s clips, ALL from Tears of Steel (live-action, CC-BY), downscaled to 480p;
+  face/scene-dominance confirmed via an in-notebook thumbnail montage before any GPU minute. No animated
+  films in the face claim (Sintel/BBB faces are rendered → OOD).
+- Primary ROI: right FFC (per NC001; left FFC is the VWFA so bilateral is avoided). Scene ROI
+  (corroborating only): PHA1-3 ∪ VMV1-3. Specificity controls: V1, right LO2 (body/EBA), A1.
+- Metric: per-clip spatial z-score; direction via Mann-Whitney U over 16 clip pairs, EXACT permutation null
+  (C(8,4)=70; U≥15→p=0.029, U=16→p=0.014), implemented + unit-tested in `tribe_tools/roi_stats.py`.
+- GO iff ALL: G1 U_FFCr≥15/16; G2 Δz_FFCr > 95th-pct of its own permutation null; G3 Δz_FFCr > Δz_V1 AND
+  > Δz_LO2; G4 video-only Δz_FFCr>0 AND U≥12/16; G5 face/scene sets matched on flow/luminance/RMS.
+- NO-GO if U_FFCr≤10/16, OR Δz_FFCr≤0, OR V1≥FFCr, OR video-only Δz_FFCr≤0. AMBIGUOUS otherwise → diagnose
+  (within-clip segment contrast, cross-film live-action) before Phase 1. Never build on AMBIGUOUS.
+
+**Trigger:** ROADMAP Phase 0; the principal review named construct-validity/OOD the load-bearing risk.
+Designed via the Three Musketeers protocol (Athos design → Porthos teardown → Aramis ruling, on Fable).
+
+**Reasoning:** Cost is asymmetric — a false GO wastes ~6 months on an unvalidated encoder; a false NO-GO
+costs one experiment and falls back to D017's static-resource paper — so GO is deliberately hard.
+Independently verified before committing: (a) the exact permutation null (Porthos's caught defect: 3v3
+U≥7 = p=0.20, a coin flip; 4v4 U≥15 = p=0.029) — now pinned by `tests/test_roi_stats.py`; (b) the
+precedent arXiv 2605.13904 is still-image feature-visualization, so FFC weights are face-tuned but a
+clip-mean contrast magnitude is unmeasured → the rule leans on direction + specificity + video-only, not a
+borrowed floor; (c) FFC spans FFA (right) and VWFA (left) per our own claims.yaml → primary ROI is right FFC;
+(d) scene area = PHA1-3 ∪ VMV1-3; (e) ToS 720p is 372 MB and the 20 min/clip figure was 480p → clips are
+downscaled and wall-clock budgeted honestly (~3.5 h expected, <12 h session).
+
+**Implications:** New `notebooks/02_gate0_validation.ipynb` reuses the proven smoke-test setup cells verbatim
+and adds prep+covariate+atlas-assert, a FULL loop, a video-only loop, and analysis+decision against the
+verified APIs. No new VRAM risk (same 11.12 GB path). New tested module `tribe_tools/roi_stats.py`. Video-only
+is a hard gate; the scene double dissociation is corroborating only (motion can fake a crossover).
+
+**Revisit if:** Gate 0 returns NO-GO (→ D017 fallback) or AMBIGUOUS (→ run the deferred diagnostics before
+any Phase-1 work); or the neuralset on-disk feature cache proves it reuses the video encode across mask
+configs (then video-only is near-free).
+
+---
+
 <!-- Add new decisions above this line -->

@@ -112,10 +112,9 @@ def batch_predict(
     video_paths: list[Path],
     features_to_mask: Optional[list[str]] = None,
     cache_dir: Optional[Path] = None,
-    checkpoint_every: int = 10,
 ) -> dict[Path, tuple[BrainPrediction, SegmentInfo]]:
     """
-    Run TRIBE v2 on multiple videos with progress tracking and checkpointing.
+    Run TRIBE v2 on multiple videos with progress tracking and resume support.
 
     Args:
         model: Loaded TribeModel
@@ -124,13 +123,14 @@ def batch_predict(
             For multi-modality runs, call batch_predict once per masking config.
         cache_dir: If provided, save/load results from HDF5 cache here.
             Already-cached videos are skipped (resume support).
-        checkpoint_every: Save checkpoint after every N videos.
 
     Returns:
         Dict mapping each video path to (preds, segments) tuple.
 
-    Progress is shown via tqdm. If the session dies, re-calling this
-    function with the same cache_dir resumes from the last checkpoint.
+    Progress is shown via tqdm. Each prediction is persisted by cache.save()
+    the moment it completes (the save closes the file), so re-calling this
+    function with the same cache_dir resumes from the last completed video —
+    there is no separate checkpoint/flush step.
     """
 ```
 
@@ -302,7 +302,6 @@ class PredictionCache:
     def save(self, key: str, data: np.ndarray, metadata: Optional[dict] = None): ...
     def load(self, key: str) -> Optional[np.ndarray]: ...
     def keys(self) -> list[str]: ...
-    def flush(self): ...
 
 
 def get_cache(cache_dir: Optional[Path]) -> Optional["PredictionCache"]:

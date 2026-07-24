@@ -19,9 +19,12 @@ def batch_predict(
     video_paths: list[Path],
     features_to_mask: Optional[list[str]] = None,
     cache_dir: Optional[Path] = None,
-    checkpoint_every: int = 10,
 ) -> dict[Path, tuple[np.ndarray, list]]:
-    """Run TRIBE v2 on multiple videos with progress tracking and checkpointing.
+    """Run TRIBE v2 on multiple videos with progress tracking and resume support.
+
+    Each prediction is persisted by cache.save() as soon as it completes (the
+    save closes the file), so a killed session resumes from the last completed
+    video with no separate checkpoint step.
 
     Args:
         model: Loaded TribeModel.
@@ -29,7 +32,6 @@ def batch_predict(
         features_to_mask: Features to mask for ALL videos in this batch.
         cache_dir: If provided, save/load results from HDF5 cache.
             Already-cached videos are skipped (resume support).
-        checkpoint_every: Save checkpoint after every N videos.
 
     Returns:
         Dict mapping each video path to (preds, segments) tuple.
@@ -39,7 +41,7 @@ def batch_predict(
     results = {}
 
     skipped = 0
-    for i, video_path in enumerate(tqdm(video_paths, desc="Batch inference")):
+    for video_path in tqdm(video_paths, desc="Batch inference"):
         video_path = Path(video_path)
         cache_k = _cache_key(video_path, mask_key)
 
@@ -70,14 +72,6 @@ def batch_predict(
         except Exception as e:
             logger.error("Failed on %s: %s", video_path, e)
             continue
-
-        # Checkpoint
-        if cache and (i + 1) % checkpoint_every == 0:
-            cache.flush()
-            logger.info("Checkpoint at %d/%d videos", i + 1, len(video_paths))
-
-    if cache:
-        cache.flush()
 
     if skipped:
         logger.info("Skipped %d cached videos", skipped)

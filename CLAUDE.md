@@ -7,19 +7,27 @@ It is the law. No exceptions unless the human explicitly overrides.
 
 ## What This Project Is
 
-tribe-bench is a research toolkit and benchmark for Meta FAIR's TRIBE v2 brain encoding
-model. We are building: a shared Python library (tribe_tools/), four research builds
-(BrainLens, NeuroGenre, ScaleLaw, NeuroCheck), Kaggle/Colab notebooks, and aiming for
-2-3 bioRxiv publications.
+**Corticall** (repo dir still `tribe-bench`; import paths still `tribe_tools`/`brainlens`/
+`neurocheck`) is ONE fused flagship built on Meta FAIR's TRIBE v2 brain-encoding model:
+an agent-callable instrument for in-silico experiments on TRIBE, and the benchmark
+(NeuroCheck) that maps where it generalizes and where it breaks. The scoring harness is
+both the paper's engine and the MCP server's backend — one spine, two payoffs.
+
+Superseded framing: the old "four-build toolkit" (BrainLens / NeuroGenre / ScaleLaw /
+NeuroCheck). NeuroGenre + ScaleLaw are deleted; the direction is the single flagship above.
+Full reasoning: `ops/principal-review-2026-07-23.pdf` and `.notes/plans/corticall/`.
 
 The operator is a solo researcher in India. No GPU locally. No university affiliation.
-No credit card. All compute is borrowed (Kaggle T4, Colab, ZeroGPU, Lightning AI).
+No credit card. All compute is borrowed (Kaggle T4, Colab, ZeroGPU, Lightning AI). Day job:
+building MCP servers for AI agents — the project's real differentiator.
 
 ## First Action Every Session
 
-Before doing ANYTHING, read `/home/deveshb/workspace/AI/tribe-bench/ops/war-room.md`.
-It contains: current status of every workstream, what's blocked, and what to work on next.
-If the human doesn't specify a task, the war room decides.
+Before doing ANYTHING, read `.notes/BRIEF_ME.md` (the state-of-play banner), then
+`.notes/LOOSE-ENDS.md`, then the last 1–2 `.notes/journal/` entries, then
+`.notes/plans/corticall/ROADMAP.md`. Together they hold current status, every open thread
+with its pick-up trigger, and the step-by-step plan. If the human doesn't specify a task,
+the ROADMAP decides (start at the first unchecked item; do not skip Gate 0).
 
 ## Build & Test Commands
 
@@ -63,8 +71,9 @@ pytest tests/ -v
 6. Do not add type annotations, docstrings, or comments to code you didn't change.
    Do not refactor adjacent code. Touch only what the task requires.
 
-7. End every session by updating `ops/war-room.md` and `ops/decision-log.md`
-   if any decisions were made. Follow `ops/session-protocol.md` closing checklist.
+7. End every session by updating `.notes/BRIEF_ME.md` (new banner if state moved) and
+   `.notes/LOOSE-ENDS.md` (every thread that changed), and writing that day's
+   `.notes/journal/YYYY-MM-DD.md`. Record any decision in `ops/decision-log.md`.
 
 ## Architectural Boundaries
 
@@ -117,10 +126,15 @@ tribe_tools/ is the foundation. Everything else sits on top.
 
 ## File Reference
 
-- Full project plan: `PLAN.md`
-- Operational system: `ops/` directory (10 files, read the README there)
-- Research foundation: `/home/deveshb/workspace/AI/tribe-v2/` (13 docs, read-only)
-- TRIBE v2 source: `/home/deveshb/workspace/AI/tribev2-source/` (Meta's code, read-only reference)
+- **Living state** (read first): `.notes/` — `BRIEF_ME.md`, `LOOSE-ENDS.md`, `journal/`,
+  `plans/corticall/ROADMAP.md` + `IDENTITY.md`. See `.notes/README.md` for the system.
+- **Durable reference**: `ops/` — `source-of-truth.md`, `interface-contracts.md`,
+  `claims-protocol.md`, `compute-playbook.md`, `knowledge-gaps.md`, `decision-log.md`.
+  Superseded process files live in `ops/archive/`.
+- Strategic review that set the current direction: `ops/principal-review-2026-07-23.pdf`.
+- Original plan (historical): `PLAN.md`.
+- Research foundation: `/home/deveshb/workspace/AI/tribe-v2/` (read-only).
+- TRIBE v2 source: `/home/deveshb/workspace/AI/tribev2-source/` (Meta's code, read-only).
 
 ## When You're Unsure
 

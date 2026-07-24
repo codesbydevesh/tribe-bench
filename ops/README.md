@@ -1,47 +1,22 @@
-# ops/ — The Operating System
+# ops/ — durable reference
 
-This directory contains 10 operational files that govern how we work on tribe-bench.
-They are not documentation. They are protocols, contracts, and living records.
+Facts, contracts, and protocols that change **rarely**. Living state (status, open
+threads, the plan) lives in `.notes/` — not here. Evergreen rules live in `CLAUDE.md`.
 
-| # | File | What It Does | When to Use |
-|---|------|-------------|-------------|
-| 1 | `war-room.md` | Status of everything, what's next | START of every session |
-| 2 | `source-of-truth.md` | Verified facts about TRIBE v2 internals | Before writing any model code |
-| 3 | `interface-contracts.md` | Every function signature and data shape | Before and during implementation |
-| 4 | `claims-protocol.md` | How to curate NeuroCheck claims | When adding any claim |
-| 5 | `compute-playbook.md` | Pre-scripted GPU session plans | Before any GPU session |
-| 6 | `red-team.md` | Adversarial review checklists | Before shipping anything |
-| 7 | `decision-log.md` | Record of every decision with reasoning | After any decision |
-| 8 | `session-protocol.md` | How to start and end Claude sessions | Every session open/close |
-| 9 | `knowledge-gaps.md` | What we don't know and need to learn | When stuck or planning |
-| 10 | `pre-mortem.md` | Risk analysis: what kills each build | Before starting a build |
+| File | What it is | When to read |
+|---|---|---|
+| `source-of-truth.md` | Verified facts about TRIBE v2 internals | Before writing any model code |
+| `interface-contracts.md` | Every function signature + data shape (keep in sync with code) | Before/during implementation |
+| `claims-protocol.md` | How to curate a NeuroCheck claim | When adding/editing a claim |
+| `compute-playbook.md` | Pre-scripted free-GPU session plans | Before any GPU session |
+| `knowledge-gaps.md` | Open unknowns to resolve | When stuck or planning |
+| `decision-log.md` | Every decision + reasoning (newest above the marker) | After any decision |
+| `principal-review-2026-07-23.{pdf,html}` | The strategic review that set the current direction | For the "why" behind Corticall |
+| `archive/` | Superseded process files (old war-room, progress, assessment, discussions, pre-mortem, red-team, session-protocol, three-musketeers) | History only |
 
-## The Workflow
+## Where state went
 
-```
-SESSION START
-  │
-  ├─ Claude reads CLAUDE.md (automatic)
-  ├─ Read war-room.md (first action)
-  ├─ Human says what to work on (or war-room decides)
-  │
-  ├─ BEFORE CODING:
-  │   ├─ Check source-of-truth.md (are our assumptions verified?)
-  │   ├─ Check interface-contracts.md (what's the function spec?)
-  │   └─ Check pre-mortem.md (what could go wrong?)
-  │
-  ├─ DURING CODING:
-  │   ├─ Follow claims-protocol.md (if curating claims)
-  │   ├─ Follow compute-playbook.md (if on GPU)
-  │   └─ Log decisions in decision-log.md
-  │
-  ├─ BEFORE SHIPPING:
-  │   └─ Run red-team.md checklist
-  │
-  SESSION END
-  │
-  ├─ Update war-room.md (status changes)
-  ├─ Update decision-log.md (new decisions)
-  ├─ Update knowledge-gaps.md (new gaps found)
-  └─ Follow session-protocol.md closing checklist
-```
+Status, priorities, open threads, and the step-by-step plan used to live in
+`war-room.md` + a heavier process ritual here. They now live in `.notes/`
+(`BRIEF_ME.md` / `LOOSE-ENDS.md` / `journal/` / `plans/corticall/ROADMAP.md`).
+Start every session from `.notes/BRIEF_ME.md`.

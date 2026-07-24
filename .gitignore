@@ -53,3 +53,9 @@ Thumbs.db
 output/
 results/
 figures/
+
+# Local working notes & internal strategy — NOT for the public repo.
+# (Candid founder-intent, competitor analysis, roadmap live here.)
+.notes/
+ops/archive/
+ops/principal-review-*
