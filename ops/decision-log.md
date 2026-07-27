@@ -511,4 +511,52 @@ configs (then video-only is near-free).
 
 ---
 
+### D021: Gate 0 v2 — frontal-face-present vs face-absent, single-source (resolves the AMBIGUOUS run) (2026-07-27)
+
+**Decision:** Re-run Gate 0 as a pre-registered confirmatory test with a redesigned, single-source stimulus
+set. Manifest frozen in `notebooks/gate0_v2_stimuli.json` before any GPU spend.
+
+- **Source:** Charade (1963), public domain, color live-action Hollywood — in-distribution for a
+  Friends/CNeuroMod-trained model. Tears of Steel abandoned (off-distribution stylized sci-fi; forced
+  group/body framing). All conditions from ONE film → no cross-film low-level confound.
+- **Conditions (mechanically defined, from sustained >=10s runs, >=45s apart):** FACE = 15 clips with one
+  frontal face filling the frame; NONFACE = 15 clips where the frontal-face detector found NO dominant face
+  across the whole window (people-with-backs/profiles, scenes, places). Both contain people, so the only
+  systematic difference is a dominant frontal face — this isolates the face signal and controls for film,
+  people/bodies, scene, and low-level stats at once, dissolving the body confound that broke Run 1.
+- **ROIs (frozen):** primary = right FFC (FFA). Specificity controls = V1 (low-level) + EBA proxy (right
+  LO2∪LO3∪V4t∪FST∪PH — replaces the broken 12-vertex LO2). Positive control = PPA (PHA1-3∪VMV1-3).
+  Auditory control = A1.
+- **PRIMARY GO (one rule):** right-FFC face>nonface, one-sided Monte-Carlo permutation on Mann-Whitney U
+  (>=10,000 shuffles, seeded), p<=0.025, AND Δ(spatial-z) exceeds the 95th percentile of its own permutation
+  null, AND FFC Δ > V1 Δ and FFC Δ > EBA Δ (specificity), AND the effect stays positive with p<=0.05 in the
+  VIDEO-ONLY pass (rules out a speech/audio artifact).
+- **NO-GO:** face<=nonface in FFC, or V1/EBA >= FFC, or video-only effect vanishes. **AMBIGUOUS:** positive
+  but short of the bars → diagnose (finer stimulus curation / a second source), do not build Phase 1.
+- **Confirmatory (reported, Holm-corrected, NOT gated):** PPA scenes>faces using clean McLintock landscapes
+  (pipeline positive control, must reproduce the Run-1 place effect); EBA nonface>face crossover.
+
+**Trigger:** Run 1 (D020) returned AMBIGUOUS — right-FFC face-selectivity was real and visual (video-only
+strengthened it) but underpowered (U=14/16, p=0.057) and the body region out-responded FFC because the
+"face" clips were groups full of bodies. A 5-agent research workflow (on Fable) diagnosed the cause
+(off-distribution single source + body confound + broken 12-vtx control) and the fix.
+
+**Reasoning / stimulus sourcing reality:** No single free public-domain naturalistic film yields clean
+faces AND bodies AND objects AND scenes at n>=15 from one matched source. Charade is face-rich (167 clean
+single-face candidates) but body/object/scene-poor as clean isolated categories; McLintock is body/scene-rich
+but face-poor. Rather than mix films (reintroducing the low-level confound) or force a 4-way we can't source
+cleanly, the within-Charade face-present-vs-absent contrast is confound-free, mechanically defined, and
+directly tests the reframed question. The full 4-way (faces>objects AND faces>bodies with modern in-distribution
+stock video) is the documented future upgrade — it needs a Pexels/Pixabay API key.
+
+**Implications:** New notebook `03_gate0_v2_validation.ipynb` (downloads Charade + McLintock, cuts clips at
+the frozen manifest, runs FFC/EBA/V1/PPA/A1 analysis via the unit-tested `roi_stats` Monte-Carlo permutation +
+IUT). Stimuli + code frozen in git before the run. Run 1 is the declared pilot (validated pipeline, estimated
+effect); no pilot-clip reuse; one primary rule; both GO and NO-GO pre-committed as reportable.
+
+**Revisit if:** v2 returns AMBIGUOUS/NO-GO (→ finer curation or a stock-video key for the full 4-way), or a
+Pexels/Pixabay key becomes available (→ upgrade to the modern-stimulus 4-way as the confirmatory-of-record).
+
+---
+
 <!-- Add new decisions above this line -->

@@ -1,0 +1,25 @@
+{
+  "design": "Gate 0 v2 — frontal-face-present vs face-absent, single-source (confound-free)",
+  "rationale": "Run 1 (Tears of Steel, faces vs scenes) was AMBIGUOUS because the face clips were groups/people-in-rooms, so a body region out-responded the face region, and it was a stylized off-distribution sci-fi short. v2 fixes this: FACE = one frontal face fills the frame; NONFACE = no dominant frontal face detected across the whole 10s window (people-with-backs/profiles/scenes). Both drawn from the SAME public-domain film (Charade, 1963, color live-action Hollywood — in-distribution for a Friends/CNeuroMod-trained model), both contain people, so the only systematic difference is a dominant frontal face. This isolates the face signal and controls for film, people/bodies, scene, and low-level statistics simultaneously. Clip starts were chosen from SUSTAINED runs (>=2 consecutive 5s samples of the same category) so each 10s clip is genuinely category-dominant, and spread >=45s apart for independence.",
+  "clip_dur_s": 10,
+  "primary_source": {
+    "name": "Charade (1963)",
+    "license": "public domain (CC PD Mark 1.0)",
+    "archive_id": "charade-1963-cary-grant-audrey-hepburn-comedy-mystery-romance-thriller-full-movie",
+    "file": "Charade_READY.mp4",
+    "url": "https://archive.org/download/charade-1963-cary-grant-audrey-hepburn-comedy-mystery-romance-thriller-full-movie/Charade_READY.mp4"
+  },
+  "face_starts_s": [550, 1355, 1410, 1495, 1955, 2385, 2680, 2860, 3750, 4000, 4080, 4375, 5480, 6255, 6505],
+  "nonface_starts_s": [250, 625, 1080, 1730, 2075, 2575, 2945, 3455, 4320, 4705, 5140, 5500, 5900, 6195, 6755],
+  "confirmatory_scene_source": {
+    "name": "McLintock! (1963)",
+    "license": "public domain (CC publicdomain)",
+    "archive_id": "mclintok_widescreen",
+    "file": "McLintock_512kb.mp4",
+    "url": "https://archive.org/download/mclintok_widescreen/McLintock_512kb.mp4",
+    "note": "Clean people-free landscapes/interiors for a PPA place-selectivity positive control (reported, not gated).",
+    "scene_starts_s": [282, 378, 936, 1386, 2556, 5310, 6750, 4242]
+  },
+  "downscale": "480p",
+  "notes": "Objects/full 4-way (faces>objects AND faces>bodies) deferred: no free PD naturalistic film yields clean object + body + face + scene at n>=15 from one matched source; that upgrade needs a stock-video API key (Pexels/Pixabay) for modern single-face / single-body / object clips."
+}

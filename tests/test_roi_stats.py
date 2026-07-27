@@ -9,6 +9,9 @@ import numpy as np
 
 from tribe_tools.roi_stats import (
     exact_perm_p,
+    iut_pass,
+    mc_perm_p,
+    perm_p,
     perm_null_deltas,
     spatial_z,
     u_statistic,
@@ -64,6 +67,40 @@ def test_spatial_z_positive_when_roi_is_hot():
 def test_spatial_z_accepts_2d_and_flat_zero_std():
     preds = np.ones((5, 50), dtype="float32")  # constant -> std 0 -> defined as 0.0
     assert spatial_z(preds, np.arange(3)) == 0.0
+
+
+def test_mc_perm_p_matches_exact_on_small_case():
+    # 4v4: exact and Monte-Carlo (many perms) should agree within noise.
+    face, scene = [10, 9, 8, 5], [6, 3, 2, 1]
+    exact = exact_perm_p(face, scene)
+    mc = mc_perm_p(face, scene, n_perm=20000, seed=1)
+    assert abs(mc - exact) < 0.02
+
+
+def test_mc_perm_p_tiny_for_clean_separation():
+    face = list(range(20, 35))          # 15 clips, all above
+    scene = list(range(0, 15))          # 15 clips, all below
+    p = mc_perm_p(face, scene, n_perm=5000, seed=2)
+    assert p < 0.001                     # far beyond any labelling could reach by chance
+
+
+def test_mc_perm_p_seeded_deterministic():
+    a, b = [3, 1, 4, 1, 5, 9, 2, 6], [2, 7, 1, 8, 2, 8, 1, 8]
+    assert mc_perm_p(a, b, n_perm=3000, seed=7) == mc_perm_p(a, b, n_perm=3000, seed=7)
+
+
+def test_perm_p_dispatches_exact_then_mc():
+    # small -> exact (deterministic, matches exact_perm_p); large -> MC (runs, small for clean sep)
+    small_f, small_s = [10, 9, 8], [3, 2, 1]
+    assert perm_p(small_f, small_s) == exact_perm_p(small_f, small_s)
+    big_f, big_s = list(range(20, 35)), list(range(0, 15))
+    assert perm_p(big_f, big_s, n_perm=3000, seed=3) < 0.01
+
+
+def test_iut_requires_both():
+    assert iut_pass(0.01, 0.02, alpha=0.025) is True
+    assert iut_pass(0.01, 0.20, alpha=0.025) is False   # one contrast fails -> no pass
+    assert iut_pass(0.20, 0.01, alpha=0.025) is False
 
 
 def test_perm_null_deltas_size_and_centering():

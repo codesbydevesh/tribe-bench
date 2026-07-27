@@ -107,3 +107,48 @@ def perm_null_deltas(face_vals, scene_vals) -> np.ndarray:
         rest = [i for i in range(n_total) if i not in set(combo)]
         out.append(vals[sel].mean() - vals[rest].mean())
     return np.array(out)
+
+
+def _u_fast(a: np.ndarray, b: np.ndarray) -> float:
+    """Vectorised Mann-Whitney U (count a_i > b_j, ties 0.5) for the MC inner loop."""
+    gt = (a[:, None] > b[None, :]).sum()
+    tie = (a[:, None] == b[None, :]).sum()
+    return float(gt) + 0.5 * float(tie)
+
+
+def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float:
+    """Monte-Carlo one-sided permutation p-value for U (face > other).
+
+    For Gate 0 v2 the conditions have ~15 clips each, so exact enumeration
+    (C(30,15) ≈ 1.55e8) is infeasible; this shuffles the pooled labels n_perm
+    times. Uses the (perm >= observed) + 1 over (n_perm + 1) estimator so the
+    p-value is never zero and stays valid. Seeded for reproducibility.
+    """
+    vals = np.array(list(face_vals) + list(other_vals), dtype=float)
+    n, N = len(face_vals), len(vals)
+    u_obs = _u_fast(vals[:n], vals[n:])
+    rng = np.random.default_rng(seed)
+    ge = 0
+    for _ in range(n_perm):
+        p = rng.permutation(N)
+        if _u_fast(vals[p[:n]], vals[p[n:]]) >= u_obs - 1e-9:
+            ge += 1
+    return (ge + 1) / (n_perm + 1)
+
+
+def perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float:
+    """One-sided permutation p for U: exact when small enough to enumerate, else Monte-Carlo."""
+    N, n = len(face_vals) + len(other_vals), len(face_vals)
+    if comb(N, n) <= 20000:
+        return exact_perm_p(face_vals, other_vals)
+    return mc_perm_p(face_vals, other_vals, n_perm=n_perm, seed=seed)
+
+
+def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool:
+    """Intersection-union test: BOTH one-sided contrasts must clear alpha.
+
+    Gate 0 v2's face-selectivity rule is 'faces>objects AND faces>bodies'. An IUT
+    controls the family-wise error at alpha without further correction, because the
+    null (selectivity fails) is rejected only if every sub-null is rejected.
+    """
+    return (p_a <= alpha) and (p_b <= alpha)
