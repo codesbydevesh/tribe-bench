@@ -9,8 +9,9 @@
     "file": "Charade_READY.mp4",
     "url": "https://archive.org/download/charade-1963-cary-grant-audrey-hepburn-comedy-mystery-romance-thriller-full-movie/Charade_READY.mp4"
   },
-  "face_starts_s": [550, 1355, 1410, 1495, 1955, 2385, 2680, 2860, 3750, 4000, 4080, 4375, 5480, 6255, 6505],
-  "nonface_starts_s": [250, 625, 1080, 1730, 2075, 2575, 2945, 3455, 4320, 4705, 5140, 5500, 5900, 6195, 6755],
+  "face_starts_s": [550, 1355, 1410, 1495, 1955, 2385, 2680, 2860, 3570, 3750, 4000, 4080, 4375, 5480, 6505],
+  "nonface_starts_s": [250, 480, 625, 1080, 2075, 2575, 2945, 3455, 4320, 4705, 5140, 5500, 5900, 5985, 6195],
+  "revision_note": "2026-07-27 post-render QA (foundation check): dropped 3 clips and swapped in verified-clean ones. FACE 104:15 (dark night outlier) -> 59:30 (clean Hepburn close-up). NONFACE 112:35 (invalid fragmented end-of-film frame) -> 99:45 (clean urban exterior). NONFACE 28:50 (struggle, visible faces) -> 8:00 (lobby/corridor, no faces). Remaining NONFACE clips at 57:35/72:00/91:40 contain profile/partial faces (Charade is people-heavy); kept because a partial face in the face-ABSENT baseline is conservative (it can only reduce face>nonface, never inflate it).",
   "confirmatory_scene_source": {
     "name": "McLintock! (1963)",
     "license": "public domain (CC publicdomain)",
