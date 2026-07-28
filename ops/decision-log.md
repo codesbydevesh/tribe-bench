@@ -554,6 +554,15 @@ the frozen manifest, runs FFC/EBA/V1/PPA/A1 analysis via the unit-tested `roi_st
 IUT). Stimuli + code frozen in git before the run. Run 1 is the declared pilot (validated pipeline, estimated
 effect); no pilot-clip reuse; one primary rule; both GO and NO-GO pre-committed as reportable.
 
+**Amendment (2026-07-27 PM, commits `5c7f554` + `f8b277d`):** after rendering the manifest and inspecting the
+FACE/NONFACE montages, 4 clips were replaced — FACE 104:15 (dark night outlier) → 59:30, FACE 108:25 (raised
+arm + busy board) → 96:30, NONFACE 112:35 (fragmented end-of-film frame) → 99:45, NONFACE 28:50 (struggle with
+visible faces) → 8:00. All 15 FACE clips are now clean face-dominant. Three NONFACE clips (57:35 / 72:00 /
+91:40) retain profile/partial faces by choice: a partial face in the face-ABSENT baseline is conservative — it
+can only shrink face>nonface, never inflate it. Every amendment landed BEFORE any GPU spend and is recorded in
+the manifest's `revision_note`, so the freeze-before-run commitment holds. No change to conditions, ROIs,
+statistics, or the GO/NO-GO rules.
+
 **Revisit if:** v2 returns AMBIGUOUS/NO-GO (→ finer curation or a stock-video key for the full 4-way), or a
 Pexels/Pixabay key becomes available (→ upgrade to the modern-stimulus 4-way as the confirmatory-of-record).
 
