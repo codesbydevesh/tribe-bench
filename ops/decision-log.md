@@ -568,4 +568,33 @@ Pexels/Pixabay key becomes available (→ upgrade to the modern-stimulus 4-way a
 
 ---
 
+### D022: Widen the ASR sentence-alignment guard for 10s clips; make a failed pass drop instead of abort (2026-07-28)
+
+**Decision:** In `notebooks/03_gate0_v2_validation.ipynb`, force `AddSentenceToWords.max_unmatched_ratio`
+to 0.99 at its construction site before the pass loops, and wrap each pass in a per-clip try/except that
+records the failure and drops that clip from the contrast instead of killing the run.
+
+**Reasoning:** the Gate 0 v2 run died 28 minutes in, at FACE_08 of 38 clips, on
+`RuntimeError: Ratio of unmatched words is 0.1111 on 9 words while AddSentenceToWords.max_unmatched_ratio=0.05`
+(G019). The 5% default assumes a full-film transcript; a 10s clip transcribes to 9–35 words, so any clip
+under 20 words tolerates ZERO unalignable words. FACE_01–07 passed only because they happened to align
+perfectly — this would have kept firing at random through all ~68 passes. The guard fires after every
+annotation is already written and only protects the `sentence` field feeding the LLaMA text encoder, so
+widening it costs nothing structural; 0.99 rather than 1.0 because `model_post_init` requires 0 ≤ r < 1,
+which usefully leaves total alignment failure still raising. The field is in `_exclude_from_cls_uid()`, so
+the change cannot invalidate cached features.
+
+**Implications:** no change to conditions, ROIs, statistics, or the GO/NO-GO rules — this is pipeline
+robustness, not design. Sentence context may be incomplete for a word or two on some clips, which can only
+add noise to the text modality; the pre-registered G4 video-only pass (text masked entirely) is the clean
+control that makes this irrelevant to the primary verdict. The analysis cell now intersects the surviving
+clips across passes, prints every dropped pass, asserts n ≥ 12 per group, and writes `dropped` into
+`gate0v2_results.json` — so any attrition is reported with the result, never silent. Cached passes make the
+restart resume; the 8 completed FACE passes are not re-paid.
+
+**Revisit if:** attrition ever exceeds 3 clips per group (then the stimulus set or the ASR step needs
+fixing, not the tolerance), or the run reports a clip where alignment failed totally.
+
+---
+
 <!-- Add new decisions above this line -->
