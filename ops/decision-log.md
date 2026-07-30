@@ -597,4 +597,128 @@ fixing, not the tolerance), or the run reports a clip where alignment failed tot
 
 ---
 
+### D023: Corrections to D022 and a narrowed NO-GO rule, before any Gate 0 v2 data exists (2026-07-29)
+
+**Context:** D022 was re-audited before spending the 7h Kaggle run (17-agent adversarial review, every
+serious finding independently refuted). The audit falsified most of D022's stated rationale and, more
+importantly, found that the largest false-verdict risk in notebook 03 is not the ASR guard at all.
+
+**(a) NO-GO disposition narrowed — the single highest-value change.**
+D021's NO-GO list included `Delta z_V1 >= Delta z_FFCr` and `Delta z_EBA >= Delta z_FFCr`, and cell 22
+implemented them so that failing G3 ALONE printed `NO-GO -> stop; D017 fallback`. Those are bare
+comparisons of two point estimates with no null, no CI and no margin, across ROIs of 58 (FFCr), 116 (EBA)
+and 523 (V1) vertices — and the 58-vertex FFC mean is structurally the noisiest of the three, so the
+comparison is biased against the hypothesis. Decisive evidence is historical, not simulated: in Run 1 the
+body ROI out-responded FFC, and Run 1's NO-GO list contained only the V1 clause, so it routed to
+AMBIGUOUS -> diagnose -> which is why D021 exists. D021 silently widened NO-GO to include the EBA
+ordering, which would convert Run 1's own observed pattern into a project-ending NO-GO. Verified by
+execution against mocks, not argument.
+NO-GO is therefore restricted to the two SIGN conditions: `Delta z_FFCr <= 0` in the full pass, or
+`Delta z_FFCr <= 0` in the video-only pass. **G3 remains a required conjunct of GO, unchanged.** A
+non-significant ROI-ordering reversal now routes to AMBIGUOUS -> diagnose.
+This LOOSENS a pre-registered stopping rule in the direction of continuing the project. It is recorded
+before any v2 contrast numbers exist, and the FULL-vs-video-only and FFC-vs-V1/EBA orderings are reported
+as headline numbers whatever the verdict.
+
+**(b) ASR tolerance set to 0.15, not 0.99, and deletion is now recorded.**
+D022's C1 ("only guards the `sentence` field ... loses nothing but the guard") and C2 ("can only add
+noise") are FALSE. An unmatched word gets `sentence=""` (neuralset `text.py:186`), then
+`AddContextToWords` gives it `context=""` (`text.py:271-274`), then `RemoveMissing` DELETES the row
+(`basic.py:52-54`), and the affected TRs receive exact zeros from the text extractor
+(`extractors/base.py:250-262, 302-305`). The ratio was the only cap on a destructive step. Worse, it
+undercounts what it nominally bounds: `utils.py:298-311` back-fills `sentence` without `sentence_char` on
+gap words, so such a word counts as matched at the check and is still deleted — deletion was never
+bounded by the ratio at any setting.
+Tolerance is therefore 0.15, the smallest value admitting the observed 1-of-9 that killed FACE_08 while
+rejecting 2-of-9. Per-clip word count, unmatched count, unmatched ratio, deleted count and `n_kept` are
+recorded in `gate0v2_results.json`. Conditions, ROIs, statistics and gate thresholds are unchanged.
+
+**(c) Environment pinned.** `exca` is now pinned to 0.5.25 and the tribev2 clone SHA is recorded.
+Verified: exca 0.5.20/0.5.25 import; 0.5.26 (2026-06-03) through 0.5.29 (2026-07-28) raise
+`AttributeError: module 'exca.steps.base' has no attribute 'NoValue'` inside
+`neuralset/events/study.py`. tribev2 pins `neuralset==0.0.2` but nothing pinned exca, and 0.5.29 shipped
+the day of the crash. Run 1's tribev2 SHA is unrecoverable, so Run 1 stays a pilot, not a comparable prior.
+
+**(d) Recording amendment, and no assert may destroy a finished run.** Per-clip z vectors, retained clip
+names, per-clip `n_kept`, ROI vertex counts, seeds, `n_perm`, the tribev2 SHA, the exca version and the
+tolerance are written to `gate0v2_results.json`, and the artifact is written BEFORE the plotting block.
+D022's `assert min(len(FN), len(NN)) >= 12` is replaced by a printed `underpowered` warning plus a
+recorded flag — an assert at hour 7 of an unrepeatable session destroys the result it was meant to
+protect. Attrition BALANCE is printed too, since asymmetric drops bias the contrast rather than merely
+shrinking n.
+
+**(e) Corrections to D022's claims.** C1, C2, C4 and C6 are false as written. C3 is half false: the
+video-only pass blocks a text-driven GO (G4 is a hard conjunct of GO) but cannot prevent a text-driven
+NO-GO, because the NO-GO branch reads full-pass numbers — G4 is a filter, never a rescue. C5's conclusion
+holds but its reason is inapplicable: the transforms run with `infra=None`
+(`transforms/base.py:156-158`), so no exca uid is ever computed and `_exclude_from_cls_uid` is never
+consulted; cache safety follows instead from the guard being the final statement of `_run` and from the
+feature caches being content- or path-keyed. Also, D022's "total alignment failure still raises" is false
+for the likeliest form of total failure: `text.py:174-176` returns without raising when there are no Word
+events at all, silently dropping the whole text modality. G019 is reopened as *mitigated, not closed*.
+
+**Settled NEGATIVE by the same audit — do not re-litigate:**
+- Word deletion CANNOT change `n_kept_segments`. `demo_utils.py:370-371` keeps a TR if
+  `len(s.ns_events) > 0`, and `ns_events` is OVERLAP-based with no type filter
+  (`segments.py:250-262 -> 155-164 -> 89-104`, `mask = (starts < stop) & (stops > start)`), on top of the
+  clip-long Video/Audio events and the per-timeline dummy `CategoricalEvent` (`main.py:186-195`).
+- `ChunkEvents(min_duration=30)` is a verified no-op on a 10s event: `etypes.py:453` discards `t=0.0` on a
+  strict inequality before `min_duration` is consulted.
+
+**Alternatives rejected:** a permutation test on `Delta_FFC - Delta_V1` (more defensible, but its first
+execution would be at hour 7 of an unrepeatable run); re-cutting to 20-30s clips (voids the >=10s
+sustained-run curation D021 rests on); promoting video-only to co-primary (already a conjunct of GO);
+`audio_only=True` as the primary path (`demo_utils.py:76` extracts audio outside the `if not audio_only`
+block, so it is an AV pass, not video-only); a local CPU WhisperX dry run (`eventstransforms.py:107-108`
+hardcodes `compute_type="float16"` with `--model large-v3`, and a CPU-viable model changes WHICH words go
+unmatched, so it cannot predict the ratios that matter).
+
+**Revisit if:** the run reports attrition imbalance > 2 clips, any `unmatched_ratio` at or above 0.15, a
+clip with `words_before == 0`, or a non-empty `nonfinite_stats`.
+
+**(f) Stimulus pre-flight MEASURED on CPU, 2026-07-30 — two findings, one of them unresolved.**
+Both films verified byte-exact against archive.org's own md5 (Charade
+`f2602d71c2279e834d48bdefe32b04a6`, McLintock `04671e70c46d1b3f3cb8d1df4217a666`); Charade is
+6785.0s against the 6205s the last clip needs and decodes cleanly at every clip start; all 38 clips
+cut valid (10.000-10.050s, height 480, video+audio present, clean decode). Full record:
+`notebooks/gate0_v2_preflight.json`.
+- **MOTION IS A REAL CONFOUND: FACE 0.914 vs NONFACE 3.039 mean frame-difference energy,
+  two-sided permutation p = 0.0008.** Eleven of fifteen NONFACE clips exceed the FACE maximum, so
+  the conditions are close to linearly separable on motion alone. This matters more than a generic
+  covariate imbalance because `spatial_z` subtracts the whole-brain mean: anything that selectively
+  raises non-FFC regions in NONFACE mechanically raises `Delta z_FFCr`. Motion does exactly that,
+  and the chosen EBA proxy (LO2/LO3/V4t/FST/PH) is the motion-sensitive lateral occipitotemporal
+  complex, so a motion asymmetry can inflate BOTH the primary statistic and the G3 specificity
+  margin. **G4 does not protect against it** - motion is a visual property and survives video-only.
+  GATE-0.md already anticipated this class of artifact for the PPA control ("a motion confound
+  (low-motion faces vs high-motion wides) can fake a crossover"); it is now measured in the primary
+  set. Disclosed, gating nothing; a GO must be reported as "face-selective or motion-asymmetry
+  driven" until a motion-matched sub-analysis is run on the saved per-clip z vectors.
+- Well matched, no action: luminance (p=0.91), audio RMS (p=0.50), voiced fraction (p=0.19),
+  shot-change rate (p=0.17), early-cut fraction (p=0.14). **The voiced-fraction result refutes the
+  working assumption that FACE clips are dialogue-dense and NONFACE quiet** - the measured means run
+  the other way (FACE 0.571, NONFACE 0.674) and do not differ significantly. The speech-confound
+  worry that motivated part of D023(b) is therefore NOT supported by measurement; D023(b) still
+  stands on the deletion mechanism, which is independent of any condition asymmetry.
+- **UNRESOLVED, needs a decision before the run: the clips are not sustained shots.** At a
+  visually-validated 0.15 scene threshold, FACE averages 2.20 shot changes per 10s clip and NONFACE
+  1.53; 13/15 FACE and 11/15 NONFACE contain at least one; 10/15 FACE and 5/15 NONFACE have one
+  within the first 2.5s. Hand-inspected frame-0 and 0/2.5/5/7.5s filmstrips confirm the detector at
+  5/5 checked clips, and show FACE_04, FACE_10 and FACE_13 opening on a non-face shot (a dark gate,
+  a red case, a wide two-man room) and NONFACE_03 and NONFACE_14 opening on a prominent frontal
+  face. D021's curation rule sampled the face detector every 5s, which is structurally blind to
+  sub-5s cuts, so "sustained runs of >=2 consecutive 5s samples" does not imply a sustained shot.
+  This compounds with the clamped V-JEPA2 4s window, which feeds 217 of 1280 frames as duplicates of
+  frame 0. Both directions of contamination are ATTENUATING, so this cannot manufacture a GO - it
+  raises P(AMBIGUOUS) on a test whose power is already ~0.46 at AUC 0.70. Note the earlier 0.4
+  threshold reported 0.13 cuts/clip and is unusable on these 480p re-encodes.
+  **Options, all CPU-cheap and all pre-data:** (i) run as-is and disclose; (ii) re-cut with a
+  mechanical, condition-blind shot-alignment rule (take the 10s from inside the longest cut-free
+  span near each manifest start), which enforces the property the pre-registration already claims;
+  (iii) trim the first 2.5s to 8s clips, which fixes frame-0 contamination only. **This is a
+  stimulus-design decision and is NOT taken here.**
+
+
+---
+
 <!-- Add new decisions above this line -->

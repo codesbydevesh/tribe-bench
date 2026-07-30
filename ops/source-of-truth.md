@@ -45,7 +45,12 @@ The T4 feasibility depends on whether each individual extractor fits in 16GB, no
 | Modality dropout is per-sample random mask, not per-modality toggle | VERIFIED | model.py:212 `mask = torch.rand(data.shape[0]) < self.config.modality_dropout` |
 | Missing modalities are handled by substituting zeros | VERIFIED | model.py:190-192 |
 | Output shape from brain model: `(B, n_outputs, T)` | VERIFIED | model.py:175-178 |
-| Temporal resolution: 2 Hz (from neuro extractor frequency) | FROM-DOCS | architecture.md, confirmed by Data.TR property in main.py:146 |
+| ~~Temporal resolution: 2 Hz (from neuro extractor frequency)~~ **WRONG — corrected 2026-07-29** | CORRECTED | see the TR/window block below |
+| **TR = 1.0 s** (neuro grid `frequency: 1`, `grids/defaults.py:68`; `TR = 1/frequency`, main.py:146-147) | VERIFIED | 2 Hz is the *feature* grid (`defaults.py:126`), not the output rate |
+| Dataloader window = `duration_trs` x TR = **100 s regardless of clip length** | VERIFIED | `grids/defaults.py:127-128` |
+| `n_kept` is driven by the Audio/Video events + the per-timeline dummy `CategoricalEvent`, NOT by Word events | VERIFIED | main.py:186-195; keep rule demo_utils.py:370-371; `ns_events` is OVERLAP-based with no type filter, segments.py:250-262 -> 155-164 -> 89-104 (`mask = (starts < stop) & (stops > start)`) |
+| A 10 s clip therefore yields ~11 rows of a 100 s window => **~90% of the model window is exact zeros** | VERIFIED | symmetric across conditions, so it attenuates but cannot bias direction |
+| `ChunkEvents(min_duration=30)` is a **no-op** on a 10 s event | VERIFIED | `etypes.py:453` discards `t=0.0` on a strict inequality before `min_duration` is consulted |
 
 ## Forward Pass Chain (VERIFIED)
 

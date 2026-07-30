@@ -1,0 +1,659 @@
+{
+ "measured": "2026-07-30 local CPU pre-flight (ffmpeg 7.0.2 static)",
+ "note": "DISCLOSURE ONLY per D023(c) - gates nothing. Frame-0 thumbnails and filmstrips were inspected visually; the 0.15 scene threshold was validated against 5 hand-checked clips and matched on all 5. The 0.4 threshold used in the first pass under-detected badly (reported 0.13 cuts/clip vs 2.20 actual) and must not be used on these 480p re-encodes.",
+ "sources": {
+  "charade.mp4": {
+   "status": "OK",
+   "bytes": 424901742,
+   "md5": "f2602d71c2279e834d48bdefe32b04a6",
+   "md5_match": true,
+   "duration_s": 6785.01,
+   "needed_s": 6205,
+   "tail_decode_ok": true
+  },
+  "mclintock.mp4": {
+   "status": "DEFECT",
+   "bytes": 550863361,
+   "md5": "04671e70c46d1b3f3cb8d1df4217a666",
+   "md5_match": true,
+   "duration_s": 7607.21,
+   "needed_s": 6760,
+   "tail_decode_ok": false
+  }
+ },
+ "clips_all_valid": true,
+ "n_clips": 38,
+ "clip_duration_range_s": [
+  10.0,
+  10.05
+ ],
+ "covariate_tests": {
+  "luminance_YAVG": {
+   "face_mean": 62.0726,
+   "nonface_mean": 62.7025,
+   "face_n": 15,
+   "nonface_n": 15,
+   "p_two_sided": 0.91351,
+   "separates": false
+  },
+  "motion_energy": {
+   "face_mean": 0.914,
+   "nonface_mean": 3.0389,
+   "face_n": 15,
+   "nonface_n": 15,
+   "p_two_sided": 0.0008,
+   "separates": true
+  },
+  "audio_rms_db": {
+   "face_mean": -34.8485,
+   "nonface_mean": -34.7168,
+   "face_n": 15,
+   "nonface_n": 15,
+   "p_two_sided": 0.50315,
+   "separates": false
+  },
+  "voiced_fraction": {
+   "face_mean": 0.5709,
+   "nonface_mean": 0.6741,
+   "face_n": 15,
+   "nonface_n": 15,
+   "p_two_sided": 0.18918,
+   "separates": false
+  },
+  "scene_cuts": {
+   "face_mean": 0.1333,
+   "nonface_mean": 0,
+   "face_n": 15,
+   "nonface_n": 15,
+   "p_two_sided": 0.48955,
+   "separates": false
+  }
+ },
+ "shot_structure": {
+  "face_mean_cuts": 2.2,
+  "nonface_mean_cuts": 1.53,
+  "p_two_sided_cuts": 0.1728,
+  "face_frac_cut_within_2p5s": 0.67,
+  "nonface_frac_cut_within_2p5s": 0.33,
+  "p_two_sided_early_cut": 0.144,
+  "per_clip": {
+   "FACE_00": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     1.96,
+     3.08,
+     7.52
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_01": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     2.12,
+     5.12,
+     9.24
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_02": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     2.12,
+     7.8
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_03": {
+    "n_cuts": 4,
+    "cut_times_s": [
+     2.32,
+     5.68,
+     7.72,
+     9.16
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_04": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     1.12
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_05": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "FACE_06": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     9.6
+    ],
+    "cut_within_2p5s": false
+   },
+   "FACE_07": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     1.04,
+     8.68
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_08": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     0.2,
+     3.08,
+     8.24
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_09": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "FACE_10": {
+    "n_cuts": 4,
+    "cut_times_s": [
+     1.6,
+     4.76,
+     5.68,
+     9.52
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_11": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     1.0,
+     1.04,
+     7.68
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_12": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     2.88,
+     5.68,
+     7.6
+    ],
+    "cut_within_2p5s": false
+   },
+   "FACE_13": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     2.0,
+     9.52
+    ],
+    "cut_within_2p5s": true
+   },
+   "FACE_14": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     4.12,
+     7.92
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_00": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     0.08,
+     0.12,
+     6.28
+    ],
+    "cut_within_2p5s": true
+   },
+   "NONFACE_01": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     8.12
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_02": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_03": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     1.84
+    ],
+    "cut_within_2p5s": true
+   },
+   "NONFACE_04": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     3.04
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_05": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     4.56,
+     6.52,
+     9.56
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_06": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     6.16,
+     8.24
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_07": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_08": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_09": {
+    "n_cuts": 0,
+    "cut_times_s": [],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_10": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     2.2,
+     6.36
+    ],
+    "cut_within_2p5s": true
+   },
+   "NONFACE_11": {
+    "n_cuts": 1,
+    "cut_times_s": [
+     9.28
+    ],
+    "cut_within_2p5s": false
+   },
+   "NONFACE_12": {
+    "n_cuts": 4,
+    "cut_times_s": [
+     0.04,
+     5.84,
+     7.56,
+     8.92
+    ],
+    "cut_within_2p5s": true
+   },
+   "NONFACE_13": {
+    "n_cuts": 3,
+    "cut_times_s": [
+     1.0,
+     7.04,
+     9.56
+    ],
+    "cut_within_2p5s": true
+   },
+   "NONFACE_14": {
+    "n_cuts": 2,
+    "cut_times_s": [
+     3.92,
+     5.88
+    ],
+    "cut_within_2p5s": false
+   }
+  }
+ },
+ "per_clip_covariates": {
+  "FACE_00": {
+   "group": "FACE",
+   "luminance_YAVG": 69.7012252,
+   "motion_energy": 1.0498558979919679,
+   "audio_rms_db": -40.712283,
+   "voiced_fraction": 0.15744229999999992,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_01": {
+   "group": "FACE",
+   "luminance_YAVG": 67.19066319999999,
+   "motion_energy": 0.9859608714859438,
+   "audio_rms_db": -35.717193,
+   "voiced_fraction": 0.5496076000000001,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_02": {
+   "group": "FACE",
+   "luminance_YAVG": 63.2563556,
+   "motion_energy": 0.6163902566265059,
+   "audio_rms_db": -34.495324,
+   "voiced_fraction": 0.7223832,
+   "scene_cuts": 1,
+   "n_frames_measured": 250
+  },
+  "FACE_03": {
+   "group": "FACE",
+   "luminance_YAVG": 64.2471324,
+   "motion_energy": 1.6313456038152612,
+   "audio_rms_db": -31.61402,
+   "voiced_fraction": 0.7315488,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_04": {
+   "group": "FACE",
+   "luminance_YAVG": 39.1509876,
+   "motion_energy": 1.0311272060240964,
+   "audio_rms_db": -36.684804,
+   "voiced_fraction": 0.4890725,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_05": {
+   "group": "FACE",
+   "luminance_YAVG": 56.906795599999995,
+   "motion_energy": 0.8029063895582329,
+   "audio_rms_db": -34.399741,
+   "voiced_fraction": 0.5481338,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_06": {
+   "group": "FACE",
+   "luminance_YAVG": 50.3335604,
+   "motion_energy": 0.6058437269076306,
+   "audio_rms_db": -33.534775,
+   "voiced_fraction": 0.8559819,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_07": {
+   "group": "FACE",
+   "luminance_YAVG": 48.3054712,
+   "motion_energy": 0.722731686746988,
+   "audio_rms_db": -35.679657,
+   "voiced_fraction": 0.639059,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_08": {
+   "group": "FACE",
+   "luminance_YAVG": 71.4766456,
+   "motion_energy": 1.0310109133333334,
+   "audio_rms_db": -42.364929,
+   "voiced_fraction": 0.14615869999999997,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_09": {
+   "group": "FACE",
+   "luminance_YAVG": 66.28141120000001,
+   "motion_energy": 0.48473345502008036,
+   "audio_rms_db": -32.134179,
+   "voiced_fraction": 0.568279,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_10": {
+   "group": "FACE",
+   "luminance_YAVG": 61.6312996,
+   "motion_energy": 1.222529370682731,
+   "audio_rms_db": -37.38419,
+   "voiced_fraction": 0.30245809999999995,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_11": {
+   "group": "FACE",
+   "luminance_YAVG": 64.7530236,
+   "motion_energy": 1.1064010176706827,
+   "audio_rms_db": -33.830034,
+   "voiced_fraction": 0.38175519999999996,
+   "scene_cuts": 1,
+   "n_frames_measured": 250
+  },
+  "FACE_12": {
+   "group": "FACE",
+   "luminance_YAVG": 80.9426108,
+   "motion_energy": 1.2778248979919677,
+   "audio_rms_db": -28.988897,
+   "voiced_fraction": 0.9193333,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_13": {
+   "group": "FACE",
+   "luminance_YAVG": 70.3722196,
+   "motion_energy": 0.5523774108433734,
+   "audio_rms_db": -31.80374,
+   "voiced_fraction": 0.778025,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "FACE_14": {
+   "group": "FACE",
+   "luminance_YAVG": 56.5403112,
+   "motion_energy": 0.5892581694779117,
+   "audio_rms_db": -33.383905,
+   "voiced_fraction": 0.774458,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_00": {
+   "group": "NONFACE",
+   "luminance_YAVG": 97.7198692,
+   "motion_energy": 6.279817497991968,
+   "audio_rms_db": -32.878075,
+   "voiced_fraction": 0.669932,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_01": {
+   "group": "NONFACE",
+   "luminance_YAVG": 59.1040816,
+   "motion_energy": 2.789442807228916,
+   "audio_rms_db": -34.35707,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_02": {
+   "group": "NONFACE",
+   "luminance_YAVG": 61.3981408,
+   "motion_energy": 1.0087394337349398,
+   "audio_rms_db": -38.140737,
+   "voiced_fraction": 0.17636280000000004,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_03": {
+   "group": "NONFACE",
+   "luminance_YAVG": 52.982864,
+   "motion_energy": 4.710514831325301,
+   "audio_rms_db": -32.24784,
+   "voiced_fraction": 0.6849817,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_04": {
+   "group": "NONFACE",
+   "luminance_YAVG": 51.794348400000004,
+   "motion_energy": 2.2898929136546187,
+   "audio_rms_db": -53.3109,
+   "voiced_fraction": 0.02886630000000001,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_05": {
+   "group": "NONFACE",
+   "luminance_YAVG": 51.0396176,
+   "motion_energy": 2.6770370763052207,
+   "audio_rms_db": -35.077629,
+   "voiced_fraction": 0.9497937,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_06": {
+   "group": "NONFACE",
+   "luminance_YAVG": 76.1959156,
+   "motion_energy": 7.518858313253012,
+   "audio_rms_db": -29.052347,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_07": {
+   "group": "NONFACE",
+   "luminance_YAVG": 71.7869728,
+   "motion_energy": 3.5542205220883534,
+   "audio_rms_db": -32.615161,
+   "voiced_fraction": 0.7019795,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_08": {
+   "group": "NONFACE",
+   "luminance_YAVG": 64.40327719999999,
+   "motion_energy": 1.6330074658634537,
+   "audio_rms_db": -33.507413,
+   "voiced_fraction": 0.5264648000000001,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_09": {
+   "group": "NONFACE",
+   "luminance_YAVG": 30.4077592,
+   "motion_energy": 0.9460446465863454,
+   "audio_rms_db": -32.837521,
+   "voiced_fraction": 0.8711655,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_10": {
+   "group": "NONFACE",
+   "luminance_YAVG": 70.352194,
+   "motion_energy": 0.6704629538152611,
+   "audio_rms_db": -37.524104,
+   "voiced_fraction": 0.26924039999999994,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_11": {
+   "group": "NONFACE",
+   "luminance_YAVG": 76.0540772,
+   "motion_energy": 1.6279287108433733,
+   "audio_rms_db": -29.920383,
+   "voiced_fraction": 0.8326644,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_12": {
+   "group": "NONFACE",
+   "luminance_YAVG": 75.0364376,
+   "motion_energy": 3.746063730923695,
+   "audio_rms_db": -36.290859,
+   "voiced_fraction": 0.735957,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_13": {
+   "group": "NONFACE",
+   "luminance_YAVG": 56.6834644,
+   "motion_energy": 5.241398032128513,
+   "audio_rms_db": -29.829889,
+   "voiced_fraction": 0.9311859,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "NONFACE_14": {
+   "group": "NONFACE",
+   "luminance_YAVG": 45.5786892,
+   "motion_energy": 0.8894433413654619,
+   "audio_rms_db": -33.16157,
+   "voiced_fraction": 0.7327822,
+   "scene_cuts": 0,
+   "n_frames_measured": 250
+  },
+  "SCENE_00": {
+   "group": "SCENE",
+   "luminance_YAVG": 103.16574813278008,
+   "motion_energy": 3.324285650833333,
+   "audio_rms_db": -30.313167,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 0,
+   "n_frames_measured": 241
+  },
+  "SCENE_01": {
+   "group": "SCENE",
+   "luminance_YAVG": 104.93083070539419,
+   "motion_energy": 3.024185050416667,
+   "audio_rms_db": -38.781242,
+   "voiced_fraction": 0.18116676616915428,
+   "scene_cuts": 2,
+   "n_frames_measured": 241
+  },
+  "SCENE_02": {
+   "group": "SCENE",
+   "luminance_YAVG": 87.02804854771783,
+   "motion_energy": 17.703503262958336,
+   "audio_rms_db": -30.372768,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 0,
+   "n_frames_measured": 241
+  },
+  "SCENE_03": {
+   "group": "SCENE",
+   "luminance_YAVG": 127.2367510373444,
+   "motion_energy": 6.785764958333333,
+   "audio_rms_db": -29.909434,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 0,
+   "n_frames_measured": 241
+  },
+  "SCENE_04": {
+   "group": "SCENE",
+   "luminance_YAVG": 79.33524541666667,
+   "motion_energy": 1.6709297322175733,
+   "audio_rms_db": -36.54147,
+   "voiced_fraction": 0.6304045763389288,
+   "scene_cuts": 1,
+   "n_frames_measured": 240
+  },
+  "SCENE_05": {
+   "group": "SCENE",
+   "luminance_YAVG": 66.18400749999999,
+   "motion_energy": 2.9634151841004184,
+   "audio_rms_db": -35.427297,
+   "voiced_fraction": 0.5584552358113508,
+   "scene_cuts": 0,
+   "n_frames_measured": 240
+  },
+  "SCENE_06": {
+   "group": "SCENE",
+   "luminance_YAVG": 96.53386041666666,
+   "motion_energy": 5.256854309623431,
+   "audio_rms_db": -33.791511,
+   "voiced_fraction": 0.8784850119904076,
+   "scene_cuts": 3,
+   "n_frames_measured": 240
+  },
+  "SCENE_07": {
+   "group": "SCENE",
+   "luminance_YAVG": 103.77604439834025,
+   "motion_energy": 7.359346759999999,
+   "audio_rms_db": -31.242335,
+   "voiced_fraction": 1.0,
+   "scene_cuts": 3,
+   "n_frames_measured": 241
+  }
+ },
+ "warnings": [
+  "mclintock.mp4: LAST clip region (6750s..6760s) does not decode cleanly: [aac @ 0x2499e1c0] Input buffer exhausted before END element found\n[aist#0:1/aac @ 0x24afb700] [dec:aac @ 0x2499d640] Error submitting packet to decoder: Invalid data found when processing input\n[aac "
+ ]
+}
