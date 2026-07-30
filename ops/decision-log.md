@@ -676,6 +676,56 @@ unmatched, so it cannot predict the ratios that matter).
 **Revisit if:** the run reports attrition imbalance > 2 clips, any `unmatched_ratio` at or above 0.15, a
 clip with `words_before == 0`, or a non-empty `nonfinite_stats`.
 
+**(g) Stimulus set REBUILT to fix both pre-flight findings — Gate 0 v3 (2026-07-30, still pre-data).**
+`gate0_v2_stimuli.json` is retained unchanged as history; `gate0_v3_stimuli.json` supersedes it and the
+notebook now reads v3. Zero Gate 0 runs have completed, so no outcome informed any choice, and the whole
+procedure is deterministic at seed 0. Pipeline + rationale committed at `scripts/gate0_v3_curation/`.
+
+*Authority:* GATE-0.md's own G5 pre-registered "FACE and SCENE clip sets not differing in mean
+optical-flow / luminance / RMS beyond tolerance **after reselection**". This executes a clause already
+written; it does not invent one. The hypothesis, ROIs, statistics and gate thresholds are untouched.
+
+*Rule (mechanical, outcome-blind):* shot boundary = any frame with ffmpeg `scene_score > 0.05` on a
+160 px scan of all 169,625 frames — deliberately SENSITIVE, because over-detecting boundaries only costs
+candidates while under-detecting is the defect being fixed (the 0.4 default reported 0.13 cuts/clip
+against 2.20 actual). A window is 10.0 s lying strictly inside ONE shot with a 0.5 s cut-free guard both
+sides. FACE = the two Haar frontal cascades' union finds a face of area >= 0.025 of frame in >= 80% of
+the 21 samples, median >= 0.025, **at the first sample**, in >= 80% of the first 4 s, and the two
+cascades AGREE in >= 30% of samples and at the first sample. NONFACE = the same high-precision detector
+NEVER finds a face of area >= 0.020 anywhere in the window, and people are present (profile detections
+in >= 30% of samples), preserving D021's "both conditions contain people" control. One clip per shot; no
+two of the 30 clips within 45 s of each other, enforced ACROSS conditions; greedy best-first 1:1 pairing
+on standardised [motion, luminance] distance. Acceptance: two-sided permutation p >= 0.20 on motion AND
+|SMD| <= 0.25 AND |AUC-0.5| <= 0.10.
+
+*Two rules earned by measurement, not taste.* (i) The frame-0 and first-4 s clauses exist because
+V-JEPA2 clamps to 4 s and feeds 217/1280 frames as duplicates of frame 0; a draft selection passed a
+window-average criterion while frame 0 showed a wide establishing shot. (ii) Cascade AGREEMENT is
+required because a persistent single-cascade false positive was observed directly: on a wide corridor
+shot the union reported face area ~0.040 on every one of 20 samples while the two cascades agreed on
+0.000 throughout. Requiring agreement excludes it; requiring full agreement everywhere would have cut
+the pool to 9 shots, so >= 30% is the measured compromise (19 shots available, 15 needed).
+
+*Result, verified on the 30 cut clips (`gate0_v3_verification.json`):*
+- **Shot changes inside clips: 0** (v2: 2.20 FACE / 1.53 NONFACE per clip; 10/15 FACE cutting within 2.5 s).
+- **Motion two-sided p = 0.246** (v2: 0.0008); SMD at selection -0.002, AUC 0.404.
+- Luminance p = 0.393, audio RMS p = 0.589, voiced fraction p = 0.745 — all matched.
+- All 30 clips 10.000-10.040 s, height 480, video+audio present, clean decode; min separation 51.0 s.
+- **Visual audit passed** on frame-0 montages for both conditions: all 15 FACE open on a clear frontal
+  face, all 15 NONFACE show people with no dominant frontal face. Frame 0 is audited specifically
+  because it is the over-weighted frame. The notebook's own montage now renders at `-ss 0`, not `-ss 5`
+  — sampling at 5 s is what let the v2 defects through.
+
+*What this does NOT fix, and is disclosed rather than claimed away:* the face-absent baseline still
+contains people and scenes rather than objects or scrambled controls, so "face-absent" means "something
+else", as in any localiser; category labels rest on Haar cascades plus a visual audit, not hand-labelled
+ground truth; and matching does not change power, which remains ~0.46 at AUC 0.70, so AMBIGUOUS is still
+a live outcome meaning "underpowered".
+
+**Revisit if:** the visual audit of a future re-cut disagrees with the detector labels, or the accepted
+motion p falls below 0.20 on the cut clips.
+
+
 **(f) Stimulus pre-flight MEASURED on CPU, 2026-07-30 — two findings, one of them unresolved.**
 Both films verified byte-exact against archive.org's own md5 (Charade
 `f2602d71c2279e834d48bdefe32b04a6`, McLintock `04671e70c46d1b3f3cb8d1df4217a666`); Charade is
