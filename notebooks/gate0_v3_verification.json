@@ -1,6 +1,7 @@
 {
  "FACE_00": {
   "group": "FACE",
+  "start": 287.74,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -12,6 +13,7 @@
  },
  "FACE_01": {
   "group": "FACE",
+  "start": 708.36,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -23,6 +25,7 @@
  },
  "FACE_02": {
   "group": "FACE",
+  "start": 860.02,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -34,6 +37,7 @@
  },
  "FACE_03": {
   "group": "FACE",
+  "start": 1243.74,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -45,6 +49,7 @@
  },
  "FACE_04": {
   "group": "FACE",
+  "start": 1401.36,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -56,6 +61,19 @@
  },
  "FACE_05": {
   "group": "FACE",
+  "start": 1653.88,
+  "dur": 10.0,
+  "height": 480,
+  "decode_ok": true,
+  "cuts": 0,
+  "motion": 1.6164290160642572,
+  "lum": 49.804512,
+  "rms": -29.885573,
+  "voiced": 0.8862993
+ },
+ "FACE_06": {
+  "group": "FACE",
+  "start": 2386.92,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -65,8 +83,9 @@
   "rms": -33.938049,
   "voiced": 0.6631837
  },
- "FACE_06": {
+ "FACE_07": {
   "group": "FACE",
+  "start": 2640.62,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -76,30 +95,21 @@
   "rms": -34.084591,
   "voiced": 0.5088980000000001
  },
- "FACE_07": {
-  "group": "FACE",
-  "dur": 10.0,
-  "height": 480,
-  "decode_ok": true,
-  "cuts": 0,
-  "motion": 0.2792890333333333,
-  "lum": 42.4750512,
-  "rms": -35.085345,
-  "voiced": 0.872805
- },
  "FACE_08": {
   "group": "FACE",
-  "dur": 10.0,
+  "start": 3063.74,
+  "dur": 10.04,
   "height": 480,
   "decode_ok": true,
   "cuts": 0,
-  "motion": 0.34460563694779117,
-  "lum": 66.85169160000001,
-  "rms": -32.052674,
-  "voiced": 0.7207936
+  "motion": 0.6016577008,
+  "lum": 78.0112139442231,
+  "rms": -33.809952,
+  "voiced": 0.33964170000000005
  },
  "FACE_09": {
   "group": "FACE",
+  "start": 3497.44,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -111,6 +121,7 @@
  },
  "FACE_10": {
   "group": "FACE",
+  "start": 3752.0,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -122,6 +133,19 @@
  },
  "FACE_11": {
   "group": "FACE",
+  "start": 3913.74,
+  "dur": 10.04,
+  "height": 480,
+  "decode_ok": true,
+  "cuts": 0,
+  "motion": 0.8509948895999999,
+  "lum": 74.64482390438248,
+  "rms": -37.620036,
+  "voiced": 0.3147348
+ },
+ "FACE_12": {
+  "group": "FACE",
+  "start": 4925.66,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -131,19 +155,9 @@
   "rms": -31.821156,
   "voiced": 0.5700114000000001
  },
- "FACE_12": {
-  "group": "FACE",
-  "dur": 10.04,
-  "height": 480,
-  "decode_ok": true,
-  "cuts": 0,
-  "motion": 1.1326886,
-  "lum": 67.63808964143426,
-  "rms": -34.199858,
-  "voiced": 0.5738774999999999
- },
  "FACE_13": {
   "group": "FACE",
+  "start": 5757.04,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -155,6 +169,7 @@
  },
  "FACE_14": {
   "group": "FACE",
+  "start": 6589.48,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -166,6 +181,7 @@
  },
  "NONFACE_00": {
   "group": "NONFACE",
+  "start": 230.26,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -177,6 +193,7 @@
  },
  "NONFACE_01": {
   "group": "NONFACE",
+  "start": 795.42,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -188,6 +205,7 @@
  },
  "NONFACE_02": {
   "group": "NONFACE",
+  "start": 1310.5,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -199,17 +217,7 @@
  },
  "NONFACE_03": {
   "group": "NONFACE",
-  "dur": 10.0,
-  "height": 480,
-  "decode_ok": true,
-  "cuts": 0,
-  "motion": 2.8249472409638554,
-  "lum": 42.957668,
-  "rms": -30.554872,
-  "voiced": 0.9571088
- },
- "NONFACE_04": {
-  "group": "NONFACE",
+  "start": 1937.4,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -219,8 +227,9 @@
   "rms": -34.52391,
   "voiced": 0.3598481
  },
- "NONFACE_05": {
+ "NONFACE_04": {
   "group": "NONFACE",
+  "start": 2248.98,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -230,8 +239,9 @@
   "rms": -39.209218,
   "voiced": 0.2848368
  },
- "NONFACE_06": {
+ "NONFACE_05": {
   "group": "NONFACE",
+  "start": 2331.52,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -241,8 +251,9 @@
   "rms": -34.212483,
   "voiced": 0.3827596
  },
- "NONFACE_07": {
+ "NONFACE_06": {
   "group": "NONFACE",
+  "start": 2716.24,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -252,19 +263,21 @@
   "rms": -35.467972,
   "voiced": 0.6557393
  },
- "NONFACE_08": {
+ "NONFACE_07": {
   "group": "NONFACE",
+  "start": 2807.14,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
   "cuts": 0,
-  "motion": 0.401977572,
-  "lum": 49.14811035856574,
-  "rms": -32.854252,
-  "voiced": 0.4916893
+  "motion": 0.2934014868,
+  "lum": 45.22060597609562,
+  "rms": -33.968752,
+  "voiced": 0.6353719
  },
- "NONFACE_09": {
+ "NONFACE_08": {
   "group": "NONFACE",
+  "start": 3548.4,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -274,8 +287,9 @@
   "rms": -31.888873,
   "voiced": 0.6500022999999999
  },
- "NONFACE_10": {
+ "NONFACE_09": {
   "group": "NONFACE",
+  "start": 3970.5,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -285,8 +299,9 @@
   "rms": -32.626647,
   "voiced": 0.5853153
  },
- "NONFACE_11": {
+ "NONFACE_10": {
   "group": "NONFACE",
+  "start": 5072.02,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -296,8 +311,9 @@
   "rms": -36.537317,
   "voiced": 0.31228350000000005
  },
- "NONFACE_12": {
+ "NONFACE_11": {
   "group": "NONFACE",
+  "start": 5173.22,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,
@@ -307,8 +323,9 @@
   "rms": -33.7086,
   "voiced": 0.7164717
  },
- "NONFACE_13": {
+ "NONFACE_12": {
   "group": "NONFACE",
+  "start": 5247.24,
   "dur": 10.0,
   "height": 480,
   "decode_ok": true,
@@ -318,8 +335,21 @@
   "rms": -28.088815,
   "voiced": 0.8524353
  },
+ "NONFACE_13": {
+  "group": "NONFACE",
+  "start": 5440.84,
+  "dur": 10.0,
+  "height": 480,
+  "decode_ok": true,
+  "cuts": 0,
+  "motion": 0.3840683694779117,
+  "lum": 62.73666,
+  "rms": -35.254326,
+  "voiced": 0.4333492
+ },
  "NONFACE_14": {
   "group": "NONFACE",
+  "start": 6642.3,
   "dur": 10.04,
   "height": 480,
   "decode_ok": true,

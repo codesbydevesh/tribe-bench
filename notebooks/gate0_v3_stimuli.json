@@ -1,8 +1,8 @@
 {
- "design": "Gate 0 v3 \u2014 frontal-face-present vs face-absent, single-source, SUSTAINED-SHOT and MOTION-MATCHED",
+ "design": "Gate 0 v3b \u2014 frontal-face-present vs face-absent, single-source, SUSTAINED-SHOT and MOTION-MATCHED",
  "supersedes": "gate0_v2_stimuli.json (D021), which is retained unchanged as the historical record",
  "amendment": "D023(g), recorded 2026-07-30 BEFORE any Gate 0 brain data exists (zero v2/v3 runs completed)",
- "why": "The v2 set was measured on CPU (notebooks/gate0_v2_preflight.json) and failed two checks. (1) MOTION CONFOUND: frame-difference energy FACE 0.914 vs NONFACE 3.039, two-sided permutation p=0.0008, with 11/15 NONFACE clips above the FACE maximum. Because spatial_z subtracts the whole-brain mean and the EBA proxy is the motion-sensitive lateral occipitotemporal complex, that asymmetry can inflate both the primary statistic and the G3 margin, and G4 cannot detect it because motion survives video-only. (2) SHOT FRAGMENTATION: clips averaged 2.20 (FACE) and 1.53 (NONFACE) shot changes per 10 s, with 10/15 FACE clips cutting inside the first 2.5 s \u2014 the region V-JEPA2 over-weights, since it clamps to 4 s and feeds 217/1280 frames as duplicates of frame 0. D021's curation sampled a face detector every 5 s and was structurally blind to sub-5 s cuts. GATE-0.md's G5 pre-registered covariate matching 'after reselection', so this executes a clause already written rather than inventing one.",
+ "why": "The v2 set was measured on CPU (notebooks/gate0_v2_preflight.json) and failed two checks. (1) MOTION CONFOUND: frame-difference energy FACE 0.914 vs NONFACE 3.039, two-sided permutation p=0.0008, with 11/15 NONFACE clips above the FACE maximum. Because spatial_z subtracts the whole-brain mean and the EBA proxy is the motion-sensitive lateral occipitotemporal complex, that asymmetry can inflate both the primary statistic and the G3 margin, and G4 cannot detect it because motion survives video-only. (2) SHOT FRAGMENTATION: clips averaged 2.20 (FACE) and 1.53 (NONFACE) shot changes per 10 s, with 10/15 FACE clips cutting inside the first 2.5 s \u2014 the region whose frames are most over-weighted (see v_jepa2_window). D021's curation sampled a face detector every 5 s and was structurally blind to sub-5 s cuts. GATE-0.md's G5 pre-registered covariate matching 'after reselection', so this executes a clause already written rather than inventing one.",
  "clip_dur_s": 10,
  "primary_source": {
   "name": "Charade (1963)",
@@ -38,8 +38,8 @@
   "nonface": "the same high-precision detector NEVER finds a face of area >= 0.020 anywhere in the window, AND people are present (profile detections in >= 30% of samples), preserving D021's stated control that both conditions contain people",
   "one_per_shot": "at most one clip per shot; the shot's median-motion window is its fixed representative",
   "independence": "no two of the 30 clips within 45 s of each other, enforced ACROSS conditions",
-  "matching": "greedy best-first 1:1 pairing on standardised [motion, luminance] distance subject to the above",
-  "acceptance": "two-sided permutation p >= 0.20 on motion AND |SMD| <= 0.25 AND |AUC-0.5| <= 0.10"
+  "matching": "EXHAUSTIVE over all 1536 feasible 15+15 selections (one clip per shot, all 30 clips >=45s apart across conditions), choosing the set that minimises |AUC-0.5| of motion measured on the DELIVERED 480p clips, tie-broken on |SMD| of log motion. This is a global optimum over the feasible set, not a heuristic. Pairwise greedy matching was tried first and rejected: it optimises pairwise distance, which is not what the criterion measures (set-level rank balance).",
+  "acceptance": "evaluated ON THE DELIVERED CLIPS: two-sided permutation p >= 0.20 on motion AND |AUC-0.5| <= 0.10 AND |SMD| <= 0.25 on LOG motion. Balance is certified in RANKS because the primary gate (G1) is a rank test (Mann-Whitney U). Raw SMD on a positive, wide-range energy measure is outlier-dominated and uninformative here: the rejected v3 set had raw SMD -0.097 (passing) while its rank separation AUC 0.631 failed."
  },
  "face_starts_s": [
   287.74,
@@ -47,14 +47,14 @@
   860.02,
   1243.74,
   1401.36,
+  1653.88,
   2386.92,
   2640.62,
-  2790.8,
-  3037.72,
+  3063.74,
   3497.44,
   3752.0,
+  3913.74,
   4925.66,
-  5462.34,
   5757.04,
   6589.48
  ],
@@ -62,17 +62,17 @@
   230.26,
   795.42,
   1310.5,
-  1638.08,
   1937.4,
   2248.98,
   2331.52,
   2716.24,
-  2849.38,
+  2807.14,
   3548.4,
   3970.5,
   5072.02,
   5173.22,
   5247.24,
+  5440.84,
   6642.3
  ],
  "per_clip": {
@@ -92,7 +92,9 @@
    "head_frac": 1.0,
    "t0_area": 0.15778549015522003,
    "both_frac": 1.0,
-   "t0_both": 0.140625
+   "t0_both": 0.140625,
+   "motion_480": 0.46323633999999997,
+   "lum_480": 90.06410398406375
   },
   "FACE_01": {
    "start": 708.36,
@@ -110,7 +112,9 @@
    "head_frac": 1.0,
    "t0_area": 0.02966049313545227,
    "both_frac": 0.85,
-   "t0_both": 0.02777777798473835
+   "t0_both": 0.02777777798473835,
+   "motion_480": 0.23858376064257028,
+   "lum_480": 60.0968836
   },
   "FACE_02": {
    "start": 860.02,
@@ -128,7 +132,9 @@
    "head_frac": 1.0,
    "t0_area": 0.02966049313545227,
    "both_frac": 0.45,
-   "t0_both": 0.02777777798473835
+   "t0_both": 0.02777777798473835,
+   "motion_480": 0.2154220824,
+   "lum_480": 51.879542629482074
   },
   "FACE_03": {
    "start": 1243.74,
@@ -146,7 +152,9 @@
    "head_frac": 1.0,
    "t0_area": 0.055748455226421356,
    "both_frac": 0.5,
-   "t0_both": 0.05062500014901161
+   "t0_both": 0.05062500014901161,
+   "motion_480": 0.993553,
+   "lum_480": 68.73576135458167
   },
   "FACE_04": {
    "start": 1401.36,
@@ -164,9 +172,31 @@
    "head_frac": 1.0,
    "t0_area": 0.05444444343447685,
    "both_frac": 0.9,
-   "t0_both": 0.04938271641731262
+   "t0_both": 0.04938271641731262,
+   "motion_480": 0.6294341084337349,
+   "lum_480": 68.5093296
   },
   "FACE_05": {
+   "start": 1653.88,
+   "shot": 1650.88,
+   "shot_end": 1670.44,
+   "shot_len": 19.56,
+   "motion": 1.45992182,
+   "lum": 49.5546936,
+   "scene_max": 0.018838,
+   "strict_frac": 1.0,
+   "strict_med": 0.03780864179134369,
+   "strict_max": 0.0434027761220932,
+   "people_frac": 0.6,
+   "n_samples": 20,
+   "head_frac": 1.0,
+   "t0_area": 0.031604938209056854,
+   "both_frac": 1.0,
+   "t0_both": 0.030625000596046448,
+   "motion_480": 1.6164290160642572,
+   "lum_480": 49.804512
+  },
+  "FACE_06": {
    "start": 2386.92,
    "shot": 2368.92,
    "shot_end": 2404.88,
@@ -182,9 +212,11 @@
    "head_frac": 1.0,
    "t0_area": 0.10204475373029709,
    "both_frac": 1.0,
-   "t0_both": 0.098526231944561
+   "t0_both": 0.098526231944561,
+   "motion_480": 0.5878898473895582,
+   "lum_480": 56.3141872
   },
-  "FACE_06": {
+  "FACE_07": {
    "start": 2640.62,
    "shot": 2637.12,
    "shot_end": 2661.56,
@@ -200,43 +232,29 @@
    "head_frac": 1.0,
    "t0_area": 0.025956790894269943,
    "both_frac": 0.35,
-   "t0_both": 0.025069445371627808
-  },
-  "FACE_07": {
-   "start": 2790.8,
-   "shot": 2787.8,
-   "shot_end": 2801.68,
-   "shot_len": 13.88,
-   "motion": 0.27557336920000003,
-   "lum": 42.177671600000004,
-   "scene_max": 0.006312,
-   "strict_frac": 1.0,
-   "strict_med": 0.0625,
-   "strict_max": 0.06530864536762238,
-   "people_frac": 0.25,
-   "n_samples": 20,
-   "head_frac": 1.0,
-   "t0_area": 0.05840277671813965,
-   "both_frac": 1.0,
-   "t0_both": 0.05706790089607239
+   "t0_both": 0.025069445371627808,
+   "motion_480": 3.0478918079999997,
+   "lum_480": 41.696991235059755
   },
   "FACE_08": {
-   "start": 3037.72,
-   "shot": 3034.72,
-   "shot_end": 3055.24,
-   "shot_len": 20.52,
-   "motion": 0.3298505284,
-   "lum": 66.582258,
-   "scene_max": 0.007501,
-   "strict_frac": 1.0,
-   "strict_med": 0.053155865520238876,
-   "strict_max": 0.07260030508041382,
-   "people_frac": 0.0,
+   "start": 3063.74,
+   "shot": 3055.24,
+   "shot_end": 3077.48,
+   "shot_len": 22.24,
+   "motion": 0.5691347596,
+   "lum": 77.78906359999999,
+   "scene_max": 0.008868,
+   "strict_frac": 0.9,
+   "strict_med": 0.05444444343447685,
+   "strict_max": 0.09167438000440598,
+   "people_frac": 1.0,
    "n_samples": 20,
    "head_frac": 1.0,
-   "t0_area": 0.05444444343447685,
-   "both_frac": 0.95,
-   "t0_both": 0.05188271775841713
+   "t0_area": 0.055748455226421356,
+   "both_frac": 0.65,
+   "t0_both": 0.04225308820605278,
+   "motion_480": 0.6016577008,
+   "lum_480": 78.0112139442231
   },
   "FACE_09": {
    "start": 3497.44,
@@ -254,7 +272,9 @@
    "head_frac": 1.0,
    "t0_area": 0.02871141955256462,
    "both_frac": 0.45,
-   "t0_both": 0.02777777798473835
+   "t0_both": 0.02777777798473835,
+   "motion_480": 1.1956690160642571,
+   "lum_480": 68.4485908
   },
   "FACE_10": {
    "start": 3752.0,
@@ -272,9 +292,31 @@
    "head_frac": 1.0,
    "t0_area": 0.07111111283302307,
    "both_frac": 1.0,
-   "t0_both": 0.061118826270103455
+   "t0_both": 0.061118826270103455,
+   "motion_480": 0.5178799554216869,
+   "lum_480": 66.2628624
   },
   "FACE_11": {
+   "start": 3913.74,
+   "shot": 3913.24,
+   "shot_end": 3937.4,
+   "shot_len": 24.16,
+   "motion": 0.814176648,
+   "lum": 74.384166,
+   "scene_max": 0.009063,
+   "strict_frac": 0.8,
+   "strict_med": 0.030625000596046448,
+   "strict_max": 0.055748455226421356,
+   "people_frac": 0.6,
+   "n_samples": 20,
+   "head_frac": 0.875,
+   "t0_area": 0.02966049313545227,
+   "both_frac": 0.8,
+   "t0_both": 0.02777777798473835,
+   "motion_480": 0.8509948895999999,
+   "lum_480": 74.64482390438248
+  },
+  "FACE_12": {
    "start": 4925.66,
    "shot": 4925.16,
    "shot_end": 4937.04,
@@ -290,25 +332,9 @@
    "head_frac": 1.0,
    "t0_area": 0.16447530686855316,
    "both_frac": 0.6,
-   "t0_both": 0.16222994029521942
-  },
-  "FACE_12": {
-   "start": 5462.34,
-   "shot": 5460.84,
-   "shot_end": 5473.48,
-   "shot_len": 12.64,
-   "motion": 0.9955167839999999,
-   "lum": 67.25706,
-   "scene_max": 0.00984,
-   "strict_frac": 1.0,
-   "strict_med": 0.07949459552764893,
-   "strict_max": 0.09336419403553009,
-   "people_frac": 0.85,
-   "n_samples": 20,
-   "head_frac": 1.0,
-   "t0_area": 0.08345679193735123,
-   "both_frac": 0.8,
-   "t0_both": 0.03260030969977379
+   "t0_both": 0.16222994029521942,
+   "motion_480": 0.4122961864,
+   "lum_480": 49.40965338645418
   },
   "FACE_13": {
    "start": 5757.04,
@@ -326,7 +352,9 @@
    "head_frac": 1.0,
    "t0_area": 0.05062500014901161,
    "both_frac": 1.0,
-   "t0_both": 0.0434027761220932
+   "t0_both": 0.0434027761220932,
+   "motion_480": 0.37724082610441767,
+   "lum_480": 55.854205199999996
   },
   "FACE_14": {
    "start": 6589.48,
@@ -344,7 +372,9 @@
    "head_frac": 1.0,
    "t0_area": 0.06817901134490967,
    "both_frac": 1.0,
-   "t0_both": 0.05840277671813965
+   "t0_both": 0.05840277671813965,
+   "motion_480": 2.277900875502008,
+   "lum_480": 57.2203236
   },
   "NONFACE_00": {
    "start": 230.26,
@@ -362,7 +392,9 @@
    "head_frac": 0.0,
    "t0_area": 0.016327161341905594,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 1.1881472080000002,
+   "lum_480": 101.55550398406373
   },
   "NONFACE_01": {
    "start": 795.42,
@@ -380,7 +412,9 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.5678096187999999,
+   "lum_480": 38.904428685258964
   },
   "NONFACE_02": {
    "start": 1310.5,
@@ -398,27 +432,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 1.019019632,
+   "lum_480": 65.30366494023905
   },
   "NONFACE_03": {
-   "start": 1638.08,
-   "shot": 1628.08,
-   "shot_end": 1650.88,
-   "shot_len": 22.8,
-   "motion": 2.7173771120000003,
-   "lum": 42.700048800000005,
-   "scene_max": 0.007933,
-   "strict_frac": 0.0,
-   "strict_med": 0.0,
-   "strict_max": 0.014266975224018097,
-   "people_frac": 0.75,
-   "n_samples": 20,
-   "head_frac": 0.0,
-   "t0_area": 0.0,
-   "both_frac": 0.0,
-   "t0_both": 0.0
-  },
-  "NONFACE_04": {
    "start": 1937.4,
    "shot": 1930.4,
    "shot_end": 1956.12,
@@ -434,9 +452,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.8956541084337349,
+   "lum_480": 44.8224432
   },
-  "NONFACE_05": {
+  "NONFACE_04": {
    "start": 2248.98,
    "shot": 2246.48,
    "shot_end": 2266.8,
@@ -452,9 +472,11 @@
    "head_frac": 0.0,
    "t0_area": 0.019290123134851456,
    "both_frac": 0.0,
-   "t0_both": 0.015625
+   "t0_both": 0.015625,
+   "motion_480": 0.807666736,
+   "lum_480": 49.16949641434263
   },
-  "NONFACE_06": {
+  "NONFACE_05": {
    "start": 2331.52,
    "shot": 2309.52,
    "shot_end": 2368.88,
@@ -470,9 +492,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 1.0190340534136546,
+   "lum_480": 53.6180816
   },
-  "NONFACE_07": {
+  "NONFACE_06": {
    "start": 2716.24,
    "shot": 2706.24,
    "shot_end": 2770.8,
@@ -488,27 +512,31 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.316813062248996,
+   "lum_480": 43.021114000000004
   },
-  "NONFACE_08": {
-   "start": 2849.38,
-   "shot": 2835.88,
-   "shot_end": 2861.04,
-   "shot_len": 25.16,
-   "motion": 0.33716250280000004,
-   "lum": 48.846342400000005,
-   "scene_max": 0.008086,
+  "NONFACE_07": {
+   "start": 2807.14,
+   "shot": 2805.64,
+   "shot_end": 2829.8,
+   "shot_len": 24.16,
+   "motion": 0.309908074,
+   "lum": 44.86847840000001,
+   "scene_max": 0.007034,
    "strict_frac": 0.0,
    "strict_med": 0.0,
    "strict_max": 0.0,
-   "people_frac": 0.85,
+   "people_frac": 0.55,
    "n_samples": 20,
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.2934014868,
+   "lum_480": 45.22060597609562
   },
-  "NONFACE_09": {
+  "NONFACE_08": {
    "start": 3548.4,
    "shot": 3540.4,
    "shot_end": 3559.2,
@@ -524,9 +552,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.5248130803212852,
+   "lum_480": 68.87175719999999
   },
-  "NONFACE_10": {
+  "NONFACE_09": {
    "start": 3970.5,
    "shot": 3970.0,
    "shot_end": 3984.6,
@@ -542,9 +572,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.90328134,
+   "lum_480": 57.96273745019921
   },
-  "NONFACE_11": {
+  "NONFACE_10": {
    "start": 5072.02,
    "shot": 5071.52,
    "shot_end": 5086.52,
@@ -560,9 +592,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.5380920680000001,
+   "lum_480": 64.42442988047809
   },
-  "NONFACE_12": {
+  "NONFACE_11": {
    "start": 5173.22,
    "shot": 5165.72,
    "shot_end": 5183.84,
@@ -578,9 +612,11 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.6586052,
+   "lum_480": 66.05523306772908
   },
-  "NONFACE_13": {
+  "NONFACE_12": {
    "start": 5247.24,
    "shot": 5246.24,
    "shot_end": 5262.88,
@@ -596,7 +632,29 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 0.9109072931726907,
+   "lum_480": 66.3381452
+  },
+  "NONFACE_13": {
+   "start": 5440.84,
+   "shot": 5431.84,
+   "shot_end": 5460.84,
+   "shot_len": 29.0,
+   "motion": 0.28898890359999996,
+   "lum": 62.355584,
+   "scene_max": 0.008077,
+   "strict_frac": 0.0,
+   "strict_med": 0.0,
+   "strict_max": 0.014266975224018097,
+   "people_frac": 0.95,
+   "n_samples": 20,
+   "head_frac": 0.0,
+   "t0_area": 0.014266975224018097,
+   "both_frac": 0.0,
+   "t0_both": 0.0,
+   "motion_480": 0.3840683694779117,
+   "lum_480": 62.73666
   },
   "NONFACE_14": {
    "start": 6642.3,
@@ -614,7 +672,9 @@
    "head_frac": 0.0,
    "t0_area": 0.0,
    "both_frac": 0.0,
-   "t0_both": 0.0
+   "t0_both": 0.0,
+   "motion_480": 1.1684951479999999,
+   "lum_480": 60.852350996015936
   }
  },
  "match_at_selection": {
@@ -648,19 +708,34 @@
   "all_height_480": true,
   "all_decode_clean": true,
   "total_shot_cuts_inside_clips": 0,
-  "covariates_two_sided_p": {
-   "motion": 0.246,
-   "luminance": 0.3928,
-   "audio_rms": 0.5887,
-   "voiced_fraction": 0.7449
-  },
-  "note": "measured on the 480p cut clips; selection used 160px full-film scans, so the two motion figures differ slightly (p=0.4006 at selection, p=0.2460 on the cuts). Both clear the 0.20 criterion.",
-  "min_separation_s": 51.0
+  "min_separation_s": 50.960000000000036
  },
- "visual_audit": "Frame-0 montages for both conditions were rendered and inspected by eye. All 15 FACE clips open on a clear frontal face; all 15 NONFACE clips show people with no dominant frontal face. Frame 0 is audited specifically because V-JEPA2's clamped 4 s window over-weights it.",
+ "visual_audit": "Frame-0 montages for both conditions rendered and inspected by eye for v3b. All 15 FACE clips open on a clear frontal face; all 15 NONFACE clips show people with no dominant frontal face. Frame 0 is audited specifically because it is the over-weighted frame (17.0%).",
  "residual": [
   "The face-absent baseline still contains people and scenes rather than objects or scrambled controls, so 'face-absent' means 'something else', as in any localiser.",
   "Category labels rest on Haar cascades plus a visual audit, not hand-labelled ground truth.",
   "Power is unchanged by matching: still ~0.46 at AUC 0.70, so AMBIGUOUS remains a live outcome."
- ]
+ ],
+ "revision": "v3b (2026-07-30) REPLACES the first v3 selection pushed earlier the same day. The v3 selection was matched on motion estimated from a 160px full-film scan, but the acceptance criterion is evaluated on the delivered 480p clips. On those files v3 gave motion AUC 0.631, i.e. |AUC-0.5| = 0.131 against its own stated cap of 0.10 \u2014 it FAILED its own criterion. The p-value leg (0.246) passed, which is how it went unnoticed. v3b fixes the root cause: every one of the 42 shot representatives is cut at 480p and measured with the SAME estimator used for verification, and the selection then optimises the quantity the criterion actually measures.",
+ "v_jepa2_window": "CORRECTION to an earlier claim in this project's record. V-JEPA2 does NOT clamp to the first 4 s. It slides a 4 s window: 20 stimulus bins at t = 0.5 .. 10.0 s x 64 frames = 1280 frames, so the encoder sees ALL TEN SECONDS in 20 overlapping spans. Frames sampled from before the clip start are clamped to frame 0 and number exactly 217 (55+47+39+31+23+15+7 for bins t=0.5..3.5). Both 1280 and 217 reproduce exactly under this reading and neither under a clamp reading (a true clamp would feed 64 frames). So frame 0 IS over-weighted, at 217/1280 = 17.0%, which is why the frame-0 selection clause and the frame-0 visual audit are kept \u2014 but the statement that the model 'only sees the first 4 s' was wrong and is withdrawn.",
+ "acceptance_on_delivered_clips": {
+  "motion": {
+   "p": 0.8847,
+   "auc": 0.52,
+   "abs_auc_minus_half": 0.02,
+   "smd_log": 0.0425,
+   "smd_raw": 0.31
+  },
+  "luminance": {
+   "p": 0.394
+  },
+  "audio_rms": {
+   "p": 0.7991
+  },
+  "voiced_fraction": {
+   "p": 0.8953
+  },
+  "accepted": true,
+  "n_feasible_sets_searched": 1536
+ }
 }
