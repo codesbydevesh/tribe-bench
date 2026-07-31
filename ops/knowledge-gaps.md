@@ -6,6 +6,38 @@ When a gap is closed, move it to the "Closed" section with the answer.
 
 ---
 
+## Standing methodological rules (earned the hard way)
+
+### M001: Verify acceptance on the DELIVERED artifact, never on the proxy used to build it
+**Rule:** whenever a selection or threshold is chosen using a cheap approximation (a downscaled scan, a
+sampled subset, a smaller model), the acceptance test must be re-run on the exact artifact that will be
+used, and on EVERY leg of the criterion — not the legs that are convenient.
+**Why:** this failed twice on 2026-07-30. The Gate 0 v3 stimulus set was matched on motion from a 160 px
+film scan while its acceptance criterion is evaluated on the delivered 480 p clips; on the real files it
+gave motion AUC 0.631 against its own 0.10 cap and had to be thrown away. The discrepancy between the two
+measurements had even been WRITTEN DOWN, and only the p-value leg was re-checked, not the AUC leg.
+Earlier the same day the same shape of error appeared in the D022 review. See D024(a).
+**How to apply:** state the criterion, then evaluate it once on the shipped artifact and paste the numbers
+next to the artifact. If a proxy was used for search, say so and give both numbers.
+
+### M002: Balance a rank test in ranks
+**Rule:** if the decision statistic is a rank test (Mann-Whitney U, as G1 is), certify covariate balance
+with a rank measure (AUC), not with a mean-based one.
+**Why:** raw standardised mean difference on a positive, wide-range energy measure is outlier-dominated.
+The rejected v3 set had raw SMD -0.097 (comfortably passing) while its rank separation AUC 0.631 failed.
+Supplement with SMD on the LOG of the measure. See D024(a).
+
+### M003: An automated stimulus label is not a label until it has been looked at
+**Rule:** any detector-assigned stimulus category gets a mandatory visual audit of the frames that carry
+the most weight, at the smallest scale that would reveal a mislabel.
+**Why:** three real defects in the Gate 0 sets were invisible to every automated check and obvious on
+sight — a clip passing a window-average face criterion while its first frame was a wide establishing
+shot; a corridor shot admitted by a persistent single-cascade false positive (one cascade reported a face
+on every sample, the two cascades agreed on none); and two "independent" clips that were adjacent shots
+of one scene. See D023(g).
+
+---
+
 ## TRIBE v2 Internals
 
 ### G005: Actual VRAM usage per extractor

@@ -51,6 +51,9 @@ The T4 feasibility depends on whether each individual extractor fits in 16GB, no
 | `n_kept` is driven by the Audio/Video events + the per-timeline dummy `CategoricalEvent`, NOT by Word events | VERIFIED | main.py:186-195; keep rule demo_utils.py:370-371; `ns_events` is OVERLAP-based with no type filter, segments.py:250-262 -> 155-164 -> 89-104 (`mask = (starts < stop) & (stops > start)`) |
 | A 10 s clip therefore yields ~11 rows of a 100 s window => **~90% of the model window is exact zeros** | VERIFIED | symmetric across conditions, so it attenuates but cannot bias direction |
 | `ChunkEvents(min_duration=30)` is a **no-op** on a 10 s event | VERIFIED | `etypes.py:453` discards `t=0.0` on a strict inequality before `min_duration` is consulted |
+| **V-JEPA2 does NOT clamp to the first 4 s** — it SLIDES a 4 s window | VERIFIED by arithmetic (D024(b)) | 20 stimulus bins at t=0.5..10.0 s x 64 frames = **1280** frames; the encoder therefore sees ALL 10 s in 20 overlapping spans. A true clamp would feed 64 frames. |
+| Frames sampled from before the clip start clamp to frame 0 and number exactly **217** | VERIFIED | 55+47+39+31+23+15+7 for bins t=0.5..3.5 s. So **frame 0 is over-weighted at 217/1280 = 17.0%** — real, and why stimulus rules and visual audits check frame 0 — but the claim that the model "only sees the first 4 s" is WITHDRAWN. |
+| Direction of the `spatial_z` nuisance from a stimulus covariate is **UNKNOWN**, not "raises the ROI contrast" | CORRECTED (D024(c)) | `spatial_z` subtracts the whole-brain mean, so the bias depends on the ROI's drive relative to the mean over all 20,484 mostly non-visual vertices — unmeasured. Do not assert a sign. |
 
 ## Forward Pass Chain (VERIFIED)
 
