@@ -33,15 +33,20 @@ THREE ASSUMPTIONS THAT ARE NOT VERIFIED AND MUST BE, in this order (cheapest fir
       compensate for haemodynamic lag. We therefore apply NO further shift. Applying the
       challenge tutorial's `hrf_delay=3` on top would double-count it.
 
-  A4. NUMPY PICKLE VERSION. numpy >= 2.0 pickles arrays referencing `numpy._core`, which
-      numpy 1.x cannot unpickle. If the scoring server runs numpy 1.x, a file written
-      here (numpy 2.5) will fail to load. `random_submission()` exists to find that out
-      for one wasted submission instead of a wasted GPU run.
+  A4. NUMPY PICKLE VERSION -- CONFIRMED AND HANDLED, not an open risk. The scoring image
+      `dommybe/codabench_algonauts25:latest` (built 2025-06-02) pins numpy==1.22.4 on
+      python3.9, read from the image's own build history. numpy >= 2.0 pickles arrays
+      referencing `numpy._core`, absent before 2.0, so a plain `np.save` from this box
+      (numpy 2.5.1) raises ModuleNotFoundError server-side -- verified by emulation.
+      `save_submission(numpy1_compat=True)` is the default and writes a file that loads
+      under both. Leave it on.
 
 CPU only. No model, no GPU.
 """
 
 import argparse
+import io
+import pickle
 import json
 import zipfile
 from pathlib import Path
@@ -214,11 +219,96 @@ def assemble(
     return out
 
 
-def save_submission(payload: dict, out_dir: Path, stem: str = "submission") -> Path:
-    """Write the .npy and zip it, which is what Codabench ingests."""
+class _Numpy122Unpickler(pickle.Unpickler):
+    """Emulates numpy 1.22.4, in which `numpy._core` does not exist."""
+
+    def find_class(self, module: str, name: str):  # noqa: ANN001, ANN201
+        if module.startswith("numpy._core"):
+            raise ModuleNotFoundError(
+                f"No module named {module!r} -- numpy 1.22 cannot load this pickle"
+            )
+        return super().find_class(module, name)
+
+
+def _load_as_numpy122(path: Path):  # noqa: ANN202
+    """Load a .npy the way the scoring server's numpy 1.22.4 would."""
+    raw = path.read_bytes()
+    if raw[:6] != np.lib.format.MAGIC_PREFIX:
+        return _Numpy122Unpickler(io.BytesIO(raw)).load()
+    fp = io.BytesIO(raw)
+    fp.read(6)
+    major = fp.read(2)[0]
+    header_len = int.from_bytes(fp.read(2 if major == 1 else 4), "little")
+    fp.read(header_len)
+    return _Numpy122Unpickler(fp).load()
+
+
+def _write_numpy1_compatible(path: Path, payload: dict) -> None:
+    """Write a genuine .npy that the scorer's numpy 1.22.4 can actually unpickle.
+
+    The Codabench scoring image (`dommybe/codabench_algonauts25:latest`, built 2025-06-02)
+    pins **numpy==1.22.4** on python3.9 -- read out of the image's own build history, not
+    guessed. numpy >= 2.0 pickles ndarrays referencing `numpy._core.multiarray`, which does
+    not exist before 2.0, so a plain `np.save` from a numpy 2.x box raises
+    ModuleNotFoundError server-side. Verified by emulation: a plain save fails, this
+    function's output loads.
+
+    Two details, both load-bearing:
+
+    * `protocol=3` is pinned. At protocol 3 globals are emitted with the newline-terminated
+      GLOBAL opcode (`c<module>\\n<name>\\n`), so rewriting `numpy._core` -> `numpy.core`
+      is safe even though it shortens the name by a byte. Protocol 4+ uses length-prefixed
+      STACK_GLOBAL, where the same edit would corrupt the stream.
+    * `np.lib.format.write_array` is used rather than raw `pickle.dumps` so the file keeps
+      a real `\\x93NUMPY` header. A bare pickle happens to load via `np.load`'s fallback
+      path, but it is not a .npy and we should not ship one.
+
+    Do NOT test this against numpy 1.26 and conclude it is unnecessary: 1.26 ships a
+    `numpy._core` shim added for the 2.0 transition, so it reads numpy-2.x pickles happily
+    and hides the bug. 1.22 has no such shim.
+    """
+    boxed = np.empty((), dtype=object)
+    boxed[()] = payload
+
+    # numpy 2.x's write_array hardcodes protocol=4, and protocol 4 emits length-prefixed
+    # STACK_GLOBAL, where the module rename below would corrupt the stream. So write the
+    # header and a protocol-3 pickle by hand -- which is byte-for-byte what numpy 1.22's
+    # own write_array produced.
+    buf = io.BytesIO()
+    np.lib.format.write_array_header_1_0(buf, np.lib.format.header_data_from_array_1_0(boxed))
+    pickle.dump(boxed, buf, protocol=3)
+    raw = buf.getvalue()
+
+    if b"\x80\x03" not in raw:
+        raise RuntimeError("expected a protocol-3 pickle; refusing to patch blindly")
+
+    path.write_bytes(raw.replace(b"numpy._core", b"numpy.core"))
+
+    # Self-verify, so this can never silently regress into an unreadable submission.
+    if path.read_bytes()[:6] != np.lib.format.MAGIC_PREFIX:
+        raise RuntimeError(f"{path} lost its .npy header")
+    restored = _load_as_numpy122(path)
+    restored = restored.item() if isinstance(restored, np.ndarray) else restored
+    if set(restored) != set(payload):
+        raise RuntimeError("numpy-1.22 round-trip changed the payload keys")
+    if not isinstance(np.load(path, allow_pickle=True).item(), dict):
+        raise RuntimeError("file is unreadable by the current numpy")
+
+
+def save_submission(
+    payload: dict, out_dir: Path, stem: str = "submission", numpy1_compat: bool = True
+) -> Path:
+    """Write the .npy and zip it, which is what Codabench ingests.
+
+    `numpy1_compat` writes a pickle the scorer's numpy 1.22.4 can actually read. Leave it
+    on unless you have verified the server has been upgraded.
+    """
     out_dir.mkdir(parents=True, exist_ok=True)
     npy = out_dir / f"{stem}.npy"
-    np.save(npy, payload, allow_pickle=True)
+    if numpy1_compat:
+        _write_numpy1_compatible(npy, payload)
+    else:
+        np.save(npy, payload, allow_pickle=True)
 
     zip_path = out_dir / f"{stem}.zip"
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
