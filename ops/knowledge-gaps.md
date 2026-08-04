@@ -36,6 +36,53 @@ shot; a corridor shot admitted by a persistent single-cascade false positive (on
 on every sample, the two cascades agreed on none); and two "independent" clips that were adjacent shots
 of one scene. See D023(g).
 
+### M004: A contrast needs a positive control measured at the SAME contrast scale
+**Rule:** an experimental contrast is only interpretable next to a positive control that shares its
+scale — same film, same n, same clip length, same statistic. A control run at an easier scale proves
+the pipeline emits output; it does not prove the pipeline can resolve the comparison you actually made.
+**Why:** Gate 0 v3b's control was PPA scene>face across TWO films (d=+2.529, U=120/120, perfect
+separation) while the experimental contrast was within one film. The run therefore cannot distinguish
+"no face selectivity" from "no within-film sensitivity to anything" — and the one within-film contrast
+that should have been near-guaranteed (FACE clips carry 18% more speech → auditory cortex) came out
+A1 +0.280, p=0.1448, not significant. See D025 / G021.
+
+### M005: Check whether your summary statistic is compositional before you interpret its sign
+**Rule:** if a statistic normalises within a unit (subtracts a mean, divides by an sd, takes a share),
+its components are constrained to sum to a constant. A negative on one component may be nothing but a
+positive somewhere else. Verify by testing the normaliser itself for a condition difference.
+**Why:** `spatial_z` makes every clip's z-map mean exactly 0 and sd exactly 1, so the brain-wide sum of
+any condition delta is exactly zero. Gate 0 v3b's three negative visual ROIs and one positive auditory
+ROI are exactly what a normaliser shift produces with zero category information present. See G020.
+
+---
+
+## Gate 0 methodology (HIGH — blocks interpreting the NO-GO)
+
+### G020: Is Gate 0's NO-GO a face result or a zero-sum-statistic artifact?
+**Question:** `spatial_z = (g[verts].mean() - g.mean()) / g.std()` forces every clip's z-map to mean 0
+and sd 1, so ROI z is a share of a fixed budget and brain-wide condition deltas sum to exactly zero.
+FACE clips carry 18% more speech (23.3 vs 19.8 words, p=0.157) and the model's output mass sits in
+auditory/STS on this material. Did an off-target auditory difference mechanically drive FFC/V1/EBA
+negative, with no face information involved either way?
+**Priority:** HIGH — decides whether the NO-GO is a finding or a measurement failure, and therefore
+whether D017's pivot or a Gate 0 v4 is the correct next move.
+**How to close:** on the cached predictions (CPU, minutes) — (a) test `g.mean()` and `g.std()` FACE vs
+NONFACE; (b) recompute FFC z against a reference mask excluding auditory+STS and check whether the sign
+survives; (c) FFC−EBA per clip, permuted (compositional-immune); (d) rank all 360 parcels by
+FACE−NONFACE delta, both passes, and locate FFC. Code in LOOSE-ENDS thread 1.
+**Status:** OPEN — needs the HDF5 prediction cache from the 2026-07-31 Kaggle session.
+
+### G021: Does the Gate 0 v3b design detect ANY within-film contrast?
+**Question:** the only positive control in the run is cross-film (PPA, Charade vs McLintock). No
+within-film control was specified. Even the near-guaranteed within-film speech→auditory contrast was
+non-significant (A1 +0.280, p=0.1448). So we have no evidence the design has within-film sensitivity
+to anything, and a null on faces cannot be attributed to faces specifically.
+**Priority:** HIGH — same decision as G020; also a mandatory design element for any Gate 0 v4 (M004).
+**How to close:** pooled auditory+STS parcels FACE vs NONFACE within Charade, full and video-only, on
+the cached predictions. Significant → the design has sensitivity and the face null is real.
+Null → the design is insensitive and the face null is uninformative.
+**Status:** OPEN — same cache dependency as G020.
+
 ---
 
 ## TRIBE v2 Internals
@@ -189,3 +236,45 @@ submissions. How do we get one? Can any of the 5 groups endorse us?
 | G011 | HF auth for LLaMA 3.2 | Resolved in practice — `HF_TOKEN` Kaggle secret + granted LLaMA-3.2 gated access; text extractor loaded LLaMA-3.2 fine in the 2026-07-22 run. | 2026-07-22 |
 | G013 | ffmpeg on Kaggle? | YES — `ffmpeg` (and `uvx`) present on PATH on the Kaggle T4 image (2026-07-22 run). | 2026-07-22 |
 | G019 | Why does a pass die with "Ratio of unmatched words is X while AddSentenceToWords.max_unmatched_ratio=0.05"? | **REOPENED 2026-07-29 — MITIGATED, NOT CLOSED.** Mechanism confirmed: `tribev2/demo_utils.py:85` builds `AddSentenceToWords(max_unmatched_ratio=0.05)` at call time; `neuralset` 0.0.2 `text.py:215-224` raises when the fraction of Word rows with an empty `sentence` field exceeds it; a 10s clip yields 9-35 words, so under 20 words one unalignable word = 0.11 > 0.05. **But the 2026-07-28 fix rationale was wrong.** The guard is NOT cosmetic: an unmatched word gets `sentence=""` (`text.py:186`), `AddContextToWords` gives it `context=""` (`text.py:271-274`), and `RemoveMissing` DELETES the row (`basic.py:52-54`), whose TRs then receive exact zeros (`extractors/base.py:250-262, 302-305`). So widening the ratio trades a loud abort for silent, condition-correlated word deletion. Tolerance is now **0.15** (admits the observed 1/9, rejects 2/9) and deletion is instrumented per clip into `gate0v2_results.json` — see D023(b). **Residual, not fixed:** (1) deletion is not actually bounded by the ratio, because `utils.py:298-311` back-fills `sentence` without `sentence_char` on gap words so they count as matched and are still deleted; (2) a clip with ZERO ASR words returns at `text.py:174-176` without raising at ANY tolerance and silently loses the whole text modality (pre-existing, present in Run 1 too). NOTE: `predict_single()` builds events before applying `features_to_mask`, so ASR runs even for video-only passes — the patch must precede every pass loop. | 2026-07-29 |
+
+### M006: Read the model's own paper before designing a test of the model
+**Rule:** before building any experiment that probes a model's behaviour, read that model's own
+paper and repo for the experiment you are about to run. Record what they did, their stimulus design,
+and their statistic, in `source-of-truth.md`, before designing anything.
+**Why:** Gate 0 was designed and rebuilt four times (D020, D021, D023, D024) to test whether TRIBE
+recovers face selectivity. TRIBE v2's own paper — titled "A foundation model of vision, audition and
+language for **in-silico neuroscience**" — already reports recovering FFA, PPA, EBA and VWFA, using
+1 s-flashed images at 8 s ISI and a raw t=+5 s across-category contrast. We used 10 s naturalistic
+clips and a compositional spatial z-score, differing on every axis, and spent ~4 GPU-hours plus ten
+days reaching an uninterpretable null. None of this was in our record until 2026-08-04. See G022.
+
+## Positioning / prior art (HIGH — decides what may be claimed)
+
+### G022: What has already been published on TRIBE v2, and by whom?
+**Question:** the record contained nothing about TRIBE v2's own in-silico results, its training/test
+split, or the three 2026 groups working the same lane. Standing gap: keep this current.
+**Priority:** HIGH — it decides what can be claimed as a contribution.
+**How to close:** maintain the occupancy map in `MASTER-PLAN.md` §3.12; re-scan before any submission.
+**Status:** PARTLY CLOSED 2026-08-04. Known now: TRIBE v2 = arXiv 2605.04326, weights 2026-03-24,
+CC-BY-NC-4.0, ungated; training 25 subjects / 451.6 h (CNeuroMod 4/268.7, BoldMoments 10/61.9,
+Lebel2023 8/85.8, Wen2017 3/35.2); testing 695 subjects / 666.1 h (NNDb, LPP, Narratives, HCP 7T).
+Our "700-subject model" line describes the TEST set. TRIBE v1 (arXiv 2507.22229,
+facebookresearch/algonauts-2025) is a DIFFERENT, earlier model — see G024.
+
+### G023: What does an in-silico category contrast on this model need to have sensitivity?
+**Question:** n per condition, stimulus duration, flashed vs naturalistic, fROI definition,
+statistic, number of source films. Our null varied none of these deliberately.
+**Priority:** HIGH — this is now the project's primary empirical question (MASTER-PLAN S2/S3).
+**How to close:** S2 (replicate the published protocol) then S3 (cross duration × n × ROI-definition
+× statistic on a multi-film corpus, with negative and deliberately-underpowered controls).
+**Status:** OPEN.
+
+### G024: Did Gate 0 run TRIBE v2 or TRIBE v1?
+**Question:** the in-silico localizer result exists only for v2 (`facebook/tribev2`). If any run
+loaded v1 weights from `facebookresearch/algonauts-2025`, its interpretation changes entirely. The
+07-31 results JSON records the tribev2 commit `af58661791a351a448a489042a28f6c37e1c14b7` but the
+tribe-bench clone FAILED that session and no tribe-bench SHA was recorded.
+**Priority:** HIGH — cheap to close, and it gates the interpretation of every result so far.
+**How to close:** check the checkpoint identifier and `from_pretrained` argument in the notebook and
+in `tribe_tools/model.py:load_model`; confirm against the HF model card.
+**Status:** OPEN.

@@ -816,4 +816,193 @@ the EBA proxy contains most of the MT+ complex, so matching makes G3 harder, not
 
 ---
 
+### D025: Gate 0 v3b returned NO-GO. The D017 pivot is HELD pending six cached diagnostics (2026-08-01)
+
+**The result (executed 2026-07-31 09:52-13:56 UTC, Kaggle T4, single ~4 h pass).**
+`FFCr d=-0.244 U=79/225 p=0.9186`; `V1 d=-0.046`; `EBA d=-0.382`; `A1 d=+0.280 p=0.1448`; video-only
+`FFCr d=-0.201 p=0.7687`; PPA place control `d=+2.529 U=120/120 p=0.0002`. G1-G4 all False.
+**VERDICT: NO-GO.** Speech disclosure: face 23.3 words vs nonface 19.8, p=0.157. Full numbers, log audit
+and provenance: journal 2026-08-01.
+
+**The verdict is correctly computed and stands.** It fired on the two sign conditions, exactly as D023(a)
+specifies. It would ALSO have fired under the un-amended rule (V1 -0.046 >= FFC -0.244), so the D023(a)
+narrowing neither caused nor prevented it.
+
+**The run is mechanically clean.** Zero attrition (15/15, 15/15, 8/8), zero failures, zero cache hits
+(all 68 passes fresh), masking verified working (video-only passes load only the video extractor and run
+in ~1.5 s), ASR deletion 1 word on 5 clips and near-symmetric across conditions, no shadowing, and a
+positive control at perfect separation. This is a real measurement, not a plumbing failure.
+
+**But the decision to pivot is HELD, for two reasons found by auditing the analysis code, not the log.**
+
+**(a) The pre-registered statistic is zero-sum by construction.** Read from source:
+`spatial_z = (g[verts].mean() - g.mean()) / g.std()` on the clip-mean map, so every clip's z-map has
+mean exactly 0 and sd exactly 1. An ROI z is a SHARE of a fixed budget. The vertex-weighted sum of the
+FACE-NONFACE delta over the brain is therefore exactly zero: if anything rises, something else must
+fall. The observed pattern - the only positive ROI is the auditory one, all three visual ROIs negative
+and ordered by distance from the brain average, in a condition carrying 18% more speech - is exactly
+what a pure normalizer shift produces WITH ZERO CATEGORY INFORMATION PRESENT. The reported statistics
+cannot distinguish that from "no face selectivity". Filed as G020.
+
+**(b) There is no within-film positive control.** The PPA control is Charade vs McLintock, i.e.
+cross-film. It proves the pipeline emits differentiated output between two movies; it does not prove
+the pipeline resolves any within-film 15v15 10 s-clip category contrast. The one within-film contrast
+that should have been near-guaranteed (more speech in FACE -> auditory cortex) came out A1 +0.280,
+p=0.1448, not significant. So the run demonstrates no within-film sensitivity to anything. Filed as G021.
+
+**Calibration, so "underpowered" is not used as a blanket excuse.** Observed AUC = 79/225 = 0.351;
+null SE at 15v15 ~ 0.107; the observation sits ~3.3 null-SEs BELOW the hypothesised 0.70. Not a
+coin-flip null. But under (a), that distance may be measuring the normalizer rather than cortex. Both
+are true at once and both belong in any write-up.
+
+**Correction recorded:** the notebook's printed `top-k FACE ROIs` is computed on the FACE grand-mean
+map, NOT on the FACE-NONFACE contrast. It shows where TRIBE's output is largest on this material
+overall (very likely identical for NONFACE). It is not evidence of a condition-specific auditory
+response and must not be cited as one.
+
+**Also recorded, in the other direction:** FFC (-0.244) beat EBA (-0.382). Run 1's body confound is
+gone. G3 failed only on the V1 leg, and V1 (523 vertices, near the brain average) is close to being
+the reference, so "FFC < V1" is nearly a restatement of "FFC fell relative to the global mean".
+
+**THE DECISION.** Six diagnostics (CPU, on the cached predictions, minutes) run BEFORE any pivot:
+(1) V1/EBA/A1 under video-only; (2) pooled auditory+STS within-film - the missing positive control;
+(3) is `g.mean()`/`g.std()` condition-dependent - the direct zero-sum test; (4) FFC-EBA per clip,
+permuted - compositional-immune specificity; (5) FFC re-normalized against a reference excluding
+auditory+STS - does the sign survive; (6) all 360 parcels ranked by FACE-NONFACE delta, both passes,
+with FFC's rank. Code parked in LOOSE-ENDS thread 1.
+
+**None of these can convert NO-GO into GO** - that is the M001-class error this project keeps catching.
+They are strictly diagnostic, and they separate two worlds:
+- FFC stays negative under re-normalization AND the within-film control is significant -> the design
+  had sensitivity; this is a clean publishable negative (strong place structure, no within-film face
+  structure), which is the "where does it break" hook D017's pivot was built around.
+- FFC flips, OR even the auditory control is null within-film -> Gate 0's STATISTIC failed, not TRIBE.
+  D017's static-resource fallback is then the wrong response, and the correct move is a **Gate 0 v4**:
+  non-compositional measure, a mandatory within-film positive control, and an object/scrambled baseline
+  instead of profiles - pre-registered and frozen before it runs, and disclosed as motivated by these data.
+
+**Revisit if:** the diagnostics run and the two branches resolve; or if the prediction cache is lost
+before they run, in which case they cost another ~4 GPU-hours and this decision must be re-taken with
+that price attached.
+
 <!-- Add new decisions above this line -->
+
+---
+
+### D026: Gate 0's NO-GO does not trigger D017's fallback; Gate 0 is retired as a project-gate (2026-08-04)
+
+**Decision:** D017's revisit clause ("Gate 0 fails → fall back to the NeuroCheck static-resource
+paper") **does not fire**. `CHARTER.md` stands in full, including the live instrument. Gate 0 stops
+being a pass/fail project-gate and becomes the instrument's sensitivity calibration. `CHARTER.md`
+§6 moves from PENDING RULING to RULED, pointing here.
+
+**Reasoning — five independent grounds, any one sufficient.**
+1. **The antecedent is false.** TRIBE v2's own paper (arXiv 2605.04326, d'Ascoli et al., 2026-05-05)
+   recovers FFA, PPA, EBA and VWFA in-silico, validated against IBC over the 360 HCP parcels. A
+   third party (Bladon & Bent, arXiv 2605.13904) recovers FFA selectivity by feature visualisation.
+   Place selectivity recovered in both our own runs. "Recovers some and not others" is verbatim the
+   direction D017 set (I6).
+2. **Meta also resolved a within-naturalistic-movie contrast** ("for Bang ... we simply contrast
+   segments from the Algonauts dataset"), so the naturalistic regime is not inherently the hard one.
+3. **Our verdict is not interpretable as a model result.** Simulation with ZERO face information,
+   varying only auditory drive, reproduces the observed pattern (sim FFCr −0.239 vs observed −0.244;
+   EBA −0.295 vs −0.382; V1 −0.124 vs −0.046; ordering exact). With a genuine 0.05 FFC effect
+   injected, raw and reference statistics detect it at p=0.0005 while spatial_z reports −0.124,
+   p=0.9985 → NO-GO. The statistic inverts real effects. See G020.
+4. **The design was mis-specified in four independent ways:** n=15 against a field norm of 25-144+;
+   all 30 clips from one film treated as a fixed effect (Westfall et al. 2017 measure 50-200%
+   statistic inflation); the Glasser right-FFC parcel is a poor face fROI; 10 s clips fill ~11 of
+   100 window rows. And no same-scale positive control existed (G021/M004) — the near-ceiling
+   speech→auditory contrast came out p=0.1448.
+5. **Operator instruction, 2026-08-04:** "STICK TO WHAT WE WANT TO BUILT DON'T CHANGE WHAT WE ARE
+   BUILDING."
+
+**What this gives up:** the option to treat Gate 0 as dispositive and stop cheaply. We accept more
+work and the risk that calibration shows the contrast class sits below what free compute resolves.
+Bounded by MASTER-PLAN §6 stop rules; a measured floor is itself reportable (I6).
+
+**Drift check (CHARTER §5):** feeds both benchmark and MCP; one spine, fewer engines; read-only;
+free compute; strictly more honest. Passes all five.
+
+**Revisit if:** S2 fails to replicate the published in-silico localizer result with our pipeline.
+
+---
+
+### D027: Measurement doctrine — adopt the model authors' statistic; retire spatial_z as primary (2026-08-04)
+
+**Decision:** the primary in-silico contrast statistic becomes the published one: predicted response
+at t=+5 s post-onset minus the mean t=+5 s response across the other categories, on 1 s-flashed /
+8 s-ISI stimuli. Add a GLM contrast z (effect/SE across time per vertex — what the paper's Fig 4
+reports) and an ROI-minus-reference statistic. `spatial_z` is demoted to legacy, retained only as
+the comparison in the write-up. Every verdict carries a detection floor. fROIs are defined
+in-silico from an independent localizer half, not taken as whole atlas parcels.
+
+**Reasoning:** spatial_z normalises across vertices within a stimulus, forcing each z-map to mean 0
+and sd 1, so brain-wide condition deltas sum to exactly zero and an off-target shift inverts
+on-target ROIs. This is not a new discovery — it is the global-signal-regression artifact (Murphy
+et al. 2009) and, in the interpretability setting, arXiv 2512.18792 ("The Dead Salmons of AI
+Interpretability", Méloux et al.). **Do not write it up as a novel methods contribution.** A GLM
+z-score is not compositional; ours is. Also relevant: TRIBE's fMRI targets were z-scored per vertex
+across session, which independently makes cross-vertex magnitudes incommensurable.
+
+**Implications:** `tribe_tools/roi_stats.py` gains `event_locked_contrast`, `glm_contrast_z`,
+`roi_minus_reference`, `define_froi`, `detection_floor`. The compositional simulation becomes a
+regression test that asserts the artifact.
+
+**Revisit if:** the floor estimator shows the new statistics are less sensitive than spatial_z on a
+design where ground truth is known (it should be the reverse).
+
+---
+
+### D028: Compute doctrine — the prediction bank is the spine (2026-08-04)
+
+**Decision:** GPU is used only to grow a durable, versioned, provenance-stamped bank of predictions
+persisted **off-session** (HF Dataset; free tier gives 100 GB private) before anything is analysed.
+All analysis is CPU-only against the bank. The MCP read path never requires a GPU. Every clip
+filename carries a content hash. Batched runs use one unique `timeline` per clip,
+`keep_in_ram: False` on all three extractors, and `chunk_size ≈ 25` with per-clip fallback.
+
+**Reasoning:** `exca` keys features on absolute filepath + offset + duration and flushes each to
+disk as computed, so a bank makes every future re-analysis free (warm re-run 1.5 s/clip vs ~378 s
+cold) and makes a killed session survivable. Kaggle `/kaggle/working` is lost on interactive session
+end unless Persistence was enabled beforehand — which is how ~4 GPU-hours went missing on 07-31.
+Independently, HF now requires a paid plan to create any compute Space except up to 2 Gradio Spaces
+on ZeroGPU, free ZeroGPU is 5 min/day (2 min for unauthenticated callers), and ZeroGPU is
+Gradio-only — so serving precomputed predictions from CPU is the **only** architecture in which
+charter I4 (a live free Space) and I5 (free compute only) are compatible.
+
+**Implications:** the cross-session feature cache moves from a Phase-1 optimisation to the spine.
+No GPU spend is authorised on a design whose value depends on one contrast landing (D-1).
+"No precomputed public bank of model-predicted brain responses exists for any encoder" survived
+three independent searches — this is the project's one surviving structural novelty.
+
+**Revisit if:** HF free-tier storage or Space terms change again.
+
+---
+
+### D029: Positioning corrections — stop claiming four occupied contributions (2026-08-04)
+
+**Decision:** remove these claims from all framing, and cite the incumbents instead.
+
+| Dropped claim | Occupied by |
+|---|---|
+| The four-valued verdict / detection-floor-per-item idea | **Veritas**, arXiv 2604.12144 (Apache-2.0): Supported/Refuted/Underpowered/Invalid from a deterministic non-LLM operator, per-hypothesis power + SESOI, 64 hypotheses with 37 positive / 16 negative / 11 deliberately underpowered controls. Earlier still: Conditional Equivalence Testing, arXiv 1710.01771 |
+| Optimal / adversarial stimulus search as a headline | **Bladon & Bent**, arXiv 2605.13904, gradient ascent on TRIBE v2 across 7 ROIs, code released |
+| Building modality ablation | **CortexLab** (`cortexlab-toolkit` 0.2.0): `analysis/lesion.py`, `experiments/causal_modality_ablation.py`, row-permutation tests + BH-FDR, 283 tests |
+| "Where does TRIBE break" / negative findings as the novelty | Algonauts 2025's own stated goal; TRIBE's published OOD evaluation; two 2026 preprints auditing TRIBE-predicted cortex |
+| A live Space as the differentiator | Meta hosts `aidemos.atmeta.com/tribev2`; also **Cortex-Canvas** (CHI 2026 EA, doi:10.1145/3772363.3798548) and **BrainExplore** (arXiv 2512.08560) |
+| "First agent-callable TRIBE instrument" | possibly `sissississi-013/cortex` (unverified). **Never claim first.** |
+
+**What survives as ours:** the prediction bank (unclaimed); the design-requirements/sensitivity
+result for in-silico contrasts on this model; breadth of DOI-verified claims scored with floors; an
+MCP whose validity flag is mechanically derived from bank coverage and measured floors.
+
+**Also decided:** no rename. The fear that product-like names plus a statistics-dense write-up
+invite AI-content desk rejection is **refuted** — ICML 2026's official CFP permits LLM writing
+assistance, and the mech-interp workshop's desk rejections were for incomprehensible abstracts or
+egregious citation fabrications after human review. A DOI-verified bibliography defeats that screen.
+But **do not lead with "MCP"** to developer audiences (four 2026 HN front-page threads, 295-460
+points, arguing MCP is dead or worse than a CLI), and **do not lead with the instrument** to
+bioRxiv, whose exclusion list names "announcements of tools or services without data".
+
+**Revisit if:** any incumbent above turns out to be misidentified (see G024).
