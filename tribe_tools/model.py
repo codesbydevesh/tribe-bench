@@ -29,12 +29,25 @@ def _check_tribev2():
 def load_model(
     device: str = "cuda",
     cache_folder: Optional[Path] = None,
+    config_update: Optional[dict] = None,
 ):
     """Load TRIBE v2 via TribeModel.from_pretrained("facebook/tribev2").
 
     Args:
         device: "cuda" or "cpu". CPU works but is very slow.
         cache_folder: Where to cache downloaded model weights.
+        config_update: Dotted-path config overrides forwarded to from_pretrained.
+            Required for anything that must be set at CONSTRUCTION time, because
+            each extractor freezes once its cache uid is first computed. The two
+            that matter for long runs:
+              - `data.<modality>_feature.infra.keep_in_ram: False` — defaults to
+                True on all three extractors, so every feature read during
+                dataloading is kept forever and RSS grows linearly with the number
+                of stimuli. This is the hard ceiling on corpus size.
+              - `data.batch_size: <int>` — predict() materialises
+                (batch_size, n_vertices, n_TRs) float32, ~524 MB at 64.
+            None of these keys participates in an extractor cache uid, so passing
+            them does not invalidate already-cached features.
 
     Returns:
         TribeModel instance ready for prediction.
@@ -58,6 +71,8 @@ def load_model(
     kwargs = {"device": device}
     if cache_folder is not None:
         kwargs["cache_folder"] = str(cache_folder)
+    if config_update:
+        kwargs["config_update"] = dict(config_update)
 
     logger.info("Loading TRIBE v2 model...")
     model = TribeModel.from_pretrained("facebook/tribev2", **kwargs)

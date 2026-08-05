@@ -48,6 +48,7 @@ Hemisphere = Literal["left", "right", "both"]
 def load_model(
     device: str = "cuda",
     cache_folder: Optional[Path] = None,
+    config_update: Optional[dict] = None,
 ) -> "TribeModel":
     """
     Load TRIBE v2 model via TribeModel.from_pretrained("facebook/tribev2").
@@ -60,6 +61,26 @@ def load_model(
         device: "cuda" or "cpu". CPU works but is slow.
         cache_folder: Where to cache downloaded model weights.
             Defaults to HuggingFace cache (~/.cache/huggingface/).
+        config_update: Dotted-path overrides forwarded to from_pretrained's own
+            config_update. Needed for settings that MUST be applied at
+            construction, because the extractors freeze once their cache uid is
+            first computed and cannot be changed afterwards. Established uses:
+
+                data.video_feature.infra.keep_in_ram: False
+                data.audio_feature.infra.keep_in_ram: False
+                data.text_feature.infra.keep_in_ram: False
+                    keep_in_ram defaults to True on all three extractors, so every
+                    feature read during dataloading is retained forever and RSS
+                    grows linearly with the number of stimuli. This is the hard
+                    ceiling on corpus size on a 13-16 GB Kaggle box.
+
+                data.batch_size: <int>
+                    predict() materialises (batch_size, n_vertices, n_TRs) float32.
+                    At batch_size=64 that is ~524 MB on GPU plus the same again on
+                    the CPU copy.
+
+            None of these keys is part of any extractor cache uid, so setting them
+            does not invalidate previously cached features.
 
     Returns:
         The TribeModel object (from tribev2.demo_utils).
