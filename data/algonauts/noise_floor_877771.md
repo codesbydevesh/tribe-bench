@@ -124,9 +124,11 @@ sequence ends at sub-05 / movie-wot with nothing following it.
 
 ## What this means for the real submission
 
-1. **Published comparators are whole-brain means** (2nd place 0.2125, 3rd 0.2094). A single parcel on
-   a single movie reaches ~0.136 from noise alone — so a per-parcel claim needs a bar roughly **6×
-   higher** than the headline figure. Never quote a per-parcel value against the leaderboard number.
+1. **Comparators are whole-brain means.** Real board as of 2026-08-04 (see
+   `ood_leaderboard_2026-08-04.md`): top 0.23465, challenge baseline 0.08952. The "0.2125 / 0.2094"
+   figures cited in earlier notes are WRONG for this board. A single parcel on a single movie reaches
+   ~0.136 from noise alone — so a per-parcel claim needs a bar roughly **6× higher** than the headline
+   figure. Never quote a per-parcel value against the leaderboard number.
 2. **The floor is measured, not simulated.** MASTER-PLAN's detection-floor work can cite these for
    this design instead of estimating them.
 3. **The detailed-results page is itself a deliverable.** It renders a per-parcel, per-movie,
