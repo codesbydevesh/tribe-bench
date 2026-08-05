@@ -129,42 +129,74 @@ def parcellate(preds: np.ndarray, parcels: np.ndarray) -> np.ndarray:
 
 
 def resample_to_tr(
-    series: np.ndarray, n_target: int, tr: float = TR, strict: bool = True
+    series: np.ndarray,
+    n_target: int,
+    tr: float = TR,
+    strict: bool = True,
+    mode: str = "area",
 ) -> np.ndarray:
     """(T, P) predictions at TRIBE_HZ -> (n_target, P) on the fMRI TR grid.
 
-    TRIBE sample i sits at t = i / TRIBE_HZ seconds; fMRI sample j sits at t = j * tr.
-    Linear interpolation between them. No HRF shift is applied here -- see A3. This is
-    assumption A2.
+    THE CONVENTION, read off the challenge's own feature extractor
+    (`01_stimulus_feature_extraction/feature_extraction_ood_utils.py`):
 
-    The fMRI grid spans (n_target - 1) * tr seconds, which is ~1.49x longer than the same
-    number of 1 Hz predictions. If the predictions run out first, np.interp CLAMPS to the
-    final value -- silently emitting a flat tail that correlates with nothing and looks
-    like a modelling failure rather than a bookkeeping one. `strict` refuses instead.
-    Pass strict=False only when a short tail is genuinely expected, since the scorer
-    discards the first and last 5 samples anyway.
+        start_times = [x for x in np.arange(0, clip.duration, args.tr)][:-1]
+        clip_chunk = clip.subclip(start, start + args.tr)
+
+    So fMRI sample j corresponds to the movie INTERVAL [j*tr, (j+1)*tr) -- a window
+    average, not a point reading at its leading edge. Sampling at t = j*tr instead (which
+    an earlier version of this function did) puts every value half a TR -- 0.745 s -- early,
+    a systematic misalignment that costs accuracy silently and looks like model error.
+
+    mode="area" (default) integrates the prediction over each TR window, treating
+    prediction i as covering [i, i+1) / TRIBE_HZ. This matches the convention above and
+    incidentally anti-aliases: going from 1 Hz to 1/1.49 Hz is a DOWNSAMPLE, and point
+    sampling would alias anything above the new 0.336 Hz Nyquist. Post-HRF BOLD has little
+    power up there, so the effect is small, but averaging costs nothing.
+
+    mode="linear" keeps the old point interpolation, at the window CENTRE (j + 0.5) * tr,
+    for comparison. No HRF shift is applied in either mode -- see A3.
+
+    If the predictions run out before the target grid ends, `strict` refuses rather than
+    silently emitting a flat tail that correlates with nothing.
     """
     series = np.asarray(series, dtype=np.float64)
     if series.ndim != 2:
         raise ValueError(f"expected 2D (T, P), got {series.shape}")
     if n_target < 1:
         raise ValueError(f"n_target must be >= 1, got {n_target}")
+    if mode not in ("area", "linear"):
+        raise ValueError(f"mode must be 'area' or 'linear', got {mode!r}")
 
-    src_t = np.arange(series.shape[0], dtype=np.float64) / TRIBE_HZ
-    dst_t = np.arange(n_target, dtype=np.float64) * tr
-
-    shortfall = dst_t[-1] - src_t[-1]
+    n_src = series.shape[0]
+    src_end = n_src / TRIBE_HZ  # predictions cover [0, n_src/TRIBE_HZ)
+    needed = n_target * tr
+    shortfall = needed - src_end
     if strict and shortfall > tr:
         raise ValueError(
-            f"predictions cover {src_t[-1]:.1f}s but the target grid needs "
-            f"{dst_t[-1]:.1f}s ({n_target} samples x {tr}s) -- short by "
-            f"{shortfall:.1f}s ({shortfall / tr:.1f} TRs). np.interp would clamp and "
-            f"emit a flat tail. Predict the full segment, or pass strict=False."
+            f"predictions cover {src_end:.1f}s but the target grid needs {needed:.1f}s "
+            f"({n_target} samples x {tr}s) -- short by {shortfall:.1f}s "
+            f"({shortfall / tr:.1f} TRs). Predict the full segment, or pass strict=False."
         )
-    out = np.empty((n_target, series.shape[1]), dtype=np.float32)
-    for p in range(series.shape[1]):
-        out[:, p] = np.interp(dst_t, src_t, series[:, p])
-    return out
+
+    if mode == "linear":
+        src_t = np.arange(n_src, dtype=np.float64) / TRIBE_HZ
+        dst_t = (np.arange(n_target, dtype=np.float64) + 0.5) * tr
+        out = np.empty((n_target, series.shape[1]), dtype=np.float32)
+        for p in range(series.shape[1]):
+            out[:, p] = np.interp(dst_t, src_t, series[:, p])
+        return out
+
+    # Area average: overlap of each TR window with each 1-second prediction bin.
+    src_edges = np.arange(n_src + 1, dtype=np.float64) / TRIBE_HZ
+    dst_edges = np.arange(n_target + 1, dtype=np.float64) * tr
+    lo = np.maximum(dst_edges[:-1, None], src_edges[None, :-1])
+    hi = np.minimum(dst_edges[1:, None], src_edges[None, 1:])
+    w = np.clip(hi - lo, 0.0, None)  # (n_target, n_src) overlap in seconds
+    total = w.sum(axis=1, keepdims=True)
+    if (total <= 0).any():
+        raise ValueError("a TR window has no overlap with the predictions")
+    return ((w @ series) / total).astype(np.float32)
 
 
 def load_sample_counts(fmri_dir: Path, subject: str) -> dict[str, int]:
