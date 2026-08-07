@@ -59,42 +59,46 @@ Including the sign, with sub-03 the only positive. The leaderboard carries 5 dec
 maps rounded to 4. This is a stronger check than the three agent verifications, because it is
 a completely independent rendering of the same underlying numbers.
 
-## A free quality check for the real run
+## CORRECTED 2026-08-07 — the "identical ordering" claim was FALSE
 
-> ⚠️ **CORRECTION, 2026-08-07 — the claim that used to be here was FALSE.** It read: *"Subject
-> difficulty is a property of the data, not of the model. Every one of the 20 non-noise entries
-> has the same ordering: sub-01 > sub-03 > sub-02 > sub-05."* That is wrong, and it was wrong on
-> the numbers printed beside it — the baseline row reads 0.0986 / 0.0859 / **0.1021** / 0.0715,
-> in which sub-03 beats sub-01. The claim was falsified by the table it was written next to, and
-> it went on to become the basis of a candidate flagship for two days.
+An earlier version of this file claimed *"subject difficulty is a property of the data, not of
+the model — every one of the 20 non-noise entries has the same ordering: sub-01 highest, sub-03
+just below it, sub-02 middle, sub-05 lowest."* **That is wrong**, and it was contradicted by the
+numbers quoted in its own sentence: the baseline it cited as confirming evidence reads sub-01
+0.09855 against sub-03 0.10209.
 
-Verified by counting every row (`scripts/algonauts/leaderboard_variance.py`):
+Counted directly off the table above:
 
-**6 of 20 entries flip sub-01/sub-03** — rank 13 cji724 (+0.00146), 15 lio (+0.00331),
-16 lovableaspargus (+0.01650), 17 neko (+0.00069), 18 mainak09 (+0.00312), and 19 **the challenge
-baseline** (+0.00354). Rank 16 also puts sub-02 above sub-01.
+| ordering (best → worst) | entries |
+|---|---|
+| sub-01 > sub-03 > sub-02 > sub-05 | 14 |
+| **sub-03 > sub-01 > sub-02 > sub-05** | **5** |
+| sub-03 > sub-02 > sub-01 > sub-05 | 1 |
 
-**Every flip sits in the bottom half of the board.** Ranks 1-12 all put sub-01 first; five of the
-bottom seven put sub-03 first.
+**6 of 20 entries put sub-03 above sub-01:** cji724 (+0.00146), lio (+0.00331), lovableaspargus
+(+0.01650), neko (+0.00069), mainak09 (+0.00312), baseline (+0.00354).
 
-### What it actually means — more interesting than the false claim
+### What survives, and one thing that is more interesting than the false claim
 
-The per-subject profile is **score-dependent, not invariant**. Strong models favour sub-01, weak
-models favour sub-03. If subject difficulty were purely a property of the data — SNR, motion,
-scan quality — the ordering could not depend on how good the model is.
+**Robust:** sub-05 is lowest in **20 of 20** entries. sub-02 is third in 19 of 20.
 
-So sub-01 appears to carry structure that only a stronger model can exploit, while sub-03 is the
-easier subject for a weak one. That **kills the "this leaderboard is just measuring subject SNR"
-reading**, which was the entire basis of the S1 candidate. The honest question is not "which
-subject is noisy" but "what does sub-01 have that a model must be good to capture" — and that is
-not answerable from aggregate scores alone.
+**And the real pattern — the six flips are the six weakest entries on the board.** Every
+sub-03-over-sub-01 row sits below ~0.15 average; every row above ~0.157 has sub-01 first. So the
+per-subject profile is **score-dependent, not a fixed property of the data**: strong models
+favour sub-01, weak models favour sub-03, with a crossover near 0.15.
 
-### The check that does survive
+That matters more than the claim it replaces. If per-subject scores shifted with model strength,
+they cannot be read as per-subject *data quality* — which is exactly the assumption anyone makes
+when they normalise a leaderboard by a per-subject noise ceiling. As far as we have checked this
+specific measurement is unreported, though the surrounding idea (reliability-normalising a brain
+benchmark) is not novel: Algonauts 2023 itself divided by the noise ceiling and the 2025 edition
+removed it (arXiv 2301.03198 vs 2501.00504).
 
-Weaker, but free and still worth running: **sub-05 is last in all 20 entries**, and sub-02 is
-third in 19 of 20. So a real submission should come back with sub-05 lowest; if it doesn't,
-something is wrong regardless of the headline number. Do **not** expect a fixed sub-01/sub-03
-order — for an average-subject model that is close to a coin flip.
+### The quality check for our own run, corrected
+
+Use only the robust part: **sub-05 must come back lowest.** Do NOT treat a sub-01/sub-03 flip as
+a red flag — at an expected score near 0.116 (MIRAGE Table 1 for the released checkpoint), we sit
+below the 0.15 crossover, so the flipped ordering is the *expected* one for us.
 
 ## What our number will mean
 
