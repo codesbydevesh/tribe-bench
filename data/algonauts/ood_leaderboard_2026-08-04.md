@@ -61,15 +61,40 @@ a completely independent rendering of the same underlying numbers.
 
 ## A free quality check for the real run
 
-**Subject difficulty is a property of the data, not of the model.** Every one of the 20
-non-noise entries has the same ordering: sub-01 highest, sub-03 just below it, sub-02 middle,
-sub-05 lowest. It holds at the top (0.2557 / 0.2289 / 0.2493 / 0.2048) and at the baseline
-(0.0986 / 0.0859 / 0.1021 / 0.0715) alike — a ~0.03 spread between best and worst subject,
-preserved across a 2.6x range of overall scores.
+> ⚠️ **CORRECTION, 2026-08-07 — the claim that used to be here was FALSE.** It read: *"Subject
+> difficulty is a property of the data, not of the model. Every one of the 20 non-noise entries
+> has the same ordering: sub-01 > sub-03 > sub-02 > sub-05."* That is wrong, and it was wrong on
+> the numbers printed beside it — the baseline row reads 0.0986 / 0.0859 / **0.1021** / 0.0715,
+> in which sub-03 beats sub-01. The claim was falsified by the table it was written next to, and
+> it went on to become the basis of a candidate flagship for two days.
 
-So when our real predictions are scored, **that pattern must reappear.** If sub-05 comes back
-highest, or the spread collapses, something is wrong regardless of the headline number. This
-costs nothing to check and is independent of the score itself.
+Verified by counting every row (`scripts/algonauts/leaderboard_variance.py`):
+
+**6 of 20 entries flip sub-01/sub-03** — rank 13 cji724 (+0.00146), 15 lio (+0.00331),
+16 lovableaspargus (+0.01650), 17 neko (+0.00069), 18 mainak09 (+0.00312), and 19 **the challenge
+baseline** (+0.00354). Rank 16 also puts sub-02 above sub-01.
+
+**Every flip sits in the bottom half of the board.** Ranks 1-12 all put sub-01 first; five of the
+bottom seven put sub-03 first.
+
+### What it actually means — more interesting than the false claim
+
+The per-subject profile is **score-dependent, not invariant**. Strong models favour sub-01, weak
+models favour sub-03. If subject difficulty were purely a property of the data — SNR, motion,
+scan quality — the ordering could not depend on how good the model is.
+
+So sub-01 appears to carry structure that only a stronger model can exploit, while sub-03 is the
+easier subject for a weak one. That **kills the "this leaderboard is just measuring subject SNR"
+reading**, which was the entire basis of the S1 candidate. The honest question is not "which
+subject is noisy" but "what does sub-01 have that a model must be good to capture" — and that is
+not answerable from aggregate scores alone.
+
+### The check that does survive
+
+Weaker, but free and still worth running: **sub-05 is last in all 20 entries**, and sub-02 is
+third in 19 of 20. So a real submission should come back with sub-05 lowest; if it doesn't,
+something is wrong regardless of the headline number. Do **not** expect a fixed sub-01/sub-03
+order — for an average-subject model that is close to a coin flip.
 
 ## What our number will mean
 
