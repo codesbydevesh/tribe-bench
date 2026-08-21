@@ -40,7 +40,7 @@ D_AUD = 0.24        # best match to the observed 2026-07-31 pattern
 N_PER_GROUP = 15    # the v3b design as run
 ALPHA = 0.025       # the pre-registered one-sided level
 POWER = 0.80
-N_SIM = 100
+N_SIM = 2000   # publication-grade power curves; ~+-1% per point
 N_PERM = 500
 EFFECTS = (0.0, 0.005, 0.01, 0.02, 0.03, 0.05, 0.075, 0.10, 0.15, 0.20, 0.30)
 
@@ -72,13 +72,18 @@ def one_experiment(base, idx, ref, face_effect, rng):
     # permutation null shuffles the clip labels and recomputes it each time.
     fa = np.array([p.mean(axis=0) for p in face])
     fb = np.array([p.mean(axis=0) for p in nonface])
-    pool = np.concatenate([fa, fb], axis=0)
     obs = glm_contrast_z(fa, fb, ffc)
+    # Slice the ROI ONCE. glm_contrast_z only ever reads `verts` columns, so
+    # permuting the pre-sliced (n_clips, |ROI|) array is exactly equivalent and
+    # avoids copying a (15, 20484) array N_PERM times per simulated experiment.
+    pool_roi = np.concatenate([fa[:, ffc], fb[:, ffc]], axis=0)
+    roi_all = np.arange(pool_roi.shape[1])
     prng = np.random.default_rng(seed)
     ge = 0
     for _ in range(N_PERM):
-        perm = prng.permutation(pool.shape[0])
-        if glm_contrast_z(pool[perm[:N_PER_GROUP]], pool[perm[N_PER_GROUP:]], ffc) >= obs - 1e-12:
+        perm = prng.permutation(pool_roi.shape[0])
+        if glm_contrast_z(pool_roi[perm[:N_PER_GROUP]],
+                          pool_roi[perm[N_PER_GROUP:]], roi_all) >= obs - 1e-12:
             ge += 1
     out["glm_contrast_z"] = (ge + 1) / (N_PERM + 1)
     return out
