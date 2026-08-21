@@ -48,6 +48,7 @@ Hemisphere = Literal["left", "right", "both"]
 def load_model(
     device: str = "cuda",
     cache_folder: Optional[Path] = None,
+    config_update: Optional[dict] = None,
 ) -> "TribeModel":
     """
     Load TRIBE v2 model via TribeModel.from_pretrained("facebook/tribev2").
@@ -60,6 +61,26 @@ def load_model(
         device: "cuda" or "cpu". CPU works but is slow.
         cache_folder: Where to cache downloaded model weights.
             Defaults to HuggingFace cache (~/.cache/huggingface/).
+        config_update: Dotted-path overrides forwarded to from_pretrained's own
+            config_update. Needed for settings that MUST be applied at
+            construction, because the extractors freeze once their cache uid is
+            first computed and cannot be changed afterwards. Established uses:
+
+                data.video_feature.infra.keep_in_ram: False
+                data.audio_feature.infra.keep_in_ram: False
+                data.text_feature.infra.keep_in_ram: False
+                    keep_in_ram defaults to True on all three extractors, so every
+                    feature read during dataloading is retained forever and RSS
+                    grows linearly with the number of stimuli. This is the hard
+                    ceiling on corpus size on a 13-16 GB Kaggle box.
+
+                data.batch_size: <int>
+                    predict() materialises (batch_size, n_vertices, n_TRs) float32.
+                    At batch_size=64 that is ~524 MB on GPU plus the same again on
+                    the CPU copy.
+
+            None of these keys is part of any extractor cache uid, so setting them
+            does not invalidate previously cached features.
 
     Returns:
         The TribeModel object (from tribev2.demo_utils).
@@ -353,6 +374,107 @@ def get_video_info(video_path: Path) -> dict:
     Get video metadata: duration, fps, resolution, has_audio.
     Returns dict with keys: duration_seconds, fps, width, height, has_audio.
     """
+```
+
+---
+
+## tribe_tools/roi_stats.py
+
+ROI contrast statistics. Decision-critical: a wrong statistic here is what produced the retracted
+2026-07-31 NO-GO (G020, D026, D027). All pure NumPy, CPU-only, unit-tested in
+`tests/test_roi_stats.py`.
+
+### Row/time resolution — use these before any event-locked read
+
+```python
+def row_times_from_segments(segments: SegmentInfo) -> np.ndarray:
+    """Absolute start time (s) of each prediction row, from predict()'s all_segments.
+
+    Row index is NOT TR index: predict() returns only KEPT rows, concatenated
+    across 100 s windows and timelines (demo_utils.py:365-380). Meta guarantees
+    len(all_segments) == preds.shape[0] (demo_utils.py:382-384).
+
+    Raises AttributeError if segments lack .start; ValueError if start times are
+    not strictly increasing (i.e. multiple timelines — pass one at a time).
+    """
+```
+
+### Event-locked statistics (D027 — the model authors' protocol)
+
+```python
+def peri_event_timecourse(
+    preds: np.ndarray,              # (n_rows, n_vertices)
+    verts: np.ndarray,
+    onset_times_s,                  # absolute seconds, same clock as segments
+    row_times_s,                    # (n_rows,) from row_times_from_segments
+    pre_trs: int = 2,
+    post_trs: int = 9,
+) -> np.ndarray:                    # (n_events, pre_trs + post_trs + 1)
+    """PRIMARY readout. Rows resolved by TIME, never by arithmetic on an index.
+    Raises IndexError if any requested time has no row within 0.5 s."""
+
+def peak_lag_trs(timecourse: np.ndarray, pre_trs: int = 2) -> int:
+    """Measured peak lag of the group-average evoked response. Report this
+    instead of assuming a lag. Expected 0 on TRIBE's already-aligned output."""
+
+def event_locked_response(
+    preds, verts, onset_times_s, row_times_s, lag_trs: int = 0
+) -> np.ndarray:                    # (n_events,)
+    """Thin wrapper: one column of the time course.
+
+    ⚠ lag_trs DEFAULTS TO 0 AND MUST NOT BE SET TO 5. TRIBE's predictions are
+    already hemodynamically aligned (README: "offset by 5 seconds in the past";
+    defaults.py:67 offset=5). Reading at 5 reads BOLD(onset+10) and recovers
+    ~22% of a real effect. See source-of-truth.md and M006."""
+
+def event_locked_contrast(target_responses, other_responses) -> float:
+    """Target minus the mean of the other CATEGORY MEANS (not pooled exemplars).
+    Per arXiv 2605.04326: "subtracting the average responses at t=5 for the
+    other categories"."""
+```
+
+### Non-compositional ROI statistics
+
+```python
+def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float
+def roi_minus_reference(preds, verts, ref_verts) -> float
+    """Raises ValueError if ROI and reference overlap — the reference must be
+    pre-registered and off-target, or it is an undeclared normaliser."""
+def glm_contrast_z(preds_a, preds_b, verts) -> float
+    """Per-vertex effect/SE across observations, averaged over the ROI.
+    ⚠ OPEN: MASTER-PLAN §3.1 describes Meta's Fig 4 GLM z as effect/SE across
+    TIME per vertex. This implements across-OBSERVATIONS. Under audit."""
+def define_froi(loc_a, loc_b, parcel_verts, top_n: int = 100) -> np.ndarray
+    """Top-N most A-selective vertices in a parcel. loc_a/loc_b MUST come from an
+    independent localizer — selecting and testing on the same data is double
+    dipping. Warn-only; the caller is responsible for the split."""
+def detection_floor(
+    n_per_group: int, noise_sd: float, alpha: float = 0.025, power: float = 0.80,
+    n_sim: int = 200, n_perm: int = 400, seed: int = 0, tol: float = 1e-3,
+    max_effect: float = 1e6,
+) -> float
+    """Simulation-based MDE at `power` (D-3). Raises RuntimeError rather than
+    looping if no effect below max_effect reaches the target power."""
+```
+
+### Legacy — kept only as the comparison
+
+```python
+def spatial_z(preds: np.ndarray, verts: np.ndarray) -> float
+    """⚠ COMPOSITIONAL. INVERTS REAL EFFECTS. Not a primary statistic (G020, D027).
+    Every clip's z-map has mean 0 and sd 1, so condition deltas sum to zero.
+    Pinned by tests/test_roi_stats.py::test_spatial_z_inverts_a_real_effect."""
+```
+
+### Small-n permutation machinery (pre-existing, unchanged)
+
+```python
+def u_statistic(face_vals, scene_vals) -> float
+def exact_perm_p(face_vals, scene_vals) -> float
+def perm_null_deltas(face_vals, scene_vals) -> np.ndarray
+def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float
+def perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float
+def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool
 ```
 
 ---

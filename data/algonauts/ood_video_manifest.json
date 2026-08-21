@@ -1,0 +1,62 @@
+{
+ "chaplin1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/F2/xV/MD5E-s144988070--387aa4c18b5468680e2c29ecf1371836.mkv/MD5E-s144988070--387aa4c18b5468680e2c29ecf1371836.mkv",
+  "bytes": 144988070,
+  "path": "chaplin/task-chaplin1_video.mkv"
+ },
+ "chaplin2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/V6/jw/MD5E-s135325659--143051bc8fdedc2b9c96c614b6515388.mkv/MD5E-s135325659--143051bc8fdedc2b9c96c614b6515388.mkv",
+  "bytes": 135325659,
+  "path": "chaplin/task-chaplin2_video.mkv"
+ },
+ "mononoke1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/gx/MW/MD5E-s139915963--e0478e63a6af82866978b392f85bf7d3.mkv/MD5E-s139915963--e0478e63a6af82866978b392f85bf7d3.mkv",
+  "bytes": 139915963,
+  "path": "mononoke/task-mononoke1_video.mkv"
+ },
+ "mononoke2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/Ww/1k/MD5E-s147190428--52a388b70fc16d028f50c6b237664dc0.mkv/MD5E-s147190428--52a388b70fc16d028f50c6b237664dc0.mkv",
+  "bytes": 147190428,
+  "path": "mononoke/task-mononoke2_video.mkv"
+ },
+ "passepartout1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/jv/VQ/MD5E-s142801168--0fc7fae50d0e36d7550776af1ea40f85.mkv/MD5E-s142801168--0fc7fae50d0e36d7550776af1ea40f85.mkv",
+  "bytes": 142801168,
+  "path": "passepartout/task-passepartout1_video.mkv"
+ },
+ "passepartout2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/pX/KJ/MD5E-s148869893--b0894d570aaade862e7a660409710999.mkv/MD5E-s148869893--b0894d570aaade862e7a660409710999.mkv",
+  "bytes": 148869893,
+  "path": "passepartout/task-passepartout2_video.mkv"
+ },
+ "planetearth1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/z0/8M/MD5E-s143013611--4ac56ffc1b686f0fe51d5d1eeaab5992.mkv/MD5E-s143013611--4ac56ffc1b686f0fe51d5d1eeaab5992.mkv",
+  "bytes": 143013611,
+  "path": "planetearth/task-planetearth1_video.mkv"
+ },
+ "planetearth2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/xm/F9/MD5E-s139878496--982fd2b61d3b5d8980fd2e7e3b60fe9f.mkv/MD5E-s139878496--982fd2b61d3b5d8980fd2e7e3b60fe9f.mkv",
+  "bytes": 139878496,
+  "path": "planetearth/task-planetearth2_video.mkv"
+ },
+ "pulpfiction1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/jq/FQ/MD5E-s158222535--b89b3b546708192a5ddc1f20c51d38c6.mkv/MD5E-s158222535--b89b3b546708192a5ddc1f20c51d38c6.mkv",
+  "bytes": 158222535,
+  "path": "pulpfiction/task-pulpfiction1_video.mkv"
+ },
+ "pulpfiction2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/3Q/85/MD5E-s129741469--d1d0c1cd9ef470b977b420d9d6a74943.mkv/MD5E-s129741469--d1d0c1cd9ef470b977b420d9d6a74943.mkv",
+  "bytes": 129741469,
+  "path": "pulpfiction/task-pulpfiction2_video.mkv"
+ },
+ "wot1": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/mW/F0/MD5E-s116790942--c6f36980f4b622a83d08e079d0311a6a.mkv/MD5E-s116790942--c6f36980f4b622a83d08e079d0311a6a.mkv",
+  "bytes": 116790942,
+  "path": "wot/task-wot1_video.mkv"
+ },
+ "wot2": {
+  "url": "https://sftp.conp.ca/users/cneuromod/ria-conp/5cd/5fe4c-93fb-4b34-bb8f-175e2cf5cb8f/annex/objects/mj/Kk/MD5E-s111631793--5682fc9c8898f015c255b0f0acda2f88.mkv/MD5E-s111631793--5682fc9c8898f015c255b0f0acda2f88.mkv",
+  "bytes": 111631793,
+  "path": "wot/task-wot2_video.mkv"
+ }
+}

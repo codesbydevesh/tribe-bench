@@ -20,7 +20,31 @@ _MAX_LABELINGS = 200_000
 
 
 def spatial_z(preds: np.ndarray, verts: np.ndarray) -> float:
-    """Spatial z-score of an ROI for a single clip.
+    """LEGACY — DO NOT USE AS A PRIMARY STATISTIC. Kept as the comparison only.
+
+    .. warning::
+       **This statistic inverts real effects (G020, D027).** It is compositional:
+       every clip's z-map has mean exactly 0 and sd exactly 1, so brain-wide
+       condition deltas sum to exactly zero. If one region's share rises, others
+       MUST fall — with no change in their actual predicted response.
+
+       Demonstrated in ``scripts/compositional_demo.py`` and pinned by
+       ``tests/test_roi_stats.py::test_spatial_z_inverts_a_real_effect``:
+
+       * inject ZERO face information, vary only auditory drive -> reproduces the
+         2026-07-31 observed pattern (FFCr sim -0.239 vs obs -0.244, ordering exact);
+       * inject a GENUINE +0.05 FFCr effect -> raw/reference statistics detect it at
+         p=0.0005 while spatial_z reports p=0.9985 and prints NO-GO.
+
+       This is not a novel finding: it is global signal regression (Murphy et al.
+       2009, doi:10.1016/j.neuroimage.2008.09.036) and, for interpretability,
+       arXiv 2512.18792 "The Dead Salmons of AI Interpretability". Cite, fix, move on.
+
+       Use :func:`event_locked_contrast` (the model authors' own statistic, D027),
+       :func:`roi_minus_reference`, or :func:`glm_contrast_z` instead. Every verdict
+       needs a :func:`detection_floor` beside it (D-3).
+
+    Spatial z-score of an ROI for a single clip.
 
     Collapses the clip to a per-vertex mean map, then measures how many
     spatial standard deviations the ROI's mean sits above the whole-cortex
@@ -152,3 +176,438 @@ def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool:
     null (selectivity fails) is rejected only if every sub-null is rejected.
     """
     return (p_a <= alpha) and (p_b <= alpha)
+
+
+# ---------------------------------------------------------------------------
+# NON-COMPOSITIONAL STATISTICS (D027)
+#
+# spatial_z above is zero-sum by construction and inverts real effects (G020).
+# Everything below measures the ROI without dividing by a brain-wide normaliser,
+# so a rise in one region does not force a fall in another.
+# ---------------------------------------------------------------------------
+
+
+def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
+    """The ROI's predicted response, unnormalised. The simplest honest readout.
+
+    No brain-wide reference at all, so it carries any per-clip global gain
+    straight through — that is the trade. Pair it with :func:`roi_minus_reference`
+    (which cancels an additive gain) and report both, per D027.
+
+    Args:
+        preds: (n_trs, n_vertices) or (n_vertices,).
+        verts: 1D array of vertex indices for the ROI.
+    """
+    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    if len(verts) == 0:
+        raise ValueError("empty ROI vertex set")
+    return float(g[verts].mean())
+
+
+def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndarray) -> float:
+    """ROI mean minus a PRE-REGISTERED off-target reference region.
+
+    Cancels an additive per-clip global gain without the zero-sum trap: the
+    reference is a fixed, named, low-drive region chosen in advance, not the
+    whole-brain average. So a condition difference confined to some third region
+    (e.g. auditory) leaves this statistic alone, which is exactly the failure
+    mode spatial_z has (G020).
+
+    The reference must be declared before seeing data and must not overlap the
+    ROI — otherwise this becomes a different, undocumented normaliser.
+
+    Args:
+        preds: (n_trs, n_vertices) or (n_vertices,).
+        verts: ROI vertex indices.
+        ref_verts: reference-region vertex indices. Must be disjoint from verts.
+    """
+    if len(verts) == 0 or len(ref_verts) == 0:
+        raise ValueError("empty ROI or reference vertex set")
+    if np.intersect1d(verts, ref_verts).size:
+        raise ValueError(
+            "ROI and reference overlap — the reference must be off-target and "
+            "pre-registered, or this is an undeclared normaliser"
+        )
+    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    return float(g[verts].mean() - g[ref_verts].mean())
+
+
+def row_times_from_segments(segments) -> np.ndarray:
+    """Absolute start time (seconds) of each prediction row, from ``predict()``'s all_segments.
+
+    **Why this exists.** ``predict()`` returns ``(preds, all_segments)`` where
+    ``preds`` has shape ``(n_kept_segments, n_vertices)`` — only the KEPT rows,
+    concatenated across 100 s windows and across timelines. Segments with no
+    events are dropped (``remove_empty_segments=True``, demo_utils.py:148,
+    370-376). So **row index is not TR index** and never was; Meta's own demo
+    prints ``Predicted 53 / 100 segments`` for a 52.21 s clip.
+
+    Meta guarantees the 1:1 mapping we rely on here — demo_utils.py:382-384
+    raises unless ``len(all_segments) == preds.shape[0]``.
+
+    This is the ONLY function that touches segment internals. It duck-types
+    ``.start`` and fails loudly if the object is not what we expect, rather than
+    returning a plausible wrong array.
+
+    Args:
+        segments: the ``all_segments`` list returned beside ``preds``.
+
+    Returns:
+        (n_rows,) float array of absolute segment start times, in seconds.
+    """
+    if segments is None or len(segments) == 0:
+        raise ValueError("no segments given — pass predict()'s all_segments")
+    try:
+        times = np.array([float(s.start) for s in segments], dtype=float)
+    except AttributeError as exc:
+        attrs = [a for a in dir(segments[0]) if not a.startswith("_")][:20]
+        raise AttributeError(
+            f"segment objects have no usable .start ({exc}); available attributes: {attrs}. "
+            "Do not work around this by indexing rows arithmetically — that is the bug this "
+            "function exists to prevent."
+        ) from exc
+    if np.any(np.diff(times) <= 0):
+        raise ValueError(
+            "segment start times are not strictly increasing — this list spans multiple "
+            "timelines or is unsorted. Pass the segments for ONE timeline at a time; "
+            "row->time resolution is ambiguous otherwise."
+        )
+    return times
+
+
+def _resolve_rows(row_times_s: np.ndarray, want_s, tol: float = 0.5) -> np.ndarray:
+    """Map absolute times to prediction rows, or raise. Never silently approximate."""
+    rt = np.asarray(row_times_s, dtype=float)
+    want = np.asarray(want_s, dtype=float)
+    idx = np.searchsorted(rt, want)
+    idx = np.clip(idx, 1, len(rt) - 1)
+    left, right = rt[idx - 1], rt[np.minimum(idx, len(rt) - 1)]
+    pick = np.where(np.abs(want - left) <= np.abs(right - want), idx - 1, idx)
+    err = np.abs(rt[pick] - want)
+    bad = err > tol
+    if np.any(bad):
+        i = int(np.argmax(err))
+        raise IndexError(
+            f"{int(bad.sum())} of {len(want)} requested times have no prediction row within "
+            f"{tol} s — worst is t={want[i]:.3f} s (nearest row at {rt[pick[i]]:.3f} s, "
+            f"off by {err[i]:.3f} s). Rows span {rt[0]:.3f}..{rt[-1]:.3f} s. This means the "
+            "stimulus timing and the returned segments disagree; do NOT proceed."
+        )
+    return pick
+
+
+def peri_event_timecourse(
+    preds: np.ndarray,
+    verts: np.ndarray,
+    onset_times_s,
+    row_times_s,
+    pre_trs: int = 2,
+    post_trs: int = 9,
+) -> np.ndarray:
+    """ROI response around each event onset, as a time course. **The primary readout.**
+
+    Returns the whole evoked response rather than one hand-picked lag, because the
+    correct lag is a thing to MEASURE, not assume — see :func:`peak_lag_trs` and the
+    warning in :func:`event_locked_response`.
+
+    Rows are resolved by absolute TIME against ``row_times_s``, never by arithmetic
+    on a row index. Use :func:`row_times_from_segments` to build ``row_times_s``.
+
+    Args:
+        preds: (n_rows, n_vertices) as returned by ``predict()``.
+        verts: ROI vertex indices.
+        onset_times_s: stimulus onset times in seconds, absolute on the same clock
+            as the segments.
+        row_times_s: (n_rows,) absolute time of each prediction row.
+        pre_trs: TRs before onset to include (baseline).
+        post_trs: TRs after onset to include.
+
+    Returns:
+        (n_events, pre_trs + post_trs + 1) array of ROI-mean responses. Column
+        ``pre_trs`` is the onset itself; column ``pre_trs + k`` is onset + k TRs.
+
+    Raises:
+        IndexError: if any requested time has no matching prediction row. Loud on
+            purpose — silent misalignment is the failure this function prevents.
+    """
+    p = np.asarray(preds, dtype=float)
+    if p.ndim != 2:
+        raise ValueError("peri_event_timecourse needs (n_rows, n_vertices)")
+    if len(verts) == 0:
+        raise ValueError("empty ROI vertex set")
+    rt = np.asarray(row_times_s, dtype=float)
+    if len(rt) != p.shape[0]:
+        raise ValueError(
+            f"row_times_s has {len(rt)} entries but preds has {p.shape[0]} rows — "
+            "these must correspond 1:1 (Meta asserts this at demo_utils.py:382)"
+        )
+    onsets = np.asarray(list(onset_times_s), dtype=float)
+    if onsets.size == 0:
+        raise ValueError("no event onsets given")
+    if pre_trs < 0 or post_trs < 0:
+        raise ValueError("pre_trs and post_trs must be >= 0")
+
+    lags = np.arange(-pre_trs, post_trs + 1, dtype=float)
+    roi = p[:, verts].mean(axis=1)
+    out = np.empty((onsets.size, lags.size), dtype=float)
+    for j, lag in enumerate(lags):
+        out[:, j] = roi[_resolve_rows(rt, onsets + lag)]
+    return out
+
+
+def peak_lag_trs(timecourse: np.ndarray, pre_trs: int = 2) -> int:
+    """Measured peak lag (in TRs relative to onset) of the group-average response.
+
+    Report this instead of assuming a lag. On a movie-trained encoder whose outputs
+    are already hemodynamically aligned, the expected answer is **0**, not 5 — but
+    measuring costs nothing and settles it (D-3: no verdict without evidence).
+    """
+    tc = np.asarray(timecourse, dtype=float)
+    if tc.ndim != 2 or tc.shape[1] == 0:
+        raise ValueError("timecourse must be (n_events, n_lags)")
+    return int(np.argmax(tc.mean(axis=0))) - int(pre_trs)
+
+
+def event_locked_response(
+    preds: np.ndarray,
+    verts: np.ndarray,
+    onset_times_s,
+    row_times_s,
+    lag_trs: int = 0,
+) -> np.ndarray:
+    """ROI response at a single lag, one value per event. Thin wrapper on the time course.
+
+    .. warning::
+       **``lag_trs`` defaults to 0, and that is deliberate. Do not set it to 5.**
+
+       TRIBE v2's predictions are ALREADY hemodynamically aligned. Its own README
+       states: *"They are offset by 5 seconds in the past, in order to compensate
+       for the hemodynamic lag"* (``tribev2-source/README.md``), implemented as
+       ``FmriExtractor(offset=5)`` in ``tribev2/grids/defaults.py:67``. The model
+       learns ``stimulus(t) -> BOLD(t+5)``, so output row *t* is already the peak
+       response to the stimulus at *t*.
+
+       Reading at ``lag_trs=5`` therefore reads predicted BOLD at **onset + 10 s** —
+       past the peak, at ~18% of its amplitude (canonical HRF ``h(10)/h(5) = 0.183``).
+       Simulated on the S2 design: a true +0.425 effect is recovered as **+0.4266 at
+       lag 0** and **+0.0769 at lag 5**, a 5.5x attenuation that would fail the
+       detection floor and fire the S2 stop rule on a real effect.
+
+       This repo had already recorded the fact twice before the bug was written —
+       ``MASTER-PLAN`` §3.8 *"do not double-apply"* and
+       ``scripts/algonauts/prepare_submission.py`` A3. See M006.
+
+       Meta's Fig 4A says predicted activity *"peaks 5 seconds after stimulus onset"*,
+       which is consistent with plotting the same array on the BOLD clock rather than
+       the row index. That ambiguity is settled by **measurement**, not assumption:
+       use :func:`peri_event_timecourse` + :func:`peak_lag_trs` and report the peak
+       you actually observe.
+
+    Args:
+        preds: (n_rows, n_vertices).
+        verts: ROI vertex indices.
+        onset_times_s: onset times in seconds, absolute.
+        row_times_s: (n_rows,) absolute time of each prediction row; see
+            :func:`row_times_from_segments`.
+        lag_trs: TRs after onset to read. **Default 0.** Any non-zero value must be
+            justified by a measured peak, not by HRF reasoning.
+
+    Returns:
+        (n_events,) array of ROI-mean responses.
+    """
+    if lag_trs < 0:
+        raise ValueError("lag_trs must be >= 0")
+    tc = peri_event_timecourse(
+        preds, verts, onset_times_s, row_times_s, pre_trs=0, post_trs=int(lag_trs)
+    )
+    return tc[:, int(lag_trs)]
+
+
+def event_locked_contrast(target_responses, other_responses) -> float:
+    """Target category minus the mean of the OTHER categories, at the same lag.
+
+    The second half of the published protocol (arXiv 2605.04326): *"subtract[ing]
+    the average responses at t=5 for the other categories"*. Each element of
+    ``other_responses`` is one other category's array from
+    :func:`event_locked_response`; each category is averaged first, then those
+    category means are averaged, so a category with more exemplars does not
+    dominate the baseline.
+
+    Note this is mean-of-category-means, not a pool of all other exemplars. The
+    two coincide only at equal n. The published wording says "the average
+    responses ... for the other categories", which reads as per-category; the
+    choice is recorded here so it can be challenged rather than discovered.
+
+    Args:
+        target_responses: (n_events,) responses for the category under test.
+        other_responses: sequence of (n_events_k,) arrays, one per other category.
+
+    Returns:
+        mean(target) - mean over categories of mean(category).
+    """
+    tgt = np.asarray(list(target_responses), dtype=float)
+    if tgt.size == 0:
+        raise ValueError("no target responses")
+    others = [np.asarray(list(o), dtype=float) for o in other_responses]
+    others = [o for o in others if o.size]
+    if not others:
+        raise ValueError("event_locked_contrast needs at least one other category")
+    return float(tgt.mean() - np.mean([o.mean() for o in others]))
+
+
+def glm_contrast_z(preds_a, preds_b, verts: np.ndarray) -> float:
+    """Per-vertex effect / standard error across observations, averaged over the ROI.
+
+    What Meta's Fig 4 actually reports, and non-compositional. Each vertex gets
+    its own two-sample z (difference of condition means over the pooled standard
+    error across observations); the ROI value is the mean of those. Because the
+    scaling is per-vertex noise — not a brain-wide sd — a condition difference
+    elsewhere in the brain cannot move this number (contrast with spatial_z, G020).
+
+    Vertices with zero pooled variance contribute 0 rather than inf.
+
+    Args:
+        preds_a: (n_obs_a, n_vertices) — one row per clip/event for condition A.
+        preds_b: (n_obs_b, n_vertices) — condition B.
+        verts: ROI vertex indices.
+
+    Returns:
+        Mean per-vertex z over the ROI. Positive = A > B.
+    """
+    a = np.asarray(preds_a, dtype=float)
+    b = np.asarray(preds_b, dtype=float)
+    if a.ndim != 2 or b.ndim != 2:
+        raise ValueError("glm_contrast_z needs (n_obs, n_vertices) for both conditions")
+    if a.shape[1] != b.shape[1]:
+        raise ValueError("condition arrays disagree on vertex count")
+    if len(verts) == 0:
+        raise ValueError("empty ROI vertex set")
+    na, nb = a.shape[0], b.shape[0]
+    if na < 2 or nb < 2:
+        raise ValueError("need >= 2 observations per condition for a standard error")
+    av, bv = a[:, verts], b[:, verts]
+    diff = av.mean(axis=0) - bv.mean(axis=0)
+    # pooled SE of the difference of means
+    var = ((na - 1) * av.var(axis=0, ddof=1) + (nb - 1) * bv.var(axis=0, ddof=1)) / (na + nb - 2)
+    se = np.sqrt(var * (1.0 / na + 1.0 / nb))
+    z = np.zeros_like(diff)
+    ok = se > 0
+    z[ok] = diff[ok] / se[ok]
+    return float(z.mean())
+
+
+def define_froi(
+    loc_a: np.ndarray,
+    loc_b: np.ndarray,
+    parcel_verts: np.ndarray,
+    top_n: int = 100,
+) -> np.ndarray:
+    """Top-N most A-selective vertices inside a parcel, from an INDEPENDENT localizer.
+
+    Fixes the ROI, not just the statistic. Gate 0 used the raw 58-vertex Glasser
+    right-FFC parcel as its face region; a proper functional ROI (fROI) is defined
+    by selectivity measured on data that is NOT the data you then test on
+    (Bladon & Bent use ~104 vertices).
+
+    .. warning::
+       ``loc_a`` / ``loc_b`` MUST come from a held-out localizer run — a separate
+       set of exemplars, or one half of a split. Defining the fROI on the same
+       responses you then contrast is double dipping: it manufactures selectivity
+       out of noise and the resulting p-value means nothing.
+
+    Args:
+        loc_a: (n_vertices,) or (n_obs, n_vertices) localizer response, condition A.
+        loc_b: same shape, condition B.
+        parcel_verts: candidate vertex indices (the anatomical parcel to search in).
+        top_n: how many vertices to keep. Capped at the parcel size.
+
+    Returns:
+        Sorted array of the selected vertex indices (a subset of parcel_verts).
+    """
+    a = np.asarray(loc_a, dtype=float)
+    b = np.asarray(loc_b, dtype=float)
+    a = a.mean(axis=0) if a.ndim == 2 else a
+    b = b.mean(axis=0) if b.ndim == 2 else b
+    if a.shape != b.shape:
+        raise ValueError("localizer conditions disagree on shape")
+    pv = np.asarray(parcel_verts, dtype=int)
+    if pv.size == 0:
+        raise ValueError("empty parcel")
+    if top_n < 1:
+        raise ValueError("top_n must be >= 1")
+    k = min(int(top_n), pv.size)
+    sel = a[pv] - b[pv]
+    keep = pv[np.argsort(sel)[::-1][:k]]
+    return np.sort(keep)
+
+
+def detection_floor(
+    n_per_group: int,
+    noise_sd: float,
+    alpha: float = 0.025,
+    power: float = 0.80,
+    n_sim: int = 200,
+    n_perm: int = 400,
+    seed: int = 0,
+    tol: float = 1e-3,
+    max_effect: float = 1e6,
+) -> float:
+    """Smallest effect this design could detect at `power`, by simulation (D-3).
+
+    "No verdict without a floor." A null is only informative if you can say what
+    size of effect you would have caught. This simulates the design's own test —
+    the same one-sided permutation test the verdict uses — under additive
+    Gaussian noise, and bisects on the effect size until the rejection rate hits
+    `power`.
+
+    Reports the MDE in the same units as the statistic being tested. It is a
+    property of the DESIGN (n, noise, alpha), not of any observed data.
+
+    Args:
+        n_per_group: clips/events per condition.
+        noise_sd: across-observation sd of the statistic under the null.
+        alpha: one-sided significance level the verdict uses.
+        power: target detection probability. 0.80 by convention.
+        n_sim: simulated experiments per effect size.
+        n_perm: permutations per simulated experiment.
+        seed: RNG seed. Reproducibility is required — the floor goes in the paper.
+        tol: bisection tolerance on the effect size.
+        max_effect: bracketing ceiling; exceeding it raises rather than looping.
+
+    Returns:
+        The minimum detectable effect (MDE) at `power`.
+    """
+    if n_per_group < 2:
+        raise ValueError("need >= 2 per group")
+    if noise_sd <= 0:
+        raise ValueError("noise_sd must be > 0")
+    if not 0 < power < 1 or not 0 < alpha < 1:
+        raise ValueError("alpha and power must be in (0, 1)")
+
+    def achieved_power(effect: float) -> float:
+        rng = np.random.default_rng(seed)
+        hits = 0
+        for _ in range(n_sim):
+            a = rng.normal(effect, noise_sd, n_per_group)
+            b = rng.normal(0.0, noise_sd, n_per_group)
+            if mc_perm_p(a, b, n_perm=n_perm, seed=int(rng.integers(1 << 31))) <= alpha:
+                hits += 1
+        return hits / n_sim
+
+    # bracket: double until powered
+    lo, hi = 0.0, max(noise_sd, 1e-6)
+    while achieved_power(hi) < power:
+        lo, hi = hi, hi * 2
+        if hi > max_effect:
+            raise RuntimeError(
+                f"no effect below {max_effect} reaches {power:.0%} power at "
+                f"n={n_per_group}, sd={noise_sd}, alpha={alpha} — the design is "
+                "underpowered for any plausible effect; report that, do not run it"
+            )
+    while hi - lo > tol:
+        mid = 0.5 * (lo + hi)
+        if achieved_power(mid) >= power:
+            hi = mid
+        else:
+            lo = mid
+    return float(hi)
