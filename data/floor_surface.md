@@ -61,3 +61,24 @@ depending on a noise-correlation parameter we have not measured."**
 
 The qualitative claim is unaffected by comparator choice: `spatial_z` is the worst of the four at
 every rho tested, by at least 2.6x.
+
+## Is the rho grid endpoint itself a boundary? — checked, NO
+
+The same failure mode this whole exercise corrected (an optimum sitting on the edge of its own
+search grid) could apply to the rho sweep: the ratio falls monotonically to rho=0.9, which is the
+last point tested. Checked at rho=0.97 (n_sim=250):
+
+| rho | spatial_z | glm_contrast_z (fixed comparator) | ratio |
+|---|---|---|---|
+| 0.0 | 0.1726 | 0.0290 | 5.95x |
+| 0.3 | 0.1858 | 0.0426 | 4.36x |
+| 0.6 | 0.1924 | 0.0500 | 3.85x |
+| 0.9 | 0.2074 | 0.0616 | **3.37x  <- minimum** |
+| 0.97 | 0.2231 | 0.0616 | 3.62x |
+
+**The ratio turns around.** `spatial_z`'s floor keeps degrading past rho=0.9 while
+`glm_contrast_z`'s has plateaued, so the ratio rises again. The minimum is interior and the low end
+of the reported range is bounded by evidence, not by where the grid stopped.
+
+Caveat: the rho=0.97 point was run at n_sim=250 rather than 500, so it is noisier than the rest of
+the table. The direction is unambiguous; the exact value is not.

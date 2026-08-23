@@ -1114,6 +1114,11 @@ shown is impossible for this model. Since **rho for real TRIBE predictions is un
 paper must either recommend `glm_contrast_z` or state the recommendation as conditional. Robust
 across the entire range: `spatial_z` is the worst of the four at every rho.
 
+**The rho endpoint was checked for the same boundary problem and is clean.** At rho=0.97 the ratio
+is 3.62x, i.e. it RISES again after a minimum at rho=0.9 (3.37x), because spatial_z's floor keeps
+degrading while glm_contrast_z's plateaus. The low end of the reported range is therefore bounded
+by evidence, not by where the grid stopped.
+
 **Revisit if:** the simulation is ever replaced by measurements from a real prediction cache, which
 would make the whole synthetic-brain parameterisation moot. Until then, every figure it produces is
 conditional on `build_brain`'s hand-set constants and must be reported as such.
