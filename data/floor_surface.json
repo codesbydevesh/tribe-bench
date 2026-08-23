@@ -1,0 +1,50 @@
+{
+  "d_aud": 0.3,
+  "n_sim": 500,
+  "rows": [
+    {
+      "rho": 0.0,
+      "floors": {
+        "spatial_z": 0.1726,
+        "raw_roi_mean": 0.0296,
+        "roi_minus_reference": 0.021,
+        "glm_contrast_z": 0.029
+      },
+      "ratio": 8.219047619047618
+    },
+    {
+      "rho": 0.3,
+      "floors": {
+        "spatial_z": 0.1858,
+        "raw_roi_mean": 0.0443,
+        "roi_minus_reference": 0.0482,
+        "glm_contrast_z": 0.0426
+      },
+      "ratio": 4.36150234741784
+    },
+    {
+      "rho": 0.6,
+      "floors": {
+        "spatial_z": 0.1924,
+        "raw_roi_mean": 0.0555,
+        "roi_minus_reference": 0.0668,
+        "glm_contrast_z": 0.05
+      },
+      "ratio": 3.8479999999999994
+    },
+    {
+      "rho": 0.9,
+      "floors": {
+        "spatial_z": 0.2074,
+        "raw_roi_mean": 0.0636,
+        "roi_minus_reference": 0.0803,
+        "glm_contrast_z": 0.0616
+      },
+      "ratio": 3.3668831168831166
+    }
+  ],
+  "ratio_range": [
+    3.3668831168831166,
+    8.219047619047618
+  ]
+}
