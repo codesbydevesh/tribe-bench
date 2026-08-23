@@ -170,15 +170,28 @@ def test_spatial_z_inverts_a_real_effect():
     """THE REGRESSION TEST FOR G020.
 
     A GENUINE +0.05 face effect is injected into FFCr on FACE clips only, while
-    FACE clips also carry more auditory drive (delta 0.24 — the setting at which
-    scripts/compositional_demo.py best matches the observed 2026-07-31 pattern,
-    sum-sq error 0.081 across four ROIs). The non-compositional statistics must
-    find the real effect. The compositional one must report the WRONG SIGN.
+    FACE clips also carry more auditory drive (delta 0.24, a STIPULATED
+    demonstration level -- see the correction note below).
 
-    Documented case, from the demo's own table:
-        true effect 0.05 -> spatial_z delta -0.124, p=0.9985 (NO-GO)
-                         -> raw delta +0.0446, p=0.0005 (detected)
-                         -> ref delta +0.0463, p=0.0005 (detected)
+    What this test pins is the SIGN INVERSION, which is the finding: the
+    non-compositional statistics must find the real effect while the
+    compositional one reports the wrong sign. Measured over 40 seeds under the
+    current generator: spatial_z delta -0.113 +/- 0.035 (0/40 seeds positive,
+    worst margin 0.030 below zero), roi_minus_reference +0.049 +/- 0.006
+    (min +0.033). The assertions are therefore on signs and loose thresholds by
+    design, not on point values.
+
+    .. note:: CORRECTED 2026-08-23 (D030). This docstring previously claimed
+       0.24 was "the setting at which compositional_demo.py best matches the
+       observed pattern, sum-sq error 0.081", and quoted "spatial_z delta -0.124,
+       p=0.9985 / raw +0.0446, p=0.0005 / ref +0.0463, p=0.0005". All of that came
+       from ONE draw of a simulator with a module-level mutable RNG, at a D_AUD
+       chosen by argmin over 25 single noisy draws on a grid whose LAST point
+       (0.24) was the winner. Averaging 225 draws per point over a grid widened to
+       0.65 puts the true interior optimum at 0.30 (2.43 sigma clear of its
+       neighbour). "p=0.0005" was the estimator floor 1/(n_perm+1)=1/2001, i.e.
+       "p < 5e-4". 0.24 is retained here only as a demonstration level; nothing in
+       this test depends on it being optimal.
     """
     base, idx = _synthetic_brain()
     ffc, ref = idx["FFCr"], idx["REST"][:2000]

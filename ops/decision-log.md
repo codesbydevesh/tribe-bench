@@ -909,6 +909,17 @@ being a pass/fail project-gate and becomes the instrument's sensitivity calibrat
    EBA −0.295 vs −0.382; V1 −0.124 vs −0.046; ordering exact). With a genuine 0.05 FFC effect
    injected, raw and reference statistics detect it at p=0.0005 while spatial_z reports −0.124,
    p=0.9985 → NO-GO. The statistic inverts real effects. See G020.
+
+   > ⚠️ **The NUMBERS in this ground are superseded by D030 (2026-08-23); the CONCLUSION stands.**
+   > That spatial_z is compositional and can invert a real effect is arithmetic and does not depend
+   > on the simulation. But every figure quoted above came from ONE draw of a simulator with a
+   > module-level mutable RNG, at a D_AUD selected by argmin over 25 single noisy draws on a grid
+   > whose LAST point was the winner. Corrected: D_AUD **0.30** (interior, 2.43σ clear); FFCr
+   > **−0.262 ± 0.035 (sd, 225 draws)**, gap to observed **0.018 (~0.5 sd)**, not "within 0.005";
+   > **p < 5e-4** (that was the estimator floor 1/2001). **"Ordering exact" is withdrawn** — the
+   > ordering is set by hand in `build_brain`. V1 and A1 are **not** reproduced (A1 +0.035 vs
+   > +0.280). Detection rate over 40 seeds at a genuine 0.05 effect: raw/reference **40/40**,
+   > spatial_z **0/40** — which is a stronger statement than the single p-value it replaces.
 4. **The design was mis-specified in four independent ways:** n=15 against a field norm of 25-144+;
    all 30 clips from one film treated as a fixed effect (Westfall et al. 2017 measure 50-200%
    statistic inflation); the Glasser right-FFC parcel is a poor face fROI; 10 s clips fill ~11 of
@@ -1006,3 +1017,108 @@ points, arguing MCP is dead or worse than a CLI), and **do not lead with the ins
 bioRxiv, whose exclusion list names "announcements of tools or services without data".
 
 **Revisit if:** any incumbent above turns out to be misidentified (see G024).
+
+---
+
+### D030: The compositional demo's published numbers are corrected; D_AUD was boundary-selected on single draws (2026-08-23)
+
+**Decision:** correct every number sourced from `scripts/compositional_demo.py`. The simulation's
+qualitative finding stands; its quantitative claims did not survive audit and are restated with
+their real provenance and uncertainty.
+
+**What was wrong** — four independent defects, all verified by execution, not inferred:
+
+1. **Not reproducible.** The module held `RNG = np.random.default_rng(0)` at module scope, consumed
+   by BOTH `build_brain()` and `run()`. Every call advanced shared state, so two `build_brain()`
+   calls returned different brains (max |diff| **0.17**) and every published figure was one
+   unrepeatable draw.
+2. **The headline was a single draw.** `FFCr z_d = -0.239` was one realization. At a FIXED setting
+   the per-draw sd is **0.035**; 12 independent draws span **-0.279 to -0.167**. One draw is not a
+   result.
+3. **D_AUD was selected on noise, at a grid boundary.** `main()` chose D_AUD by argmin over
+   `np.arange(0.0, 0.25, 0.01)` evaluating ONE draw per point. The winner, **0.24, was the last
+   point of that grid** — a boundary solution. The selected value was then reused to report
+   performance, so results were conditioned on a parameter fitted to the same draws.
+4. **`p=0.0005` was never measured.** It is the Monte-Carlo estimator floor `1/(n_perm+1) = 1/2001`
+   at `n_perm=2000`. The only honest statement is `p < 5e-4`.
+
+**What replaces it.** `scripts/sensitivity_surface.py` averages **225 seeded draws per grid point**
+over a grid widened to **0.00–0.65**, using seeds **disjoint** from those used to report
+(`0..224` select; `100000..100224` report). Result:
+
+| | old | corrected |
+|---|---|---|
+| D_AUD | 0.24 (argmin of 25 single draws, on the grid boundary) | **0.30** (interior, but see below -- NOT a resolved optimum) |
+| FFCr z_d | -0.239 (one draw) | **-0.262 +/- 0.035** (sd, 225 draws) |
+| gap to observed -0.244 | claimed "within 0.005" | **0.018**, i.e. ~0.5 sd |
+| p | "0.0005" | **< 5e-4 (n_perm=2000)** |
+| SSE over 4 ROIs | 0.07985 (at 0.24) | **0.07155** (at 0.30) |
+
+**What did NOT survive, and is now stated plainly:** the simulation reproduces the **sign and
+ordering** of the 2026-07-31 pattern, and FFCr/EBA to within ~0.5-1.3 sd. It does **not** reproduce
+V1 (-0.136 vs -0.046) or **A1 (+0.035 vs +0.280, ~8x short)**. The phrase **"ordering exact" is
+withdrawn**: the relative baseline z of V1/FFCr/EBA is set by hand in `build_brain`, so the ordering
+is a stipulated INPUT, not a measured agreement. "FFC within 0.005" is withdrawn.
+
+**Also recorded:** `rho`, the within-parcel correlation of the prediction noise, is now a swept
+parameter rather than an implicit `rho=0`. `rho=0` is not neutral — TRIBE's head is
+`nn.Linear(hidden, low_rank_head=2048)` (`tribev2/model.py:139-141`, `grids/defaults.py:198`), so its
+20,484-vertex output has **rank <= 2048** and spatially independent noise is structurally
+impossible. `_parcel_noise` holds the marginal variance fixed (verified 0.0025 at every rho), so
+floors across rho differ by noise STRUCTURE, not by total noise.
+
+**Alternatives considered:** (a) leave the numbers and add a caveat — rejected: the docstring is the
+public API surface and D026 ground 3 rests on these figures; (b) re-derive the old -0.239 under the
+new generator — impossible, and pointless: clip seeding changed, so the old draw is not reproducible
+even in principle, which is itself the finding.
+
+**Implications:** D026's ground 3 keeps its conclusion (spatial_z is compositional and can invert a
+real effect — that is arithmetic, not simulation-dependent) but its supporting numbers are
+superseded by this entry. The commit-message claim *"spatial_z needs a 6.7x larger effect than the
+simplest alternative"* (`29cb104`) is a value at ONE corner of a two-parameter space and is
+superseded by the measured range in `data/floor_surface.md`:
+
+| rho | spatial_z floor | best alternative | ratio |
+|---|---|---|---|
+| 0.0 | 0.1726 | 0.0210 | **8.22x** |
+| 0.3 | 0.1858 | 0.0426 | **4.36x** |
+| 0.6 | 0.1924 | 0.0500 | **3.85x** |
+| 0.9 | 0.2074 | 0.0616 | **3.37x** |
+
+**Corrected claim: 3.4x-6.0x against a FIXED comparator (`glm_contrast_z`), not 6.7x.** (Against the best-of-three selected per row it reads 3.4x-8.2x, but that per-row `min()` is itself a selection on the same data and inflates the rho=0 endpoint; against a fixed `roi_minus_reference` it reads 2.6x-8.2x. Lead with the fixed comparator.) The mechanism is that spatial
+correlation costs the honest statistics dearly and barely touches the compositional one: across the
+rho range `spatial_z`'s floor rises **+20%** while the best alternative's rises **2.9x**. Note the
+two corrections push OPPOSITE ways -- fixing the boundary-selected D_AUD (0.24 -> 0.30) RAISES the
+ratio at rho=0 from 6.7x to 8.2x, while realistic rho lowers it. 6.7x was not fabricated; it was a
+real value at one unstated corner of a two-parameter space, reported as if it were the answer.
+
+**The optimum is interior but NOT resolved, and this is stated rather than glossed.** The winner at
+0.30 is separated from its nearest rival (0.35) by **2.43 sigma**. But the grid was searched 14
+times, so 13 comparisons were implicitly made; the Bonferroni threshold for family-wise 0.05 is
+**2.89 sigma**. 2.43 < 2.89, so **D_AUD in {0.30, 0.35} are statistically indistinguishable**.
+0.30 is therefore the best available point estimate of a **stipulated nuisance level**, not a
+fitted optimum, and must be reported as such. (An earlier version of the selection code used a bare
+2-sigma rule, which would have called this "distinguishable" -- that criterion ignored the number of
+looks and has been corrected in `scripts/sensitivity_surface.py`.)
+
+Averaging did work as intended: 225 draws cut the objective's noise **15x**, from a single-draw sd
+of 7.7% of the value to a sem of 0.5%. The problem is not insufficient averaging; it is that the
+objective is genuinely flat between 0.30 and 0.35.
+
+**A second finding, not anticipated:** the ranking of the three NON-compositional statistics
+**reverses with rho**. `roi_minus_reference` has the lowest floor at rho=0 (0.0210) and the
+**highest** at every rho >= 0.3 (0.0482 / 0.0668 / 0.0803), because subtracting an off-target
+reference cancels a shared gain only when the noise is shared. `glm_contrast_z` is best at all
+rho >= 0.3. So "the simplest statistic is the most sensitive" holds only at the one setting we have
+shown is impossible for this model. Since **rho for real TRIBE predictions is unmeasured**, the
+paper must either recommend `glm_contrast_z` or state the recommendation as conditional. Robust
+across the entire range: `spatial_z` is the worst of the four at every rho.
+
+**The rho endpoint was checked for the same boundary problem and is clean.** At rho=0.97 the ratio
+is 3.62x, i.e. it RISES again after a minimum at rho=0.9 (3.37x), because spatial_z's floor keeps
+degrading while glm_contrast_z's plateaus. The low end of the reported range is therefore bounded
+by evidence, not by where the grid stopped.
+
+**Revisit if:** the simulation is ever replaced by measurements from a real prediction cache, which
+would make the whole synthetic-brain parameterisation moot. Until then, every figure it produces is
+conditional on `build_brain`'s hand-set constants and must be reported as such.

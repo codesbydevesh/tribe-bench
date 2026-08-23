@@ -32,9 +32,25 @@ def spatial_z(preds: np.ndarray, verts: np.ndarray) -> float:
        ``tests/test_roi_stats.py::test_spatial_z_inverts_a_real_effect``:
 
        * inject ZERO face information, vary only auditory drive -> reproduces the
-         2026-07-31 observed pattern (FFCr sim -0.239 vs obs -0.244, ordering exact);
-       * inject a GENUINE +0.05 FFCr effect -> raw/reference statistics detect it at
-         p=0.0005 while spatial_z reports p=0.9985 and prints NO-GO.
+         SIGN and ORDERING of the 2026-07-31 pattern. Quantitatively, over 225
+         seeded draws at the selected auditory drive (D_AUD=0.30): FFCr
+         -0.262 +/- 0.035 (sd) vs observed -0.244, and EBA -0.325 +/- 0.042 vs
+         -0.382. Two of four ROIs are NOT reproduced: V1 -0.136 vs -0.046, and
+         A1 +0.035 vs +0.280 (~8x short). The ordering EBA < FFCr < V1 < A1 is
+         robust across draws but is a STIPULATED INPUT (build_brain sets the
+         baseline z of each ROI by hand), not a measured agreement.
+       * inject a GENUINE +0.05 FFCr effect -> raw/reference statistics detect it
+         while spatial_z does not.
+
+       .. note:: CORRECTED 2026-08-23 (D030). This docstring previously read
+          "FFCr sim -0.239 vs obs -0.244, ordering exact" and "p=0.0005 ...
+          p=0.9985". Those came from a single draw of a simulator with a
+          module-level mutable RNG (two build_brain() calls differed by 0.17), at
+          a D_AUD chosen by argmin over 25 single noisy draws on a grid whose last
+          point was the winner. "p=0.0005" was the permutation estimator FLOOR
+          1/(n_perm+1) = 1/2001, i.e. "p < 5e-4", not a measurement. Every figure
+          above now comes from `run_many` over independent seeds; see
+          data/sensitivity_selection.json and scripts/sensitivity_surface.py.
 
        This is not a novel finding: it is global signal regression (Murphy et al.
        2009, doi:10.1016/j.neuroimage.2008.09.036) and, for interpretability,
