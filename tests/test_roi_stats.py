@@ -378,7 +378,10 @@ def test_peak_lag_is_measured_and_lands_at_zero_for_prealigned_output():
     keep = onsets[(onsets - 2 >= 0) & (onsets + 9 < dur)]
     tc = peri_event_timecourse(preds, np.arange(8), keep, times, pre_trs=2, post_trs=9)
     assert tc.shape == (len(keep), 12)
-    assert peak_lag_trs(tc, pre_trs=2) == 0
+    # peak_lag_trs pools across categories by construction (C5), so split the
+    # events into two pseudo-categories rather than handing it one course.
+    half = len(keep) // 2
+    assert peak_lag_trs([tc[:half], tc[half:]], pre_trs=2) == 0
 
 
 def test_event_locked_contrast_averages_categories_not_exemplars():
@@ -417,9 +420,163 @@ def test_define_froi_picks_the_selective_vertices():
     assert froi.tolist() == list(range(150, 160))
 
 
-def test_define_froi_caps_at_parcel_size():
-    parcel = np.arange(0, 5)
-    assert define_froi(np.zeros(10), np.zeros(10), parcel, top_n=100).size == 5
+def test_define_froi_refuses_to_return_the_whole_parcel():
+    """M1 REGRESSION. This test previously asserted the OPPOSITE — that
+    define_froi(..., top_n=100) on a 5-vertex parcel returns all 5. That blessed
+    a silent no-op: with the project's own 58-vertex right-FFC parcel and the
+    old default top_n=100, k = min(100, 58) = 58, so the "fROI" was bit-identical
+    to the unfixed anatomical parcel and S2 would have reported that while
+    believing it had fixed the ROI.
+
+    Boundary is tested on all three sides.
+    """
+    parcel = np.arange(100, 158)          # 58 vertices, the real FFC parcel size
+    a, b = np.zeros(200), np.zeros(200)
+    a[np.arange(120, 140)] = 1.0
+
+    # k < parcel size -> valid, and a STRICT subset
+    froi = define_froi(a, b, parcel, top_n=30)
+    assert froi.size == 30
+    assert set(froi.tolist()) < set(parcel.tolist())
+
+    # k == parcel size -> raises (no selection occurred)
+    with pytest.raises(ValueError, match="no functional selection"):
+        define_froi(a, b, parcel, top_n=58)
+
+    # k > parcel size -> same contract, including the old default
+    with pytest.raises(ValueError, match="no functional selection"):
+        define_froi(a, b, parcel, top_n=100)
+
+    # and the largest legal request still works
+    assert define_froi(a, b, parcel, top_n=57).size == 57
+
+
+def test_define_froi_rejects_non_finite_localizer():
+    """M3. np.argsort sorts NaN LAST ascending; [::-1] promotes it to FIRST, so a
+    dead vertex was ranked maximally selective and displaced a real one."""
+    parcel = np.arange(100, 158)
+    a, b = np.zeros(200), np.zeros(200)
+    a[np.arange(120, 140)] = 1.0
+    for bad in (np.nan, np.inf, -np.inf):
+        a_bad = a.copy(); a_bad[123] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            define_froi(a_bad, b, parcel, top_n=10)
+
+
+def test_glm_contrast_z_uses_welch_not_pooled_se():
+    """M2. Pooled SE is anticonservative at unequal n — the design S2 plans.
+    Checked against scipy as an independent oracle, and the equal-n invariant
+    (Welch == pooled) is pinned so the floor table cannot silently move."""
+    from scipy.stats import ttest_ind
+    rng = np.random.default_rng(0)
+    v = np.arange(40)
+
+    # unequal n, heterogeneous variance -> must equal Welch, NOT pooled
+    A = rng.normal(0.5, 0.30, (10, 40)); B = rng.normal(0.0, 0.05, (40, 40))
+    mine = glm_contrast_z(A, B, v)
+    welch = float(np.mean([ttest_ind(A[:, i], B[:, i], equal_var=False).statistic for i in v]))
+    pooled = float(np.mean([ttest_ind(A[:, i], B[:, i], equal_var=True).statistic for i in v]))
+    assert mine == pytest.approx(welch, abs=1e-9), "not Welch"
+    assert abs(mine - pooled) > 1.0, "indistinguishable from the pooled SE it replaced"
+    assert abs(pooled) > abs(mine), "pooled should be the anticonservative one here"
+
+    # equal n -> algebraically identical to pooled; this is what keeps the
+    # published 15v15 floor table valid after the change
+    C = rng.normal(0.4, 0.3, (12, 40)); D = rng.normal(0.0, 0.1, (12, 40))
+    pooled_eq = float(np.mean([ttest_ind(C[:, i], D[:, i], equal_var=True).statistic for i in v]))
+    assert glm_contrast_z(C, D, v) == pytest.approx(pooled_eq, abs=1e-9)
+
+
+def test_glm_contrast_z_has_direction_semantics():
+    """S1. `return 0.0` AND a sign flip both passed the previous suite. Pin the
+    sign, the antisymmetry, and a magnitude floor so neither mutant survives."""
+    rng = np.random.default_rng(5)
+    roi = np.arange(20)
+    a = rng.normal(0.5, 0.1, (12, 50)); b = rng.normal(0.0, 0.1, (12, 50))
+    fwd, rev = glm_contrast_z(a, b, roi), glm_contrast_z(b, a, roi)
+    assert fwd > 0, "A > B must give a positive contrast"          # kills return 0.0
+    assert rev < 0, "swapping conditions must flip the sign"        # kills the sign flip
+    assert fwd == pytest.approx(-rev, rel=1e-9), "must be antisymmetric"
+    assert abs(fwd) > 1.0, "a real separation must produce a substantial statistic"
+
+
+def test_glm_contrast_z_rejects_non_finite():
+    rng = np.random.default_rng(6)
+    a = rng.normal(0.5, 0.1, (8, 30)); b = rng.normal(0.0, 0.1, (8, 30))
+    for bad in (np.nan, np.inf):
+        a_bad = a.copy(); a_bad[3, 5] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            glm_contrast_z(a_bad, b, np.arange(10))
+
+
+def test_event_locked_contrast_rejects_2d_target():
+    """S6. peri_event_timecourse's (n_events, n_lags) is always in scope beside
+    event_locked_response's (n_events,); passing the wrong one silently averaged
+    both axes and returned an attenuated contrast."""
+    with pytest.raises(ValueError, match="must be 1-D"):
+        event_locked_contrast(np.ones((2, 3)), [np.array([1.0, 2.0])])
+    with pytest.raises(ValueError, match="must be 1-D"):
+        event_locked_contrast(np.array([1.0, 2.0]), [np.ones((2, 3))])
+    # the valid 1-D path is untouched
+    assert event_locked_contrast([10.0, 10.0], [[0.0] * 100, [4.0, 4.0]]) == pytest.approx(8.0)
+
+
+def test_event_locked_contrast_raises_on_an_empty_category():
+    """Dropping an empty category silently changes the baseline's denominator."""
+    with pytest.raises(ValueError, match="empty"):
+        event_locked_contrast([1.0, 2.0], [[3.0, 4.0], []])
+
+
+def test_roi_minus_reference_overlap_guard_survives_a_dtype_mismatch():
+    """C7. np.intersect1d compares a boolean mask's VALUES (0/1) against integer
+    indices, so a total overlap went undetected and the guard silently passed —
+    the module's only defence against an undeclared normaliser."""
+    g = np.arange(20.0)[None, :]
+    mask = np.zeros(20, dtype=bool); mask[[10, 11, 12]] = True
+    with pytest.raises(ValueError, match="overlap"):
+        roi_minus_reference(g, mask, np.array([10, 11]))
+    # non-overlapping bool mask still works, and agrees with the integer form
+    mask2 = np.zeros(20, dtype=bool); mask2[[1, 2, 3]] = True
+    assert roi_minus_reference(g, mask2, np.array([10, 11])) == pytest.approx(
+        roi_minus_reference(g, np.array([1, 2, 3]), np.array([10, 11])))
+
+
+def test_peak_lag_must_pool_across_categories():
+    """C5. Selecting the peak lag on the target category and then testing at that
+    lag is selection on the test statistic — measured type-I 0.0417 against a
+    nominal 0.025. The API now makes single-category selection inexpressible."""
+    tc_a = np.zeros((5, 12)); tc_a[:, 6] = 1.0     # target peaks late
+    tc_b = np.zeros((5, 12)); tc_b[:, 3] = 1.0
+    tc_c = np.zeros((5, 12)); tc_c[:, 3] = 1.0     # two categories agree on 3
+
+    # a bare 2-D array (the old signature) is refused, by name
+    with pytest.raises(ValueError, match="SINGLE"):
+        peak_lag_trs(tc_a, pre_trs=2)
+    # so is a single-element sequence
+    with pytest.raises(ValueError, match=">= 2 categories"):
+        peak_lag_trs([tc_a], pre_trs=2)
+
+    # pooling gives the majority peak (3 -> lag 1), NOT the target's (6 -> lag 4)
+    assert peak_lag_trs([tc_a, tc_b, tc_c], pre_trs=2) == 1
+
+    # mismatched lag grids are caught
+    with pytest.raises(ValueError, match="lag grid"):
+        peak_lag_trs([tc_a, np.zeros((5, 8))], pre_trs=2)
+
+
+def test_non_finite_policy_is_consistent_across_entry_points():
+    """M3. One policy, not five subtly different ones — NaN and both infinities
+    are rejected everywhere, with the same error wording."""
+    g = np.ones((3, 50))
+    roi, ref = np.arange(10), np.arange(20, 30)
+    for bad in (np.nan, np.inf, -np.inf):
+        dirty = g.copy(); dirty[0, 5] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            raw_roi_mean(dirty, roi)
+        with pytest.raises(ValueError, match="non-finite"):
+            roi_minus_reference(dirty, roi, ref)
+        with pytest.raises(ValueError, match="non-finite"):
+            perm_p([1.0, 2.0, bad], [0.0, 0.1, 0.2], n_perm=50)
 
 
 def test_detection_floor_scales_the_right_way():

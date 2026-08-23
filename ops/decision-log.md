@@ -1122,3 +1122,37 @@ by evidence, not by where the grid stopped.
 **Revisit if:** the simulation is ever replaced by measurements from a real prediction cache, which
 would make the whole synthetic-brain parameterisation moot. Until then, every figure it produces is
 conditional on `build_brain`'s hand-set constants and must be reported as such.
+
+---
+
+### D031: Phase B — seven audited defects corrected; the Fig 4 attribution was false (2026-08-23)
+
+**Decision:** apply the seven must-fix items from `data/audit_s1_SYNTHESIS.md` and
+`data/audit_s1_CRITIC.md`, each with a regression test built from the finding's own failing input.
+
+| id | defect | fix |
+|---|---|---|
+| **M1** | `define_froi(top_n=100)` on the 58-vertex right-FFC parcel returned the WHOLE parcel — `k = min(100, 58) = 58` — so the "fROI" was the unfixed anatomical ROI and S2 would have reported it while believing the ROI was fixed. **No lane filed this; the synthesis found it.** | raise when `top_n >= parcel size`. Selecting everything is not selection. |
+| **M2** | pooled (equal-variance) SE in `glm_contrast_z` is not level-alpha at unequal n — the design S2 plans. Measured 10v40, 6:1 sd ratio: pooled z=10.74 vs Welch 5.59, **1.9x anticonservative** on the headline face claim. | Welch SE. Verified against `scipy.stats.ttest_ind` exactly, and identical to pooled at equal n — so the published 15v15 floor table is unchanged. |
+| **M3** | non-finite values absorbed silently in five places. `np.argsort` sorts NaN LAST ascending and `[::-1]` promotes it to FIRST, so a dead vertex was ranked **maximally selective** and displaced a real one. | one shared `_require_finite` policy (NaN and both infinities) at every entry point — not five subtly different rules. Hardening: no NaN source is demonstrated in this pipeline. |
+| **M4** | the docstring claimed the statistic is *"what Meta's Fig 4 actually reports"*. **False under both readings.** §5.9 describes the visual contrasts as the plain t=+5 s subtraction with **no GLM**; the Fig 4 caption separately describes a GLM on the predicted **time-series**. The shipped code is a two-sample contrast across **observations**. | state what it actually is — a recorded deviation, not a replication. `interface-contracts.md`'s ⚠ OPEN is **resolved**, and the stale restatement in MASTER-PLAN is annotated. |
+| **S6** | `event_locked_contrast` accepted a 2-D target and averaged both axes, returning an attenuated contrast (0.0404 for a true 0.0941). `peri_event_timecourse`'s output is always in scope beside it. | reject non-1-D at the contract boundary; raise on an empty category rather than dropping it. |
+| **C7** | the overlap guard was defeated by dtype: `np.intersect1d` compares a boolean mask's VALUES (0/1) against integer indices, so total overlap went undetected — the module's only defence against an undeclared normaliser. | normalise both selectors to integer indices before comparing. |
+| **C5** | `peak_lag_trs` selected the peak from whatever course it was handed. Choosing the lag on the target category and testing at it is selection on the test statistic: measured type-I **0.0417** against a nominal 0.025. | the function now takes ALL categories' courses and pools them itself, requiring >= 2 — single-category selection is **not expressible** through the API. |
+
+**Also closed (S1):** `glm_contrast_z` had zero value coverage — `return 0.0` *and* a sign flip both
+passed the entire suite. Sign, antisymmetry and a magnitude floor are now pinned.
+
+**Two API changes, both deliberate:**
+- `define_froi` raises where it previously capped. `test_define_froi_caps_at_parcel_size` asserted
+  the no-op was correct and was **rewritten in the same commit** — it had been blessing the bug.
+- `peak_lag_trs(timecourse)` becomes `peak_lag_trs(category_timecourses)`. Enforcing the pooling in
+  the signature rather than the docstring is the point: a docstring cannot prevent the error.
+
+**Method:** every defect was reproduced against the pre-fix tree first, so each regression test is
+built from the finding's own failing input rather than from a description of it.
+
+**Revisit if:** a real NaN source is demonstrated in the prediction pipeline (M3 would move from
+hardening to a live defect), or if the paper's §5.9 wording is ever read in full — two independent
+fetches truncated before its body, so its exact GLM specification remains **unverified** and is
+recorded as a gap, not a fact.

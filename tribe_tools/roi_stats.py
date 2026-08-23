@@ -117,6 +117,7 @@ def exact_perm_p(face_vals, scene_vals) -> float:
     gives p=1/70≈0.014 and U>=15 gives p=2/70≈0.029 — the numbers Gate 0's
     GO rule is pre-registered against.
     """
+    _require_finite(list(face_vals) + list(scene_vals), "exact_perm_p input")
     vals = list(face_vals) + list(scene_vals)
     n_total, n_face = len(vals), len(face_vals)
     u_obs = u_statistic(face_vals, scene_vals)
@@ -165,6 +166,7 @@ def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> floa
     p-value is never zero and stays valid. Seeded for reproducibility.
     """
     vals = np.array(list(face_vals) + list(other_vals), dtype=float)
+    _require_finite(vals, "mc_perm_p input")
     n, N = len(face_vals), len(vals)
     u_obs = _u_fast(vals[:n], vals[n:])
     rng = np.random.default_rng(seed)
@@ -203,6 +205,47 @@ def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _require_finite(a, what: str) -> np.ndarray:
+    """Reject NaN and +/-inf. ONE policy, used at every entry point (M3).
+
+    Non-finite values do not merely propagate here — they can be ranked as
+    *maximally selective* (``np.argsort`` sorts NaN last ascending, and
+    ``[::-1]`` then promotes it to first), or be silently absorbed into a
+    plausible finite number. Both produce a confident wrong answer with no
+    warning, which is the failure class this module exists to prevent.
+    """
+    arr = np.asarray(a, dtype=float)
+    bad = ~np.isfinite(arr)
+    if bad.any():
+        idx = np.flatnonzero(bad.ravel())[:5].tolist()
+        raise ValueError(
+            f"{what} contains {int(bad.sum())} non-finite value(s) (NaN or +/-inf); "
+            f"first flat indices {idx}. Refusing to continue: a non-finite value here "
+            "can be ranked as maximally selective or absorbed into a finite-looking "
+            "result. Clean the input or exclude those vertices explicitly."
+        )
+    return arr
+
+
+def _as_vertex_indices(v, what: str = "vertex selector") -> np.ndarray:
+    """Normalise a vertex selector to an INTEGER index array (C7).
+
+    A boolean mask and an integer index array select the same vertices but do
+    NOT compare correctly against each other: ``np.intersect1d`` compares the
+    boolean *values* (0/1) with the integers, so a total overlap goes
+    undetected and the overlap guard in :func:`roi_minus_reference` silently
+    passes. Normalising both sides first makes the comparison semantic.
+    """
+    arr = np.asarray(v)
+    if arr.dtype == bool:
+        return np.flatnonzero(arr)
+    if arr.size and not np.issubdtype(arr.dtype, np.integer):
+        if not np.all(np.equal(np.mod(arr, 1), 0)):
+            raise ValueError(f"{what} must be integer vertex indices or a boolean mask")
+        return arr.astype(int)
+    return arr.astype(int, copy=False)
+
+
 def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
     """The ROI's predicted response, unnormalised. The simplest honest readout.
 
@@ -215,8 +258,10 @@ def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
         verts: 1D array of vertex indices for the ROI.
     """
     g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    verts = _as_vertex_indices(verts, "ROI")
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set")
+    _require_finite(g[verts], "raw_roi_mean ROI values")
     return float(g[verts].mean())
 
 
@@ -237,6 +282,10 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
         verts: ROI vertex indices.
         ref_verts: reference-region vertex indices. Must be disjoint from verts.
     """
+    # Normalise BOTH selectors to integer indices before comparing them: a
+    # boolean mask vs an int array defeats np.intersect1d entirely (C7).
+    verts = _as_vertex_indices(verts, "ROI")
+    ref_verts = _as_vertex_indices(ref_verts, "reference")
     if len(verts) == 0 or len(ref_verts) == 0:
         raise ValueError("empty ROI or reference vertex set")
     if np.intersect1d(verts, ref_verts).size:
@@ -245,6 +294,8 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
             "pre-registered, or this is an undeclared normaliser"
         )
     g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    _require_finite(g[verts], "roi_minus_reference ROI values")
+    _require_finite(g[ref_verts], "roi_minus_reference reference values")
     return float(g[verts].mean() - g[ref_verts].mean())
 
 
@@ -363,7 +414,9 @@ def peri_event_timecourse(
     if pre_trs < 0 or post_trs < 0:
         raise ValueError("pre_trs and post_trs must be >= 0")
 
+    verts = _as_vertex_indices(verts, "ROI")
     lags = np.arange(-pre_trs, post_trs + 1, dtype=float)
+    _require_finite(p[:, verts], "peri_event_timecourse ROI values")
     roi = p[:, verts].mean(axis=1)
     out = np.empty((onsets.size, lags.size), dtype=float)
     for j, lag in enumerate(lags):
@@ -371,17 +424,66 @@ def peri_event_timecourse(
     return out
 
 
-def peak_lag_trs(timecourse: np.ndarray, pre_trs: int = 2) -> int:
-    """Measured peak lag (in TRs relative to onset) of the group-average response.
+def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
+    """Measured peak lag (TRs relative to onset) of the POOLED evoked response.
 
     Report this instead of assuming a lag. On a movie-trained encoder whose outputs
     are already hemodynamically aligned, the expected answer is **0**, not 5 — but
     measuring costs nothing and settles it (D-3: no verdict without evidence).
+
+    .. important:: **The peak MUST be selected from the pooled (grand-average)
+       response across ALL categories, never from the target category alone.**
+       Selecting the lag on the same category you then test at is selection on the
+       test statistic — double dipping along the time axis. Measured type-I error
+       with a true effect of zero at a nominal one-sided alpha of 0.025:
+       fixed lag 0.0050 · peak from the **pooled** course 0.0100 ·
+       peak from the **target's** course **0.0417** (C5).
+
+       This function therefore takes the per-category time courses and pools them
+       itself. It deliberately requires **two or more** categories, so selecting on
+       a single category's course is not expressible through this API.
+
+    Args:
+        category_timecourses: sequence of >= 2 arrays, each (n_events_k, n_lags),
+            one per stimulus category — as returned by
+            :func:`peri_event_timecourse`. All must share n_lags.
+        pre_trs: how many TRs before onset the courses begin (column ``pre_trs``
+            is the onset itself).
+
+    Returns:
+        The lag, in TRs relative to onset, at which the pooled grand average peaks.
     """
-    tc = np.asarray(timecourse, dtype=float)
-    if tc.ndim != 2 or tc.shape[1] == 0:
-        raise ValueError("timecourse must be (n_events, n_lags)")
-    return int(np.argmax(tc.mean(axis=0))) - int(pre_trs)
+    # A bare 2-D array iterates as its ROWS, which would otherwise produce a
+    # confusing per-row shape error instead of naming the real mistake.
+    if isinstance(category_timecourses, np.ndarray) and category_timecourses.ndim == 2:
+        raise ValueError(
+            "peak_lag_trs received a SINGLE (n_events, n_lags) array. It requires the "
+            "time courses of every category, as a sequence, so it can pool them. "
+            "Selecting the peak lag from one category and then testing at that lag "
+            "inflates type-I error to ~0.042 against a nominal 0.025 (C5). "
+            "Pass e.g. [faces_tc, objects_tc, places_tc]."
+        )
+    courses = [np.asarray(c, dtype=float) for c in category_timecourses]
+    if len(courses) < 2:
+        raise ValueError(
+            f"peak_lag_trs needs the time courses of >= 2 categories so it can pool "
+            f"them, got {len(courses)}. Selecting the peak from one category and then "
+            "testing at that lag inflates type-I error to ~0.042 against a nominal "
+            "0.025 (C5). Pass every category's course."
+        )
+    for i, c in enumerate(courses):
+        if c.ndim != 2 or c.shape[1] == 0:
+            raise ValueError(f"category_timecourses[{i}] must be (n_events, n_lags), got {c.shape}")
+        if c.shape[1] != courses[0].shape[1]:
+            raise ValueError(
+                f"category_timecourses[{i}] has {c.shape[1]} lags but [0] has "
+                f"{courses[0].shape[1]}; all categories must share the lag grid"
+            )
+        _require_finite(c, f"peak_lag_trs category_timecourses[{i}]")
+    # Grand average = mean of the per-category means, so a category with more
+    # events does not dominate the pooled course.
+    pooled = np.mean([c.mean(axis=0) for c in courses], axis=0)
+    return int(np.argmax(pooled)) - int(pre_trs)
 
 
 def event_locked_response(
@@ -462,25 +564,73 @@ def event_locked_contrast(target_responses, other_responses) -> float:
         mean(target) - mean over categories of mean(category).
     """
     tgt = np.asarray(list(target_responses), dtype=float)
+    # Reject a 2-D target at the CONTRACT boundary, not by letting a later
+    # operation happen to fail (S6). peri_event_timecourse returns
+    # (n_events, n_lags) and is always in scope beside event_locked_response's
+    # (n_events,), so passing the wrong one is a live hazard: it averages both
+    # axes and silently returns an attenuated contrast (measured 0.0404 for a
+    # true 0.0941 -- right sign, 2.3x too small).
+    if tgt.ndim != 1:
+        raise ValueError(
+            f"target_responses must be 1-D (n_events,), got shape {tgt.shape}. "
+            "If this came from peri_event_timecourse (n_events, n_lags), select a "
+            "lag column first — e.g. via event_locked_response."
+        )
     if tgt.size == 0:
         raise ValueError("no target responses")
-    others = [np.asarray(list(o), dtype=float) for o in other_responses]
-    others = [o for o in others if o.size]
+    _require_finite(tgt, "event_locked_contrast target")
+    others = []
+    for i, o in enumerate(other_responses):
+        arr = np.asarray(list(o), dtype=float)
+        if arr.ndim != 1:
+            raise ValueError(
+                f"other_responses[{i}] must be 1-D (n_events,), got shape {arr.shape}"
+            )
+        if arr.size == 0:
+            # Raise rather than drop: silently discarding a category changes the
+            # denominator of the baseline without telling the caller.
+            raise ValueError(
+                f"other_responses[{i}] is empty. An empty category silently changes "
+                "the number of categories averaged into the baseline; pass only "
+                "categories that have events, deliberately."
+            )
+        _require_finite(arr, f"event_locked_contrast other_responses[{i}]")
+        others.append(arr)
     if not others:
         raise ValueError("event_locked_contrast needs at least one other category")
     return float(tgt.mean() - np.mean([o.mean() for o in others]))
 
 
 def glm_contrast_z(preds_a, preds_b, verts: np.ndarray) -> float:
-    """Per-vertex effect / standard error across observations, averaged over the ROI.
+    """Per-vertex Welch two-sample contrast, averaged over the ROI. Non-compositional.
 
-    What Meta's Fig 4 actually reports, and non-compositional. Each vertex gets
-    its own two-sample z (difference of condition means over the pooled standard
-    error across observations); the ROI value is the mean of those. Because the
-    scaling is per-vertex noise — not a brain-wide sd — a condition difference
-    elsewhere in the brain cannot move this number (contrast with spatial_z, G020).
+    Each vertex gets a two-sample statistic — difference of condition means over
+    the **Welch** (unequal-variance) standard error across observations — and the
+    ROI value is the mean of those. Because the scaling is per-vertex noise, not a
+    brain-wide sd, a condition difference elsewhere in the brain cannot move this
+    number (contrast with :func:`spatial_z`, G020).
 
-    Vertices with zero pooled variance contribute 0 rather than inf.
+    .. note:: **This is NOT the estimator from the TRIBE v2 paper (M4, D030).**
+       An earlier version of this docstring claimed it was "what Meta's Fig 4
+       actually reports". That is false under both readings of the paper: the
+       Fig 4 caption describes a GLM fit on the predicted **time-series**, and
+       §5.9 describes the visual contrasts as a plain **t = +5 s subtraction with
+       no GLM at all**. What is implemented here is a two-sample contrast across
+       **observations**, chosen by us because it is non-compositional. It is an
+       explicit, recorded deviation — see `ops/interface-contracts.md` and D027.
+       For the paper's own protocol use :func:`event_locked_contrast`.
+
+    .. warning:: **Not on the z scale.** This is a mean of per-vertex t-like
+       statistics; its null SD depends on the within-ROI correlation and is not 1.
+       Never threshold at 1.96 and never compare it numerically to a per-vertex
+       z-map — always permute.
+
+    **Welch, not pooled (M2).** The pooled (equal-variance) SE is not level-alpha
+    when the group sizes differ, which is the design S2 plans (faces vs the pooled
+    other categories, ~1:4). Measured at 10v40 with a 6:1 sd ratio, pooled gives
+    z=10.74 where Welch gives 5.59 — 1.9x anticonservative, i.e. a false-positive
+    risk on the headline claim. Welch and pooled are algebraically identical at
+    equal n, so results computed at equal n are unchanged.
 
     Args:
         preds_a: (n_obs_a, n_vertices) — one row per clip/event for condition A.
@@ -501,11 +651,15 @@ def glm_contrast_z(preds_a, preds_b, verts: np.ndarray) -> float:
     na, nb = a.shape[0], b.shape[0]
     if na < 2 or nb < 2:
         raise ValueError("need >= 2 observations per condition for a standard error")
+    verts = _as_vertex_indices(verts, "ROI")
     av, bv = a[:, verts], b[:, verts]
+    # Raise rather than renormalise: a silently shrinking ROI is itself a result
+    # the operator must see (M3).
+    _require_finite(av, "glm_contrast_z condition A over the ROI")
+    _require_finite(bv, "glm_contrast_z condition B over the ROI")
     diff = av.mean(axis=0) - bv.mean(axis=0)
-    # pooled SE of the difference of means
-    var = ((na - 1) * av.var(axis=0, ddof=1) + (nb - 1) * bv.var(axis=0, ddof=1)) / (na + nb - 2)
-    se = np.sqrt(var * (1.0 / na + 1.0 / nb))
+    # Welch (unequal-variance) SE of the difference of means -- see the note above.
+    se = np.sqrt(av.var(axis=0, ddof=1) / na + bv.var(axis=0, ddof=1) / nb)
     z = np.zeros_like(diff)
     ok = se > 0
     z[ok] = diff[ok] / se[ok]
@@ -535,10 +689,22 @@ def define_froi(
         loc_a: (n_vertices,) or (n_obs, n_vertices) localizer response, condition A.
         loc_b: same shape, condition B.
         parcel_verts: candidate vertex indices (the anatomical parcel to search in).
-        top_n: how many vertices to keep. Capped at the parcel size.
+        top_n: how many vertices to keep. Must be STRICTLY LESS than the parcel
+            size — see the no-op note below.
 
     Returns:
-        Sorted array of the selected vertex indices (a subset of parcel_verts).
+        Sorted array of the selected vertex indices (a strict subset of parcel_verts).
+
+    Raises:
+        ValueError: if ``top_n >= len(parcel_verts)``. Selecting the whole parcel
+            is not selection (M1). The previous behaviour silently capped
+            ``k = min(top_n, parcel_size)``, so the DEFAULT ``top_n=100`` applied
+            to the project's own 58-vertex right-FFC parcel returned the entire
+            parcel — the unfixed anatomical ROI — with no warning, while the
+            caller believed it had defined a functional ROI.
+        ValueError: if the localizer contrast contains non-finite values (M3).
+            ``np.argsort`` sorts NaN last ascending and ``[::-1]`` then promotes
+            it to FIRST, so a dead vertex would be ranked maximally selective.
     """
     a = np.asarray(loc_a, dtype=float)
     b = np.asarray(loc_b, dtype=float)
@@ -551,8 +717,17 @@ def define_froi(
         raise ValueError("empty parcel")
     if top_n < 1:
         raise ValueError("top_n must be >= 1")
-    k = min(int(top_n), pv.size)
+    k = int(top_n)
+    if k >= pv.size:
+        raise ValueError(
+            f"top_n={k} >= parcel size {pv.size}: this would return the whole parcel "
+            "and perform no functional selection at all. The right-FFC parcel is 58 "
+            "vertices, so the old default of 100 was a silent no-op on it. Either "
+            "widen the candidate region beyond the parcel, or pass a top_n well "
+            "below the parcel size (e.g. 30) and record the choice."
+        )
     sel = a[pv] - b[pv]
+    _require_finite(sel, "define_froi localizer contrast over the parcel")
     keep = pv[np.argsort(sel)[::-1][:k]]
     return np.sort(keep)
 
