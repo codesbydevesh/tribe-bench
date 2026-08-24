@@ -545,9 +545,10 @@ def test_peak_lag_must_pool_across_categories():
     """C5. Selecting the peak lag on the target category and then testing at that
     lag is selection on the test statistic — measured type-I 0.0417 against a
     nominal 0.025. The API now makes single-category selection inexpressible."""
-    tc_a = np.zeros((5, 12)); tc_a[:, 6] = 1.0     # target peaks late
+    tc_a = np.zeros((5, 12)); tc_a[:, 6] = 1.0            # target peaks late
     tc_b = np.zeros((5, 12)); tc_b[:, 3] = 1.0
-    tc_c = np.zeros((5, 12)); tc_c[:, 3] = 1.0     # two categories agree on 3
+    tc_c = np.zeros((5, 12)); tc_c[:, 3] = 0.9            # agrees on lag 3, NOT identical
+    tc_c[:, 8] = 0.1                                       # (identical courses are rejected)
 
     # a bare 2-D array (the old signature) is refused, by name
     with pytest.raises(ValueError, match="SINGLE"):
@@ -587,3 +588,246 @@ def test_detection_floor_scales_the_right_way():
     # and it must scale with the noise
     louder = detection_floor(6, noise_sd=2.0, n_sim=60, n_perm=200, seed=0, tol=0.02)
     assert louder > small_n
+
+
+# ==========================================================================
+# MECHANISM TESTS (M008)
+#
+# Phase B's first pass fixed each finding at the example level and four fixes
+# still did not close the class. These tests ENUMERATE the entry points by
+# introspection rather than naming a fixed list, so a NEW function that accepts
+# a selector or array data is covered the moment it is added — and an
+# unguarded one fails here rather than in S2.
+# ==========================================================================
+
+import inspect as _inspect
+
+from tribe_tools import roi_stats as _R
+
+N_V = 60
+
+
+def _selector_entry_points():
+    """Every public function taking a vertex selector, found by introspection."""
+    out = []
+    for name, fn in vars(_R).items():
+        if name.startswith("_") or not callable(fn):
+            continue
+        if getattr(fn, "__module__", None) != _R.__name__:
+            continue
+        for arg in ("verts", "parcel_verts"):
+            if arg in _inspect.signature(fn).parameters:
+                out.append((name, fn, arg))
+                break
+    return out
+
+
+def _call_with_selector(name, fn, selector):
+    """Invoke each selector-taking function with valid data and a given selector."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    times = np.arange(4.0)
+    if name in ("spatial_z", "raw_roi_mean"):
+        return fn(preds, selector)
+    if name == "roi_minus_reference":
+        return fn(preds, selector, np.array([50, 51]))
+    if name == "glm_contrast_z":
+        return fn(preds + np.arange(4)[:, None], preds, selector)
+    if name == "peri_event_timecourse":
+        return fn(preds, selector, [1.0], times, pre_trs=0, post_trs=0)
+    if name == "event_locked_response":
+        return fn(preds, selector, [1.0], times, lag_trs=0)
+    if name == "define_froi":
+        # selector IS the parcel here, so top_n must be < its size (M1's guard)
+        a = np.zeros(N_V); a[10:13] = [3.0, 2.0, 1.0]
+        return fn(a, np.zeros(N_V), selector, top_n=2)
+    raise AssertionError(f"unhandled selector entry point {name!r} — extend this helper")
+
+
+def test_every_selector_entry_point_rejects_the_whole_bad_selector_CLASS():
+    """MECHANISM TEST for C7/A0/A8/F4.
+
+    The reported instance was a boolean mask vs integer indices defeating the
+    overlap guard in ONE function. The class is: any selector representation that
+    aliases or duplicates vertices, at ANY entry point. `define_froi` was the one
+    function the original fix never reached — and it is the function M1 was about.
+    """
+    eps = _selector_entry_points()
+    assert len(eps) >= 6, f"expected >=6 selector entry points, introspection found {len(eps)}"
+    good = np.array([10, 11, 12])
+    mask = np.zeros(N_V, bool); mask[[10, 11, 12]] = True
+    # Each case pins the SPECIFIC reason. A generic pytest.raises(ValueError) is
+    # not enough: with the ambiguity check removed, an int8 mask trips the
+    # *duplicate* check instead, so a generic assertion passes while the fix is
+    # gone. Mutation testing caught exactly that in an earlier draft of this test.
+    bad_cases = {
+        "int8 0/1 mask (ambiguous)":  (mask.astype(np.int8),   "ambiguous"),
+        "float 0/1 mask (ambiguous)": (mask.astype(np.float64), "ambiguous"),
+        "negative index":             (np.array([10, -1]),      "negative"),
+        "duplicate index":            (np.array([10, 10, 11]),  "duplicate"),
+        "out of range":               (np.array([10, N_V + 5]), ">= n_vertices"),
+        "non-integer float":          (np.array([10.5, 11.0]),  "integer vertex indices"),
+    }
+    for name, fn, _arg in eps:
+        # the good selector must still work everywhere
+        _call_with_selector(name, fn, good)
+        # and a genuine boolean mask must be accepted and mean the same thing
+        _call_with_selector(name, fn, mask)
+        for label, (bad, why) in bad_cases.items():
+            with pytest.raises(ValueError, match=why):
+                _call_with_selector(name, fn, bad)
+
+
+def test_bool_mask_and_equivalent_indices_agree_at_every_entry_point():
+    """The two representations must be interchangeable, or one of them is wrong."""
+    mask = np.zeros(N_V, bool); mask[[10, 11, 12]] = True
+    idx = np.flatnonzero(mask)
+    for name, fn, _arg in _selector_entry_points():
+        a = _call_with_selector(name, fn, mask)
+        b = _call_with_selector(name, fn, idx)
+        assert np.allclose(np.asarray(a, float), np.asarray(b, float)), name
+
+
+def test_empty_selection_raises_at_every_entry_point_not_just_two():
+    """MECHANISM TEST for A2. An all-False mask has len == n_vertices, so an
+    empty-check placed BEFORE normalisation let it through and returned nan.
+    Two functions checked first and two checked after — the policy must be one."""
+    empty_mask = np.zeros(N_V, bool)
+    for name, fn, _arg in _selector_entry_points():
+        with pytest.raises(ValueError, match="empty"):
+            _call_with_selector(name, fn, empty_mask)
+
+
+def _nonfinite_entry_points():
+    """Every public function that consumes array data, with a NaN-poisoned call."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    dirty = preds.copy(); dirty[0, 10] = np.nan
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    times = np.arange(4.0)
+    tc = np.zeros((3, 5)); tc[:, 2] = 1.0
+    tc_bad = tc.copy(); tc_bad[0, 0] = np.nan
+    tc_b = np.zeros((3, 5)); tc_b[:, 1] = 1.0
+    nanvals = [1.0, 2.0, np.nan, 3.0]
+    ok = [0.1, 0.2, 0.3, 0.4]
+    return {
+        "spatial_z":            lambda: _R.spatial_z(dirty, roi),
+        "raw_roi_mean":         lambda: _R.raw_roi_mean(dirty, roi),
+        "roi_minus_reference":  lambda: _R.roi_minus_reference(dirty, roi, ref),
+        "glm_contrast_z":       lambda: _R.glm_contrast_z(dirty, preds, roi),
+        "glm_contrast_z (B)":   lambda: _R.glm_contrast_z(preds, dirty, roi),
+        "peri_event_timecourse (preds)":  lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
+        "peri_event_timecourse (onset)":  lambda: _R.peri_event_timecourse(preds, roi, [np.nan], times, 0, 0),
+        "peri_event_timecourse (rows)":   lambda: _R.peri_event_timecourse(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0, 0),
+        "event_locked_response (onset)":  lambda: _R.event_locked_response(preds, roi, [np.nan], times, 0),
+        "event_locked_contrast (target)": lambda: _R.event_locked_contrast(nanvals, [ok]),
+        "event_locked_contrast (other)":  lambda: _R.event_locked_contrast(ok, [nanvals]),
+        # NaN INSIDE the parcel: outside it cannot affect the selection, so
+        # rejecting that would be stricter than the mechanism requires.
+        "define_froi":          lambda: _R.define_froi(np.where(np.arange(N_V) == 25, np.nan, 0.0),
+                                                       np.zeros(N_V), np.arange(20, 50), top_n=5),
+        "peak_lag_trs":         lambda: _R.peak_lag_trs([tc_bad, tc_b], pre_trs=2),
+        "u_statistic":          lambda: _R.u_statistic(nanvals, ok),
+        "exact_perm_p":         lambda: _R.exact_perm_p(nanvals, ok),
+        "mc_perm_p":            lambda: _R.mc_perm_p(nanvals + ok, ok + nanvals, n_perm=20),
+        "perm_null_deltas":     lambda: _R.perm_null_deltas(nanvals, ok),
+        "row_times_from_segments": lambda: _R.row_times_from_segments(
+            [_Seg(0.0), _Seg(np.nan), _Seg(2.0)]),
+    }
+
+
+def test_non_finite_is_rejected_at_EVERY_entry_point_the_docstring_claims():
+    """MECHANISM TEST for M3.
+
+    The original test checked 3 of ~10 call sites while its docstring claimed
+    "rejected everywhere", and its perm_p call never even reached mc_perm_p.
+    A test that claims universal coverage and does not prove it is worse than no
+    test, because it retires the question. This enumerates every path.
+    """
+    unguarded = []
+    for label, call in _nonfinite_entry_points().items():
+        try:
+            call()
+            unguarded.append(label)
+        except ValueError:
+            pass                      # correct: rejected
+        except Exception as exc:      # wrong error type is also a finding
+            unguarded.append(f"{label} (raised {type(exc).__name__}, want ValueError)")
+    assert not unguarded, "non-finite input NOT rejected at: " + "; ".join(unguarded)
+
+
+def test_inf_is_treated_exactly_like_nan_everywhere():
+    """+/-inf must not be a second, weaker policy."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    roi = np.array([10, 11, 12])
+    for bad in (np.inf, -np.inf):
+        dirty = preds.copy(); dirty[0, 10] = bad
+        for fn in (_R.spatial_z, _R.raw_roi_mean):
+            with pytest.raises(ValueError, match="non-finite"):
+                fn(dirty, roi)
+        with pytest.raises(ValueError, match="non-finite"):
+            _R.u_statistic([1.0, bad], [0.0, 0.5])
+
+
+def test_event_locked_contrast_rejects_bad_shapes_on_BOTH_arguments():
+    """MECHANISM TEST for S6/F3. The original fix guarded target_responses only;
+    the identical hazard reaches the arithmetic through other_responses."""
+    good = np.array([1.0, 2.0])
+    tc = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    with pytest.raises(ValueError, match="1-D"):                 # target 2-D
+        event_locked_contrast(tc, [good])
+    with pytest.raises(ValueError, match="1-D"):                 # one other 2-D
+        event_locked_contrast(good, [tc])
+    with pytest.raises(ValueError, match="SEQUENCE"):             # bare 2-D AS other_responses
+        event_locked_contrast(good, tc)
+    with pytest.raises(ValueError, match="scalar"):               # 0-d, was a TypeError
+        event_locked_contrast(np.array(3.0), [good])
+    with pytest.raises(ValueError, match="scalar"):
+        event_locked_contrast(good, [np.array(3.0)])
+    for empty in ([], np.array([])):                              # empty either side
+        with pytest.raises(ValueError, match="empty"):
+            event_locked_contrast(good, [empty])
+    assert event_locked_contrast([10.0, 10.0], [[0.0] * 100, [4.0, 4.0]]) == pytest.approx(8.0)
+
+
+def test_peak_lag_rejects_every_degenerate_configuration_that_satisfies_the_count():
+    """MECHANISM TEST for C5/F6. ">= 2 categories" is a formality: each of these
+    satisfies it while pooling to exactly the target's own course (measured
+    type-I 0.2032 vs a nominal 0.025)."""
+    tc = np.zeros((6, 12)); tc[:, 6] = 1.0
+    other = np.zeros((6, 12)); other[:, 3] = 1.0
+    for label, courses in {
+        "same object twice":      [tc, tc],
+        "a copy":                 [tc, tc.copy()],
+        "all-zero filler":        [tc, np.zeros_like(tc)],
+        "constant filler":        [tc, np.full_like(tc, 7.0)],
+        "an empty category":      [tc, np.zeros((0, 12))],
+    }.items():
+        with pytest.raises(ValueError):
+            peak_lag_trs(courses, pre_trs=2)
+    # genuinely different categories still work
+    assert peak_lag_trs([tc, other], pre_trs=2) in (1, 4)
+
+
+def test_resolve_rows_rejects_non_finite_directly_not_only_via_its_callers():
+    """MECHANISM TEST for A1, isolated.
+
+    `peri_event_timecourse` guards its onsets before `_resolve_rows` ever sees
+    them, so testing only through the caller masks whether `_resolve_rows` itself
+    is safe — mutation testing showed a revert of its guard surviving. The
+    function's own docstring promises "or raise. Never silently approximate",
+    and `err > tol` is False for NaN, so a NaN silently resolved to a row.
+    """
+    from tribe_tools.roi_stats import _resolve_rows
+    rt = np.arange(10.0)
+    assert _resolve_rows(rt, [3.0]).tolist() == [3]          # the valid path still works
+    for bad in (np.nan, np.inf, -np.inf):
+        with pytest.raises(ValueError, match="non-finite"):
+            _resolve_rows(rt, [bad])
+        with pytest.raises(ValueError, match="non-finite"):
+            _resolve_rows(np.array([0.0, 1.0, bad, 3.0]), [1.0])
+
+
+def test_row_times_from_segments_rejects_non_finite_directly():
+    """A NaN start also defeats `np.diff(t) <= 0`, so the strictly-increasing
+    guard passed and rows then resolved to the wrong times."""
+    with pytest.raises(ValueError, match="non-finite"):
+        row_times_from_segments([_Seg(0.0), _Seg(np.nan), _Seg(2.0)])
