@@ -782,6 +782,132 @@ def test_higher_rank_preds_are_rejected_before_n_vertices_is_derived():
     assert np.isfinite(raw_roi_mean(np.tile(flat, (4, 1)), np.array([0, 1])))
 
 
+# Public functions taking per-event response vectors, with the argument positions
+# that must each enforce the (n_events,) rank contract. Derived requirement below.
+_EVENT_VECTOR_ARGS = ("face_vals", "scene_vals", "other_vals",
+                      "target_responses", "other_responses")
+
+
+def _event_vector_entry_points():
+    """Every (function, argument) that takes a per-event vector, by introspection."""
+    out = []
+    for name, fn in _public_functions().items():
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        for arg in _EVENT_VECTOR_ARGS:
+            if arg in params:
+                out.append((name, fn, arg))
+    return out
+
+
+def _call_with_event_vector(name, fn, bad, which):
+    """Invoke each event-vector function with valid data except at `which`."""
+    ok = [0.1, 0.2, 0.3, 0.4]
+    kw = {"n_perm": 20} if name in ("mc_perm_p", "perm_p") else {}
+    if name == "event_locked_contrast":
+        return fn(bad, [ok]) if which == "target_responses" else fn(ok, [bad])
+    first = ("face_vals", "target_responses")
+    return fn(bad, ok, **kw) if which in first else fn(ok, bad, **kw)
+
+
+def test_every_event_vector_argument_enforces_the_rank_contract():
+    """MECHANISM TEST for S6. A (n_events, n_lags) time course passed where a
+    (n_events,) per-event vector is wanted is the confusion this module names in
+    its own source. _as_event_vector was written to close it and guarded ONE
+    function out of five: mc_perm_p broadcast a 2-D input to a finite wrong
+    p-value, turning p=0.567 into p=0.0005. Coverage is keyed on the (function,
+    argument) PAIR and derived from the signatures, so a new one fails by default."""
+    eps = _event_vector_entry_points()
+    assert len(eps) >= 10, f"discovery found only {len(eps)} event-vector arguments"
+    bad_cases = {
+        "(n_events, n_lags) time course": (np.zeros((4, 3)),  "must be 1-D"),
+        "(n, 1) column vector":           (np.zeros((4, 1)),  "must be 1-D"),
+        "a bare scalar":                  (1.0,               "scalar"),
+        "an empty sample":                ([],                "empty"),
+    }
+    for name, fn, arg in eps:
+        _call_with_event_vector(name, fn, [0.5, 0.6, 0.7, 0.8], arg)   # valid still works
+        for label, (bad, why) in bad_cases.items():
+            with pytest.raises(ValueError, match=why):
+                _call_with_event_vector(name, fn, bad, arg)
+
+
+def test_a_time_course_cannot_masquerade_as_a_sample_and_change_the_verdict():
+    """The concrete stakes, pinned. This exact call returned 0.0005 where the
+    correct one returns 0.567 — a null read as a headline result."""
+    rng = np.random.default_rng(3)
+    a = rng.normal(0, 1, (15, 12)); b = rng.normal(0, 1, (15, 12))
+    a[:, 1:] += 6.0                      # no effect at lag 0, large effect after
+    assert perm_p(a[:, 0], b[:, 0], n_perm=2000, seed=0) == pytest.approx(0.567216, abs=1e-6)
+    with pytest.raises(ValueError, match="must be 1-D"):
+        perm_p(a, b, n_perm=2000, seed=0)
+
+
+def test_the_rank_collapse_actually_averages_rows():
+    """_as_vertex_map's only arithmetic. EVERY 2-D preds fixture in this suite has
+    identical rows — np.tile(...), np.ones(...), g[None, :] — so `mean over rows`
+    and `row 0` were indistinguishable everywhere and the collapse was asserted by
+    nothing. Four public statistics depend on this one line."""
+    # rows deliberately DISTINCT, and the column mean differs from every single row
+    p = np.zeros((3, N_V))
+    p[0, 10] = 9.0
+    p[1, 10] = 3.0
+    p[2, 10] = 0.0                       # column mean 4.0; no row equals it
+    assert _R._as_vertex_map(p, "x")[10] == pytest.approx(4.0)
+    assert raw_roi_mean(p, [10]) == pytest.approx(4.0)
+    # and it must equal the explicitly collapsed input, at every entry point
+    flat = p.mean(axis=0)
+    for name, call in (
+        ("raw_roi_mean",        lambda q: raw_roi_mean(q, [10])),
+        ("spatial_z",           lambda q: spatial_z(q, [10])),
+        ("roi_minus_reference", lambda q: roi_minus_reference(q, [10], [50, 51])),
+    ):
+        assert call(p) == pytest.approx(call(flat)), f"{name} disagrees with its own collapse"
+    a = np.zeros((2, N_V)); a[0, 22] = 6.0          # column mean 3.0 at vertex 22
+    assert define_froi(a, np.zeros(N_V), np.arange(20, 50), top_n=1).tolist() == [22]
+    assert a.mean(axis=0)[22] == pytest.approx(3.0)
+
+
+def test_preds_representations_agree_at_every_entry_point():
+    """I1, for the DATA argument rather than the selector. roi_minus_reference was
+    the one site deriving n_vertices from a raw .shape, so it raised AttributeError
+    on a list where the other statistics accepted one."""
+    flat = list(np.arange(N_V, dtype=float))
+    reps = {"list": flat, "tuple": tuple(flat), "ndarray": np.asarray(flat),
+            "2-D single row": np.asarray(flat)[None, :]}
+    for name, call in (
+        ("raw_roi_mean",        lambda q: raw_roi_mean(q, [0, 1])),
+        ("spatial_z",           lambda q: spatial_z(q, [0, 1])),
+        ("roi_minus_reference", lambda q: roi_minus_reference(q, [0, 1], [50, 51])),
+    ):
+        vals = {k: call(v) for k, v in reps.items()}
+        assert len(set(np.round(list(vals.values()), 12))) == 1, f"{name}: {vals}"
+
+
+def test_row_time_pairing_is_enforced_not_assumed():
+    """row_times_from_segments exists because row index is NOT TR index. The 1:1
+    check is the only thing enforcing that, and removing it returned a number."""
+    preds = np.arange(24.0).reshape(6, 4)
+    with pytest.raises(ValueError):
+        peri_event_timecourse(preds, [0, 1], [1.0], np.arange(3.0), 0, 0)
+    assert np.isfinite(peri_event_timecourse(preds, [0, 1], [1.0], np.arange(6.0), 0, 0)).all()
+
+
+def test_peak_lag_validates_its_offset():
+    """pre_trs converts a grid index into a lag, so an out-of-range value fabricates
+    a lag exactly as a degenerate course does. Scalars have no coverage harness."""
+    tc = np.zeros((4, 12)); tc[:, 6] = 1.0
+    other = np.zeros((4, 12)); other[:, 3] = 1.0
+    for bad in (100, -5, 12):
+        with pytest.raises(ValueError, match="pre_trs"):
+            peak_lag_trs([tc, other], pre_trs=bad)
+    with pytest.raises(ValueError, match="pre_trs"):
+        peak_lag_trs([tc, other], pre_trs=2.9)
+    assert peak_lag_trs([tc, other], pre_trs=2) == 1
+
+
 def test_masked_selectors_are_rejected_rather_than_silently_unmasked():
     """I1. np.asarray drops the mask, so the masked entries rejoin the selection and
     two encodings of one vertex set disagree. Reject rather than guess."""
@@ -851,6 +977,54 @@ _REGION_LOCAL_CONSUMERS = {                   # read only the selected vertices
 }
 
 
+def _read_extent_required():
+    """Functions that MUST declare a read extent, derived from the signatures.
+
+    Any public function taking both a vertex selector and array data reads some
+    region of a vertex map, so whether its guard covers the whole map or only the
+    selected region is a question that has an answer and must be recorded.
+    """
+    out = set()
+    for name, fn in _public_functions().items():
+        if name in _NO_ARRAY_INPUT:
+            continue
+        try:
+            params = set(_inspect.signature(fn).parameters)
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        if params & set(_SELECTOR_ARGS) and params & _ARRAY_DATA_PARAMS:
+            out.add(name)
+    return out
+
+
+def _read_extent_undeclared():
+    """Functions required to declare a read extent that have not declared one.
+
+    Shared by the completeness test and its planted-violation self-test, so a
+    weakening here fails BOTH. When the derivation lived inline in the
+    completeness test, the self-test called it separately and nothing noticed
+    when the completeness test stopped using it.
+    """
+    return _read_extent_required() - (_WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS)
+
+
+def test_read_extent_declaration_catches_a_planted_undeclared_function(monkeypatch):
+    """Self-test for the derivation. A new function that divides by a whole-map
+    statistic while guarding only its ROI — F4 verbatim — must be REQUIRED to
+    declare an extent, rather than being invisible to a hand-written list."""
+    def roi_share(preds, verts):
+        g = _R._as_vertex_map(preds, "roi_share preds")
+        verts = _R._as_vertex_indices(verts, "roi_share ROI", g.shape[-1])
+        _R._require_finite(g[verts], "roi_share ROI values")   # region-only guard
+        return float(g[verts].mean() / g.mean())               # whole-map divisor
+
+    monkeypatch.setattr(_R, "roi_share", roi_share, raising=False)
+    assert "roi_share" in _read_extent_undeclared(), (
+        "a new selector+array function was not required to declare its read extent, "
+        "so F4 could be reintroduced in it with a green suite"
+    )
+
+
 def _poison_outside_the_region_cases():
     """One call per function with a non-finite value placed OUTSIDE the region its
     selector picks out — the placement every existing fixture avoids."""
@@ -878,9 +1052,22 @@ def test_each_guard_covers_exactly_the_data_its_statistic_reads():
     silent nan. Here the read EXTENT is the assertion."""
     cases = _poison_outside_the_region_cases()
     declared = _WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS
-    assert set(cases) == declared, (
-        "every function reading vertex data must declare its read extent: "
-        f"undeclared={sorted(set(cases) - declared)}, unexercised={sorted(declared - set(cases))}"
+    # DERIVE the requirement from the signatures, exactly as _nonfinite_coverage
+    # does. Comparing two hand-written lists made a function in NEITHER invisible,
+    # so F4 stayed reintroducible in a new function with a green suite: the one
+    # completeness check in this suite that did not introspect.
+    undeclared = _read_extent_undeclared()
+    assert not undeclared, (
+        "these functions read vertex data through a selector but declare no read extent, "
+        "so nothing checks whether their guard covers what they compute: "
+        f"{sorted(undeclared)}. Add each to _WHOLE_MAP_CONSUMERS or "
+        "_REGION_LOCAL_CONSUMERS and give it a case in _poison_outside_the_region_cases."
+    )
+    assert declared <= set(cases), (
+        f"declared but never exercised outside its region: {sorted(declared - set(cases))}"
+    )
+    assert set(cases) <= declared, (
+        f"exercised but undeclared: {sorted(set(cases) - declared)}"
     )
     for name, call in cases.items():
         if name in _WHOLE_MAP_CONSUMERS:

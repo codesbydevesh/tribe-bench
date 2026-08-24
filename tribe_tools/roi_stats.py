@@ -95,13 +95,14 @@ def u_statistic(face_vals, scene_vals) -> float:
     """
     # A NaN compares False against everything, so it silently scored as a loss
     # with no tie credit -- a FINITE WRONG U, which is worse than an error.
-    face_list, scene_list = list(face_vals), list(scene_vals)
-    n_face = len(face_list)
-    vals = _require_finite(face_list + scene_list, "u_statistic input")
-    # Iterate the VALIDATED array, never the original arguments: a single-pass
-    # iterable was exhausted by the guard above, both loops then saw nothing, and
-    # the result was U=0.0 -- finite, wrong, and maximally anti-selective (F6).
-    face_list, scene_list = vals[:n_face], vals[n_face:]
+    # I3: materialise once, then validate and compute on THAT copy. Iterating the
+    # original arguments after the guard consumed them returned U=0.0 -- finite,
+    # wrong, and maximally anti-selective (F6).
+    # S6: the rank check belongs here too. A (n_events, n_lags) time course passed
+    # where a (n_events,) per-event vector is wanted is the confusion this module
+    # documents as its own failure class, and it produced a finite wrong statistic.
+    face_list = _as_event_vector(_materialise(face_vals), "u_statistic face_vals")
+    scene_list = _as_event_vector(_materialise(scene_vals), "u_statistic scene_vals")
     u = 0.0
     for f in face_list:
         for s in scene_list:
@@ -134,9 +135,10 @@ def exact_perm_p(face_vals, scene_vals) -> float:
     # I3: materialise ONCE at the boundary. This previously consumed its arguments
     # three times -- guard, re-materialise, then len() and u_statistic() -- so a
     # single-pass iterable silently became an empty sample (F6, same class).
-    face_list, scene_list = list(face_vals), list(scene_vals)
-    n_face = len(face_list)
-    vals = _require_finite(face_list + scene_list, "exact_perm_p input").tolist()
+    face_arr = _as_event_vector(_materialise(face_vals), "exact_perm_p face_vals")
+    scene_arr = _as_event_vector(_materialise(scene_vals), "exact_perm_p scene_vals")
+    n_face = int(face_arr.size)
+    vals = np.concatenate([face_arr, scene_arr]).tolist()
     n_total = len(vals)
     u_obs = u_statistic(vals[:n_face], vals[n_face:])
     ge = total = 0
@@ -160,10 +162,10 @@ def perm_null_deltas(face_vals, scene_vals) -> np.ndarray:
     """
     # I3: n_face came from len(face_vals) AFTER the argument had been consumed
     # above, which raises on a generator. Measure the materialised copy.
-    face_list = list(face_vals)
-    n_face = len(face_list)
-    vals = _require_finite(np.array(face_list + list(scene_vals), dtype=float),
-                           "perm_null_deltas input")
+    face_arr = _as_event_vector(_materialise(face_vals), "perm_null_deltas face_vals")
+    scene_arr = _as_event_vector(_materialise(scene_vals), "perm_null_deltas scene_vals")
+    n_face = int(face_arr.size)
+    vals = np.concatenate([face_arr, scene_arr])
     n_total = len(vals)
     out = []
     for combo in _labelings(n_total, n_face):
@@ -190,10 +192,10 @@ def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> floa
     """
     # I3: `n` came from len(face_vals), re-reading an argument already consumed
     # above -- which raises on a generator instead of working.
-    face_list = list(face_vals)
-    n = len(face_list)
-    vals = _require_finite(np.array(face_list + list(other_vals), dtype=float),
-                           "mc_perm_p input")
+    face_arr = _as_event_vector(_materialise(face_vals), "mc_perm_p face_vals")
+    other_arr = _as_event_vector(_materialise(other_vals), "mc_perm_p other_vals")
+    n = int(face_arr.size)
+    vals = np.concatenate([face_arr, other_arr])
     N = len(vals)
     u_obs = _u_fast(vals[:n], vals[n:])
     rng = np.random.default_rng(seed)
@@ -209,8 +211,9 @@ def perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float:
     """One-sided permutation p for U: exact when small enough to enumerate, else Monte-Carlo."""
     # I3: materialise before measuring, so a single-pass iterable is not consumed
     # by the size check and then handed on empty to the estimator.
-    face_list, other_list = list(face_vals), list(other_vals)
-    N, n = len(face_list) + len(other_list), len(face_list)
+    face_list = _as_event_vector(_materialise(face_vals), "perm_p face_vals")
+    other_list = _as_event_vector(_materialise(other_vals), "perm_p other_vals")
+    N, n = int(face_list.size + other_list.size), int(face_list.size)
     if comb(N, n) <= 20000:
         return exact_perm_p(face_list, other_list)
     return mc_perm_p(face_list, other_list, n_perm=n_perm, seed=seed)
@@ -432,7 +435,12 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
     """
     # Normalise BOTH selectors to integer indices before comparing them: a
     # boolean mask vs an int array defeats np.intersect1d entirely (C7).
-    _n = preds.shape[-1] if np.ndim(preds) else None
+    # Collapse FIRST, through the same helper as every other entry point. Reading
+    # preds.shape directly was the one site left deriving n_vertices from a raw
+    # attribute: it skipped the rank precondition and raised a bare AttributeError
+    # on a list where the other three statistics accept one.
+    g = _as_vertex_map(preds, "roi_minus_reference preds")
+    _n = g.shape[-1]
     verts = _as_vertex_indices(verts, "roi_minus_reference ROI", _n)
     ref_verts = _as_vertex_indices(ref_verts, "roi_minus_reference reference", _n)
     if len(verts) == 0 or len(ref_verts) == 0:
@@ -442,7 +450,6 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
             "ROI and reference overlap — the reference must be off-target and "
             "pre-registered, or this is an undeclared normaliser"
         )
-    g = _as_vertex_map(preds, "roi_minus_reference preds")
     _require_finite(g[verts], "roi_minus_reference ROI values")
     _require_finite(g[ref_verts], "roi_minus_reference reference values")
     return float(g[verts].mean() - g[ref_verts].mean())
@@ -677,6 +684,21 @@ def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
                 "returns 0, fabricating a lag. Drop the empty category deliberately."
             )
     n_lags = courses[0].shape[1]
+    # pre_trs is the offset that turns a grid index into a lag, so an out-of-range
+    # or non-integer value fabricates a lag just as surely as a degenerate course
+    # does -- pre_trs=100 on a 12-lag grid returned -94. peri_event_timecourse
+    # validates its own pre_trs; the function whose entire purpose is refusing to
+    # fabricate a lag did not. Scalars are the one parameter class with no
+    # coverage harness, so they need explicit guards.
+    if isinstance(pre_trs, bool) or int(pre_trs) != pre_trs:
+        raise ValueError(f"pre_trs must be an integer number of TRs, got {pre_trs!r}")
+    pre_trs = int(pre_trs)
+    if not 0 <= pre_trs < n_lags:
+        raise ValueError(
+            f"pre_trs={pre_trs} is outside the lag grid [0, {n_lags}). The returned lag is "
+            "argmax(pooled) - pre_trs, so an out-of-range offset reports a lag that does not "
+            "exist on this grid."
+        )
     if n_lags < 3:
         raise ValueError(
             f"peak_lag_trs needs at least 3 lags, got {n_lags}. With two lags every pair of "
@@ -793,8 +815,25 @@ def event_locked_response(
     return tc[:, int(lag_trs)]
 
 
+def _materialise(a):
+    """Consume a possibly single-pass iterable EXACTLY once (I3).
+
+    Returns non-iterables unchanged so that ``_as_event_vector`` can report the
+    contract violation itself: ``list(1.0)`` raises TypeError before any guard
+    runs, which is the bare-TypeError failure this module refuses elsewhere.
+    """
+    if isinstance(a, np.ndarray) or not hasattr(a, "__iter__"):
+        return a
+    return list(a)
+
+
 def _as_event_vector(a, what: str) -> np.ndarray:
-    """Validate a per-event response vector. Used for EVERY such argument (F3).
+    """Validate a per-event response vector. Used for EVERY such argument (F3, S6).
+
+    Enforced at every public entry point that takes one: ``event_locked_contrast``
+    (both arguments) and all four permutation statistics. The claim "used for
+    EVERY such argument" was previously true of one function out of five, while
+    ``mc_perm_p`` broadcast a 2-D input to a finite wrong p-value.
 
     The reported instance was a 2-D ``target_responses``. The mechanism is that
     ``peri_event_timecourse`` returns ``(n_events, n_lags)`` and is always in

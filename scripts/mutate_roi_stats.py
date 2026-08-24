@@ -67,7 +67,8 @@ MUTATIONS = [
     # The five that survived the independent review. Each MUST now be detected.
     ("R01", "REVIEWER", SRC, '    if arr.ndim != 1:\n        raise ValueError(\n            f"{what} must be 1-D', '    if False:\n        raise ValueError(\n            f"{what} must be 1-D',
      "F1: 2-D boolean mask of size n read in flat C order -> wrong vertex set"),
-    ("R02", "REVIEWER", SRC, 'if arr.ndim != 1:', 'if arr.ndim != 1 and arr.dtype != bool:',
+    ("R02", "REVIEWER", SRC, 'if arr.ndim != 1:\n        raise ValueError(\n            f"{what} must be 1-D, got shape {arr.shape}. A multi-dimensional',
+     'if arr.ndim != 1 and arr.dtype != bool:\n        raise ValueError(\n            f"{what} must be 1-D, got shape {arr.shape}. A multi-dimensional',
      "F1: 1-D rule exempts booleans, the exact shape of the original bypass"),
     ("R03", "REVIEWER", SRC, 'g = _require_finite(g, "spatial_z map")',
      '_require_finite(g[verts], "spatial_z map")',
@@ -80,7 +81,7 @@ MUTATIONS = [
     # I1 — selector canonicalisation
     ("C01", "CLASS", SRC, 'return np.sort(idx)', 'return idx',
      "I1: integer selectors keep caller order; representations diverge"),
-    ("C02", "CLASS", SRC, 'if arr.ndim == 0:', 'if False:',
+    ("C02", "CLASS", SRC, 'if arr.ndim == 0:\n        raise ValueError(\n            f"{what} is a scalar', 'if False:\n        raise ValueError(\n            f"{what} is a scalar',
      "I1: bare scalar selector accepted"),
     ("C03", "CLASS", SRC, 'if n_vertices is not None and arr.size != n_vertices:', 'if False:',
      "I1: boolean mask of the wrong length accepted"),
@@ -99,10 +100,10 @@ MUTATIONS = [
     ("C09", "CLASS", SRC, 'u_obs = u_statistic(vals[:n_face], vals[n_face:])',
      'u_obs = u_statistic(face_vals, scene_vals)',
      "I3: exact_perm_p re-reads consumed arguments"),
-    ("C10", "CLASS", SRC, '    face_list = list(face_vals)\n    n = len(face_list)', '    n = len(face_vals)',
+    ("C10", "CLASS", SRC, '    n = int(face_arr.size)', '    n = len(face_vals)',
      "I3: mc_perm_p measures an argument it has already consumed"),
-    ("C11", "CLASS", SRC, '    face_list = list(face_vals)\n    n_face = len(face_list)\n    vals = _require_finite(np.array(face_list + list(scene_vals), dtype=float),',
-     '    vals = _require_finite(np.array(list(face_vals) + list(scene_vals), dtype=float),',
+    ("C11", "CLASS", SRC, '    n_face = int(face_arr.size)\n    vals = np.concatenate([face_arr, scene_arr])',
+     '    n_face = len(face_vals)\n    vals = np.concatenate([face_arr, scene_arr])',
      "I3: perm_null_deltas calls len() on a consumed argument"),
     # I4 — semantic degeneracy, expressed on the pooled course
     ("O06", "CLASS", SRC, 'if _is_zero(nrm, m):', 'if False:',
@@ -131,6 +132,37 @@ MUTATIONS = [
     ("C24", "CLASS", SRC, 'rt = _require_finite(np.array(list(row_times_s), dtype=float), "peri_event_timecourse row_times_s")',
      'rt = _require_finite(np.asarray(row_times_s, dtype=float), "peri_event_timecourse row_times_s")',
      "I3: row_times_s generator becomes a 0-d object array"),
+    # --- third review: S6 rank guard on the permutation entry points
+    ("C25", "CLASS", SRC, 'face_list = _as_event_vector(_materialise(face_vals), "u_statistic face_vals")',
+     'face_list = _require_finite(_materialise(face_vals), "u_statistic face_vals")',
+     "S6: u_statistic accepts a (n_events, n_lags) time course"),
+    ("C26", "CLASS", SRC, 'other_arr = _as_event_vector(_materialise(other_vals), "mc_perm_p other_vals")',
+     'other_arr = np.asarray(_materialise(other_vals), dtype=float)',
+     "S6: mc_perm_p broadcasts a 2-D input to a finite wrong p-value (0.567 -> 0.0005)"),
+    ("C27", "CLASS", SRC, 'scene_arr = _as_event_vector(_materialise(scene_vals), "perm_null_deltas scene_vals")',
+     'scene_arr = np.asarray(_materialise(scene_vals), dtype=float)',
+     "S6: the G2 magnitude null means over both axes"),
+    # --- the rank-collapse arithmetic itself
+    ("C28", "CLASS", SRC, 'return arr.mean(axis=0) if arr.ndim == 2 else arr', 'return arr[0] if arr.ndim == 2 else arr',
+     "I1: rank collapse takes row 0 instead of the row mean"),
+    ("C29", "CLASS", SRC, 'return arr.mean(axis=0) if arr.ndim == 2 else arr', 'return arr.mean(axis=1) if arr.ndim == 2 else arr',
+     "I1: rank collapse averages the wrong axis"),
+    # --- roi_minus_reference routed through the shared helper
+    ("C30", "CLASS", SRC, '    g = _as_vertex_map(preds, "roi_minus_reference preds")\n    _n = g.shape[-1]',
+     '    _n = preds.shape[-1] if np.ndim(preds) else None\n    g = _as_vertex_map(preds, "roi_minus_reference preds")',
+     "I1: n_vertices from a raw .shape again, skipping the rank precondition"),
+    # --- read-extent completeness derived rather than hand-listed
+    ("C31", "CLASS", TESTS, '    return _read_extent_required() - (_WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS)',
+     '    return set()',
+     "I2/I5: read-extent requirement no longer derived, so a new function is invisible"),
+    ("C32", "CLASS", TESTS, 'if params & set(_SELECTOR_ARGS) and params & _ARRAY_DATA_PARAMS:', 'if False:',
+     "I2/I5: read-extent derivation returns nothing"),
+    # --- scalar guard
+    ("C33", "CLASS", SRC, 'if not 0 <= pre_trs < n_lags:', 'if False:',
+     "pre_trs outside the lag grid reports a lag that does not exist"),
+    # --- the row/time 1:1 pairing, the reason row_times_from_segments exists
+    ("C34", "CLASS", SRC, 'if len(rt) != p.shape[0]:', 'if False:',
+     "row index treated as TR index; the confusion the module was built to prevent"),
     # I5 — coverage machinery. Mutating the TESTS: does the machinery catch its own gaps?
     ("C15", "CLASS", TESTS, '    return covered, required',
      '    return {k.split(":")[0] for k in covered}, {k.split(":")[0] for k in required}',
@@ -152,8 +184,9 @@ def _run_one(mut, keep_going: bool):
         work = pathlib.Path(tmp) / "repo"
         shutil.copytree(REPO, work, symlinks=True,
                         ignore=shutil.ignore_patterns(".git", "__pycache__", "*.pyc",
-                                                      "data", "notebooks", "*.npy",
-                                                      "*.nii.gz", "*.png"))
+                                                      "data", "notebooks", "results",
+                                                      "*.npy", "*.nii.gz", "*.png",
+                                                      "*.zip", "*.h5", "*.pdf"))
         path = work / target
         text = path.read_text()
         if find not in text:
