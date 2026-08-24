@@ -601,6 +601,7 @@ def test_detection_floor_scales_the_right_way():
 # ==========================================================================
 
 import inspect as _inspect
+import itertools as _itertools
 
 from tribe_tools import roi_stats as _R
 
@@ -782,12 +783,6 @@ def test_higher_rank_preds_are_rejected_before_n_vertices_is_derived():
     assert np.isfinite(raw_roi_mean(np.tile(flat, (4, 1)), np.array([0, 1])))
 
 
-# Public functions taking per-event response vectors, with the argument positions
-# that must each enforce the (n_events,) rank contract. Derived requirement below.
-_EVENT_VECTOR_ARGS = ("face_vals", "scene_vals", "other_vals",
-                      "target_responses", "other_responses")
-
-
 def _event_vector_entry_points():
     """Every (function, argument) that takes a per-event vector, by introspection."""
     out = []
@@ -809,7 +804,17 @@ def _call_with_event_vector(name, fn, bad, which):
     if name == "event_locked_contrast":
         return fn(bad, [ok]) if which == "target_responses" else fn(ok, [bad])
     first = ("face_vals", "target_responses")
-    return fn(bad, ok, **kw) if which in first else fn(ok, bad, **kw)
+    second = ("scene_vals", "other_vals", "other_responses")
+    if which in first:
+        return fn(bad, ok, **kw)
+    if which in second:
+        return fn(ok, bad, **kw)
+    # An unrecognised event-vector argument must fail LOUDLY here rather than
+    # silently poisoning whichever position the name-based routing guessed.
+    raise AssertionError(
+        f"unhandled event-vector argument {name}({which}); add it to this dispatcher "
+        "so the rank rules are actually exercised at its own position"
+    )
 
 
 def test_every_event_vector_argument_enforces_the_rank_contract():
@@ -832,6 +837,118 @@ def test_every_event_vector_argument_enforces_the_rank_contract():
         for label, (bad, why) in bad_cases.items():
             with pytest.raises(ValueError, match=why):
                 _call_with_event_vector(name, fn, bad, arg)
+
+
+def test_every_tr_count_scalar_rejects_fractional_and_bool_values():
+    """One rule for every TR count. The guard was written for peak_lag_trs and its
+    comment ASSUMED peri_event_timecourse covered its own — true of the sign, false
+    of integrality. lag_trs is the most safety-critical scalar here (M006): it picks
+    which column of the peri-event grid becomes the response, and 3.9 read lag 3."""
+    preds = np.tile(np.arange(N_V, dtype=float), (30, 1))
+    v, t, on = np.array([10, 11]), np.arange(30.0), [10.0]
+    for label, call in (
+        ("peri_event pre_trs",  lambda x: peri_event_timecourse(preds, v, on, t, x, 9)),
+        ("peri_event post_trs", lambda x: peri_event_timecourse(preds, v, on, t, 2, x)),
+        ("event_locked lag_trs", lambda x: event_locked_response(preds, v, on, t, x)),
+    ):
+        for bad in (2.5, True, -1):
+            with pytest.raises(ValueError):
+                call(bad)
+        call(2)                                   # the integer case still works
+    with pytest.raises(ValueError, match="pre_trs"):
+        peak_lag_trs([np.eye(4, 12), np.eye(4, 12)[:, ::-1]], pre_trs=99)
+
+
+def test_n_perm_must_be_a_positive_count():
+    """(ge + 1) / (n_perm + 1) with n_perm <= -1 is NEGATIVE, and iut_pass reads a
+    negative p as a pass. n_perm reaches this from CLI/config in three scripts."""
+    f, o = [3.0, 4.0, 7.0, 9.0], [1.0, 2.0, 5.0, 6.0]
+    for bad in (-5, 0, 2.5, True):
+        with pytest.raises(ValueError, match="n_perm"):
+            mc_perm_p(f, o, n_perm=bad)
+    assert 0.0 < mc_perm_p(f, o, n_perm=50) <= 1.0
+
+
+def test_iterables_that_are_not_samples_are_rejected():
+    """str/bytes/dict/set are iterable but are not per-event data: a str yields
+    characters, a dict yields keys, a set has no order. Each produced a finite U."""
+    ok = [1.0, 2.0, 3.0]
+    for bad in ("123", b"123", {"a": 1.0}, {1.0, 2.0}):
+        with pytest.raises(ValueError):
+            u_statistic(bad, ok)
+        with pytest.raises(ValueError):
+            u_statistic(ok, bad)
+
+
+def test_event_locked_contrast_accepts_single_pass_iterables_on_both_arguments():
+    """I3 regression guard. Routing this function through the rank validator dropped
+    _materialise on the one boundary of six that had it, so the module's primary
+    published statistic stopped accepting a generator — the bare TypeError that
+    _materialise exists to prevent."""
+    tgt, oth = [1.0, 2.0, 3.0], [0.1, 0.2, 0.3, 0.4]
+    ref = event_locked_contrast(tgt, [oth])
+    assert event_locked_contrast((x for x in tgt), [oth]) == pytest.approx(ref)
+    assert event_locked_contrast(tgt, [(x for x in oth)]) == pytest.approx(ref)
+    assert event_locked_contrast(iter(tgt), [iter(oth)]) == pytest.approx(ref)
+
+
+def test_permutation_statistics_are_correct_at_UNEQUAL_n():
+    """MECHANISM TEST. Every permutation fixture in this suite is 4v4, 3v3, 8v8 or
+    15v15, so the split index between the two arms is unobservable: swapping it
+    changes nothing at equal n. The planned design is unequal — glm_contrast_z's
+    own docstring says faces vs pooled others is ~1:4 — and the Welch note exists
+    for exactly that reason. Checked against brute-force enumeration."""
+    from itertools import combinations as _combos
+
+    def brute_force_p(f, s):
+        vals = list(f) + list(s)
+        n, N = len(f), len(vals)
+        u_obs = u_statistic(vals[:n], vals[n:])
+        ge = tot = 0
+        for combo in _combos(range(N), n):
+            sel = set(combo)
+            ge += u_statistic([vals[i] for i in sel],
+                              [vals[i] for i in range(N) if i not in sel]) >= u_obs - 1e-9
+            tot += 1
+        return ge / tot
+
+    cases = [([1., 2., 3.], [9., 8., 7., 6., 5.]),
+             ([9., 8., 7.], [6., 5., 4., 3., 2.]),
+             ([5., 5., 4., 4.], [4., 3.]),
+             ([1.], [2., 3., 4., 5.])]
+    for f, s in cases:
+        assert exact_perm_p(f, s) == pytest.approx(brute_force_p(f, s)), f"{f} vs {s}"
+    # the split index must be the FACE arm's size, and at unequal n that is visible
+    assert exact_perm_p([1., 2., 3.], [9., 8., 7., 6., 5.]) == pytest.approx(1.0)
+    assert exact_perm_p([9., 8., 7., 6., 5.], [1., 2., 3.]) == pytest.approx(1 / 56)
+    # perm_null_deltas must split the same way
+    d = perm_null_deltas([1., 2., 3.], [9., 8., 7., 6., 5.])
+    assert len(d) == 56, f"expected C(8,3)=56 labelings, got {len(d)}"
+    assert d[0] == pytest.approx(np.mean([1., 2., 3.]) - np.mean([9., 8., 7., 6., 5.]))
+    # and mc_perm_p must agree with the exact answer at unequal n. Use a case where
+    # the WRONG split is far away (1.0 vs 0.714), not one where both land inside the
+    # Monte-Carlo tolerance -- otherwise the assertion cannot see the split at all.
+    assert mc_perm_p([1., 2., 3.], [9., 8., 7., 6., 5.], n_perm=5000, seed=0) == \
+        pytest.approx(1.0, abs=0.005)
+    assert mc_perm_p([9., 8., 7.], [6., 5., 4., 3., 2.], n_perm=20000, seed=0) == \
+        pytest.approx(exact_perm_p([9., 8., 7.], [6., 5., 4., 3., 2.]), abs=0.01)
+
+
+def test_u_fast_matches_u_statistic_including_the_tie_term():
+    """_u_fast is the vectorised twin used by EVERY Monte-Carlo p-value and by
+    detection_floor, and nothing asserted the two agree. The tie credit is
+    load-bearing: on the tied integer covariates the Gate 0 curation scripts pass
+    (scene_cuts is a count), dropping it moves a curation p-value across the gate."""
+    rng = np.random.default_rng(11)
+    for _ in range(50):
+        na, nb = int(rng.integers(2, 8)), int(rng.integers(2, 8))
+        a = rng.integers(0, 3, na).astype(float)      # heavy ties by construction
+        b = rng.integers(0, 3, nb).astype(float)
+        assert _R._u_fast(a, b) == pytest.approx(u_statistic(a, b)), f"{a} vs {b}"
+    # ties must be worth exactly half, in the vectorised path too
+    assert _R._u_fast(np.array([1.0, 1.0]), np.array([1.0])) == pytest.approx(1.0)
+    assert _R._u_fast(np.array([2.0, 2.0]), np.array([1.0])) == pytest.approx(2.0)
+    assert _R._u_fast(np.array([0.0, 0.0]), np.array([1.0])) == pytest.approx(0.0)
 
 
 def test_a_time_course_cannot_masquerade_as_a_sample_and_change_the_verdict():
@@ -866,8 +983,20 @@ def test_the_rank_collapse_actually_averages_rows():
     ):
         assert call(p) == pytest.approx(call(flat)), f"{name} disagrees with its own collapse"
     a = np.zeros((2, N_V)); a[0, 22] = 6.0          # column mean 3.0 at vertex 22
-    assert define_froi(a, np.zeros(N_V), np.arange(20, 50), top_n=1).tolist() == [22]
+    assert define_froi(a, np.zeros((2, N_V)), np.arange(20, 50), top_n=1).tolist() == [22]
     assert a.mean(axis=0)[22] == pytest.approx(3.0)
+
+
+def test_localizer_conditions_must_agree_on_rank_not_only_on_collapsed_shape():
+    """Both arguments are collapsed to 1-D, so a post-collapse shape check cannot
+    see that one condition was averaged over trials and the other was not."""
+    with pytest.raises(ValueError, match="rank"):
+        define_froi(np.ones((5, N_V)), np.zeros(N_V), np.arange(20, 50), top_n=3)
+    with pytest.raises(ValueError, match="rank"):
+        define_froi(np.zeros(N_V), np.ones((5, N_V)), np.arange(20, 50), top_n=3)
+    # matching ranks still work, in both accepted forms
+    assert define_froi(np.arange(N_V, dtype=float), np.zeros(N_V), np.arange(20, 50), top_n=3).size == 3
+    assert define_froi(np.ones((5, N_V)), np.zeros((5, N_V)), np.arange(20, 50), top_n=3).size == 3
 
 
 def test_preds_representations_agree_at_every_entry_point():
@@ -1403,11 +1532,18 @@ _IMPORTED_CALLABLES = {"comb", "combinations"}
 
 # Parameters that DO carry array data and therefore need non-finite coverage at
 # their own argument position (selectors are covered by the selector harness).
-_ARRAY_DATA_PARAMS = {
-    "preds", "preds_a", "preds_b", "loc_a", "loc_b",
-    "target_responses", "other_responses", "onset_times_s", "row_times_s",
-    "category_timecourses", "face_vals", "scene_vals", "other_vals", "segments",
-}
+# Array parameters, PARTITIONED by kind. The partition is asserted below, so a
+# new array parameter must be assigned a kind rather than defaulting into the
+# unguarded remainder. _EVENT_VECTOR_ARGS was previously a hand-written tuple with
+# no forcing function, so a new per-event argument under an unforeseen name was
+# exempt from the rank harness by default -- S6 reintroducible with a green suite.
+_EVENT_VECTOR_ARGS = ("face_vals", "scene_vals", "other_vals",
+                      "target_responses", "other_responses")
+_MAP_ARGS = ("preds", "preds_a", "preds_b", "loc_a", "loc_b")
+_TIME_ARGS = ("onset_times_s", "row_times_s", "segments")
+_GRID_ARGS = ("category_timecourses",)
+
+_ARRAY_DATA_PARAMS = set(_EVENT_VECTOR_ARGS) | set(_MAP_ARGS) | set(_TIME_ARGS) | set(_GRID_ARGS)
 
 # Parameters that carry no array data. Declared explicitly so that a NEW
 # parameter is a failure by default rather than a silent miss.
@@ -1520,6 +1656,67 @@ def test_completeness_is_measured_per_argument_not_per_function(monkeypatch):
     )
     # neither is in the hand-written map, so both must surface as gaps
     assert {"planted_two_array_fn:preds", "planted_two_array_fn:other_vals"} <= (required - covered)
+
+
+def _array_param_kinds():
+    """The declared kinds, and the array params assigned to none of them.
+
+    Shared by the partition test and its planted-violation self-test. Computing
+    the union separately in each was how C31 slipped through two rounds ago: two
+    tests, one invariant, no shared code, so weakening one failed neither.
+    """
+    kinds = {"event vector": set(_EVENT_VECTOR_ARGS), "vertex map": set(_MAP_ARGS),
+             "time base": set(_TIME_ARGS), "lag grid": set(_GRID_ARGS)}
+    union = set().union(*kinds.values())
+    return kinds, union, _ARRAY_DATA_PARAMS - union, union - _ARRAY_DATA_PARAMS
+
+
+def test_every_array_parameter_is_assigned_exactly_one_kind():
+    """The partition is what makes the rank harness derived rather than hand-written.
+    Without it a new array parameter under an unforeseen name joined
+    _ARRAY_DATA_PARAMS, satisfied the non-finite harness, and was exempt from the
+    rank harness by default — S6 reintroducible with a green suite."""
+    kinds, _union, unassigned, orphaned = _array_param_kinds()
+    assert not unassigned, f"array params belonging to no declared kind: {sorted(unassigned)}"
+    assert not orphaned, f"assigned a kind but not an array param: {sorted(orphaned)}"
+    for a, b in _itertools.combinations(sorted(kinds), 2):
+        overlap = kinds[a] & kinds[b]
+        assert not overlap, f"{a} and {b} both claim {sorted(overlap)}"
+    # and the three parameter families must not overlap each other either
+    assert not (_ARRAY_DATA_PARAMS & _NON_ARRAY_PARAMS)
+    assert not (_ARRAY_DATA_PARAMS & set(_SELECTOR_ARGS))
+    assert not (_NON_ARRAY_PARAMS & set(_SELECTOR_ARGS))
+
+
+def test_partition_check_catches_a_planted_unassigned_parameter(monkeypatch):
+    """Self-test for the partition. Asserting `union == _ARRAY_DATA_PARAMS` is only
+    meaningful if union is BUILT from the kinds; comparing the set to itself passes
+    for free. Plant an array parameter with no kind and require it to surface."""
+    monkeypatch.setitem(globals(), "_ARRAY_DATA_PARAMS",
+                        _ARRAY_DATA_PARAMS | {"planted_unassigned_arg"})
+    _kinds, _union, unassigned, _orphaned = _array_param_kinds()
+    assert "planted_unassigned_arg" in unassigned, (
+        "an array parameter belonging to no declared kind was not surfaced, so a new "
+        "per-event argument would be exempt from the rank harness by default"
+    )
+
+
+def test_exemption_lists_cannot_silently_hide_a_function(monkeypatch):
+    """_IMPORTED_CALLABLES removes a name from ALL FOUR derived harnesses at once,
+    and the only existing check is that the name still exists. Anything in it must
+    genuinely not be defined by this module."""
+    for name in _IMPORTED_CALLABLES:
+        fn = getattr(_R, name)
+        mod = getattr(fn, "__module__", None)
+        assert mod != _R.__name__, (
+            f"{name} is exempted as an import but is defined by roi_stats itself, so it "
+            "is hidden from every coverage harness"
+        )
+    for name in _NO_ARRAY_INPUT:
+        params = set(_inspect.signature(getattr(_R, name)).parameters)
+        assert not (params & set(_MAP_ARGS) | params & set(_GRID_ARGS)), (
+            f"{name} is declared array-free but takes array data: {sorted(params)}"
+        )
 
 
 def test_discovery_machinery_catches_a_planted_partial(monkeypatch):

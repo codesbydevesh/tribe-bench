@@ -1156,3 +1156,56 @@ built from the finding's own failing input rather than from a description of it.
 hardening to a live defect), or if the paper's §5.9 wording is ever read in full — two independent
 fetches truncated before its body, so its exact GLM specification remains **unverified** and is
 recorded as a gap, not a fact.
+
+---
+
+## D032 — Phase B closed under a stated stopping rule (2026-08-24)
+
+**Decision.** Stop the adversarial review loop. Do not run a fifth independent reviewer to search
+for further theoretical test gaps.
+
+**Stopping rule, pre-committed and now met:**
+
+> no demonstrated live wrong-number defect + independent numerical cross-checks pass + known
+> residuals explicitly recorded → stop auditing, move to replication and paper work.
+
+**The claim being made — deliberately narrow:**
+
+> The latest independent audit found no remaining demonstrated wrong-number defect in the
+> decision-critical paths; remaining issues are documented test/coverage or defensive-hardening
+> gaps.
+
+**Not** "the statistics module is proven correct". Four independent reviews each found something
+the previous reviewer and the author had missed. A fifth would probably find something too. What
+changed is the *kind* of finding, not the supply.
+
+**Why stop here.** Marginal value of another reviewer is now below the marginal value of running
+S2, checking whether the decision-critical analysis replicates, and writing the paper. Five days
+remain. Round 4 found zero live wrong-number defects; its yield was two correct-but-unasserted
+mechanisms, three operator-error guards, and one regression the author had introduced while fixing
+round 3.
+
+**Evidence.** `data/phase_b_closure.md` (live correctness vs residuals, the four C verdicts, the
+independent numerical cross-checks), `data/phase_b_invariants.md` (I1-I5 + S6),
+`data/phase_b_mutation_ledger.md` (69 mutations; eleven that proved nothing, recorded as such).
+86 tests in `test_roi_stats.py`, 124 repo-wide, 69/69 mutations detected against a verified-green
+baseline.
+
+**Re-open criterion.** A concrete new correctness concern arising from S2 or from paper
+generation — not another audit of this module.
+
+---
+
+## D033 — G024 resolved: Gate 0 loaded TRIBE v2 (2026-08-24)
+
+`tribe_tools/model.py` has hardcoded `TribeModel.from_pretrained("facebook/tribev2")` in **every
+commit since the initial commit f03833a (2026-06-09)**, seven weeks before the 2026-07-31 Gate 0
+run. `notebooks/03_gate0_v2_validation.ipynb` contains **zero** `from_pretrained` calls and loads
+the model only via `from tribe_tools.model import load_model`, so there is no independent load path
+that could have reached a different checkpoint.
+
+**Caveat, recorded rather than glossed:** this is a code-path argument over full git history, not a
+runtime artifact. The 07-31 results JSON records the tribev2 commit
+(`af58661791a351a448a489042a28f6c37e1c14b7`) but no tribe-bench SHA — the known provenance gap. The
+conclusion is therefore strong but indirect. **The in-silico FFA/PPA/EBA/VWFA claim we are
+replicating exists only for v2, and that claim is safe to rely on.**

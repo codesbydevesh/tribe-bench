@@ -192,6 +192,13 @@ def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> floa
     """
     # I3: `n` came from len(face_vals), re-reading an argument already consumed
     # above -- which raises on a generator instead of working.
+    if isinstance(n_perm, bool) or int(n_perm) != n_perm or int(n_perm) < 1:
+        raise ValueError(
+            f"n_perm must be a positive whole number, got {n_perm!r}. The estimator is "
+            "(ge + 1) / (n_perm + 1), so n_perm <= -1 returns a NEGATIVE p-value, which "
+            "iut_pass then reads as a pass."
+        )
+    n_perm = int(n_perm)
     face_arr = _as_event_vector(_materialise(face_vals), "mc_perm_p face_vals")
     other_arr = _as_event_vector(_materialise(other_vals), "mc_perm_p other_vals")
     n = int(face_arr.size)
@@ -581,8 +588,10 @@ def peri_event_timecourse(
                              "peri_event_timecourse onset_times_s")
     if onsets.size == 0:
         raise ValueError("no event onsets given")
-    if pre_trs < 0 or post_trs < 0:
-        raise ValueError("pre_trs and post_trs must be >= 0")
+    # Integrality, not just sign: pre_trs=2.5 silently produced a 13-lag grid
+    # instead of 12, shifting every reported lag by one.
+    pre_trs = _as_tr_count(pre_trs, "peri_event_timecourse pre_trs")
+    post_trs = _as_tr_count(post_trs, "peri_event_timecourse post_trs")
 
     lags = np.arange(-pre_trs, post_trs + 1, dtype=float)
     _require_finite(p[:, verts], "peri_event_timecourse ROI values")
@@ -686,19 +695,14 @@ def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
     n_lags = courses[0].shape[1]
     # pre_trs is the offset that turns a grid index into a lag, so an out-of-range
     # or non-integer value fabricates a lag just as surely as a degenerate course
-    # does -- pre_trs=100 on a 12-lag grid returned -94. peri_event_timecourse
-    # validates its own pre_trs; the function whose entire purpose is refusing to
-    # fabricate a lag did not. Scalars are the one parameter class with no
-    # coverage harness, so they need explicit guards.
-    if isinstance(pre_trs, bool) or int(pre_trs) != pre_trs:
-        raise ValueError(f"pre_trs must be an integer number of TRs, got {pre_trs!r}")
-    pre_trs = int(pre_trs)
-    if not 0 <= pre_trs < n_lags:
-        raise ValueError(
-            f"pre_trs={pre_trs} is outside the lag grid [0, {n_lags}). The returned lag is "
-            "argmax(pooled) - pre_trs, so an out-of-range offset reports a lag that does not "
-            "exist on this grid."
-        )
+    # does -- pre_trs=100 on a 12-lag grid returned -94. Every TR-count scalar in
+    # this module now goes through _as_tr_count: this comment previously claimed
+    # "peri_event_timecourse validates its own pre_trs", which was true of the
+    # sign and false of integrality -- the guard written for one function and
+    # assumed of its neighbour.
+    # The returned lag is argmax(pooled) - pre_trs, so an out-of-range or
+    # fractional offset reports a lag that does not exist on this grid.
+    pre_trs = _as_tr_count(pre_trs, "peak_lag_trs pre_trs", hi=n_lags)
     if n_lags < 3:
         raise ValueError(
             f"peak_lag_trs needs at least 3 lags, got {n_lags}. With two lags every pair of "
@@ -807,12 +811,32 @@ def event_locked_response(
     Returns:
         (n_events,) array of ROI-mean responses.
     """
-    if lag_trs < 0:
-        raise ValueError("lag_trs must be >= 0")
+    # lag_trs is the most safety-critical scalar in this module (M006): it selects
+    # WHICH column of the peri-event grid becomes the response. 3.9 silently read
+    # lag 3 and True silently read lag 1.
+    lag_trs = _as_tr_count(lag_trs, "event_locked_response lag_trs")
     tc = peri_event_timecourse(
         preds, verts, onset_times_s, row_times_s, pre_trs=0, post_trs=int(lag_trs)
     )
     return tc[:, int(lag_trs)]
+
+
+def _as_tr_count(x, name: str, *, lo: int = 0, hi: int | None = None) -> int:
+    """Validate a TR count / offset. ONE rule for every such scalar.
+
+    Scalars are the only parameter class with no coverage harness, so their guards
+    must be shared rather than written per function. A fractional value silently
+    changed the lag grid (pre_trs=2.5 gave 13 lags, not 12) and ``lag_trs=True``
+    silently read lag 1 -- the bool case this module explicitly rejects elsewhere.
+    """
+    if isinstance(x, bool) or int(x) != x:
+        raise ValueError(f"{name} must be a whole number of TRs, got {x!r}")
+    v = int(x)
+    if v < lo or (hi is not None and v >= hi):
+        raise ValueError(
+            f"{name}={v} is outside the valid range [{lo}, {'inf' if hi is None else hi})"
+        )
+    return v
 
 
 def _materialise(a):
@@ -822,6 +846,12 @@ def _materialise(a):
     contract violation itself: ``list(1.0)`` raises TypeError before any guard
     runs, which is the bare-TypeError failure this module refuses elsewhere.
     """
+    if isinstance(a, (str, bytes, bytearray, dict, set, frozenset)):
+        raise ValueError(
+            f"expected a sequence of per-event numbers, got {type(a).__name__}. "
+            "These are iterable but are not samples: a str yields characters, a dict "
+            "yields keys, and a set has no order, so each would silently become data."
+        )
     if isinstance(a, np.ndarray) or not hasattr(a, "__iter__"):
         return a
     return list(a)
@@ -896,8 +926,9 @@ def event_locked_contrast(target_responses, other_responses) -> float:
     # Every array-valued argument goes through the SAME validator (M008): the
     # original fix guarded target_responses only, and the identical 2-D hazard
     # reaches the arithmetic through other_responses.
-    tgt = _as_event_vector(target_responses, "event_locked_contrast target_responses")
-    others = [_as_event_vector(o, f"event_locked_contrast other_responses[{i}]")
+    tgt = _as_event_vector(_materialise(target_responses),
+                           "event_locked_contrast target_responses")
+    others = [_as_event_vector(_materialise(o), f"event_locked_contrast other_responses[{i}]")
               for i, o in enumerate(other_responses)]
     if not others:
         raise ValueError("event_locked_contrast needs at least one other category")
@@ -1011,6 +1042,15 @@ def define_froi(
             ``np.argsort`` sorts NaN last ascending and ``[::-1]`` then promotes
             it to FIRST, so a dead vertex would be ranked maximally selective.
     """
+    # Compare RANK before collapsing: after _as_vertex_map both are 1-D, so a
+    # (5, 60) vs (60,) mismatch -- one condition averaged over trials, the other
+    # not -- became invisible to a post-collapse shape check.
+    ra, rb = np.ndim(loc_a), np.ndim(loc_b)
+    if ra != rb:
+        raise ValueError(
+            f"localizer conditions disagree on rank: loc_a is {ra}-D and loc_b is {rb}-D. "
+            "One has been averaged over trials and the other has not."
+        )
     a = _as_vertex_map(loc_a, "define_froi loc_a")
     b = _as_vertex_map(loc_b, "define_froi loc_b")
     if a.shape != b.shape:
