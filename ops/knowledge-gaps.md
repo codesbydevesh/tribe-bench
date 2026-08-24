@@ -321,3 +321,34 @@ tribe-bench clone FAILED that session and no tribe-bench SHA was recorded.
 **How to close:** check the checkpoint identifier and `from_pretrained` argument in the notebook and
 in `tribe_tools/model.py:load_model`; confirm against the HF model card.
 **Status:** OPEN.
+
+---
+
+## M010 — `glm_contrast_z` scores a noiseless vertex as zero evidence
+
+**Found:** 2026-08-24, by the second independent review of the Phase B mechanism corrections.
+Out of scope for Phase B (pre-existing, not introduced by the audited diff) and recorded rather
+than fixed under the freeze discipline.
+
+`glm_contrast_z` sets `z = 0` at any vertex whose Welch SE is zero. The intent is to avoid a
+division by zero, but a zero SE at a vertex carrying a real effect means *perfect evidence*, and
+scoring it as **no** evidence is the wrong direction:
+
+```
+vertex 0 (true +1 effect, zero noise) alone :  0.0000
+vertex 1 (same effect, with noise)    alone : 18.6615
+both vertices together                      :  9.3308
+```
+
+A real effect silently reads as none, and adding a noiseless vertex to an ROI *halves* the
+statistic. On real TRIBE output a vertex is unlikely to have exactly zero variance across
+observations — but `low_rank_head: 2048` makes the 20,484-vertex output rank ≤ 2048, so exact
+linear dependence between vertices is structural, and near-zero SEs are not exotic.
+
+**Priority:** MEDIUM — it cannot manufacture a false positive (it only ever loses evidence), so it
+does not threaten a published claim in the direction that matters. It can lose a true one.
+**How to close:** decide the intended semantics for a zero-SE vertex (exclude it from the ROI mean
+with a recorded count, or treat it as maximal evidence with a documented cap) rather than silently
+scoring it 0. Needs a decision, not just a patch. Revisit in Phase C when S2 supplies real
+predictions to check the empirical frequency of near-zero SEs.
+**Status:** OPEN.

@@ -74,7 +74,7 @@ def spatial_z(preds: np.ndarray, verts: np.ndarray) -> float:
     Returns:
         (mean over ROI - mean over cortex) / std over cortex, on the clip-mean map.
     """
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds)
+    g = _as_vertex_map(preds, "spatial_z preds")
     verts = _as_vertex_indices(verts, "spatial_z ROI", g.shape[-1])
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set")
@@ -257,6 +257,24 @@ def _require_finite(a, what: str) -> np.ndarray:
     return arr
 
 
+def _as_vertex_map(preds, what: str) -> np.ndarray:
+    """Collapse ``(n_trs, n_vertices)`` or ``(n_vertices,)`` to one per-vertex map.
+
+    The accepted RANK is a precondition, checked before ``n_vertices`` is derived
+    from the shape. Without it a 3-D array was silently accepted: ``n_vertices``
+    came from ``shape[-1]`` while ``g[verts]`` indexed axis 0, so the range and
+    ambiguity checks validated against an axis the selector never touched and the
+    result was a finite, plausible, wrong number.
+    """
+    arr = np.asarray(preds, dtype=float)
+    if arr.ndim not in (1, 2):
+        raise ValueError(
+            f"{what} must be (n_trs, n_vertices) or (n_vertices,), got shape {arr.shape}. "
+            "A higher-rank array indexes the wrong axis and returns a plausible wrong number."
+        )
+    return arr.mean(axis=0) if arr.ndim == 2 else arr
+
+
 def _as_vertex_indices(v, what: str = "vertex selector", n_vertices: int | None = None) -> np.ndarray:
     """Normalise and VALIDATE a vertex selector. The single entry point for every
     function in this module that accepts one (C7, A0, A8, F4).
@@ -297,6 +315,12 @@ def _as_vertex_indices(v, what: str = "vertex selector", n_vertices: int | None 
         n_vertices: total vertex count, when the caller knows it. Enables the
             range check and the ambiguity check.
     """
+    if isinstance(v, np.ma.MaskedArray):
+        raise ValueError(
+            f"{what} is a masked array. np.asarray drops the mask, so the masked entries would "
+            "silently rejoin the selection and two encodings of one vertex set would disagree. "
+            "Pass the compressed values explicitly."
+        )
     arr = np.asarray(v)
     if arr.ndim == 0:
         raise ValueError(
@@ -356,7 +380,11 @@ def _as_vertex_indices(v, what: str = "vertex selector", n_vertices: int | None 
             f"{idx[idx >= n_vertices][:5].tolist()}"
         )
     if np.unique(idx).size != idx.size:
-        dup = [int(x) for x in np.unique(idx[np.isin(idx, idx[np.diff(np.sort(idx), prepend=-1) == 0])])][:5]
+        # np.unique returns the values that repeat. The previous expression built
+        # the repeat mask from np.sort(idx) and then applied it to the UNSORTED
+        # idx, so it named whichever value happened to sit at that position.
+        vals, counts = np.unique(idx, return_counts=True)
+        dup = [int(x) for x in vals[counts > 1]][:5]
         raise ValueError(
             f"{what} contains duplicate indices (e.g. {dup}). A repeated index double-weights "
             "that vertex in every ROI mean; pass a unique set."
@@ -377,7 +405,7 @@ def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
         preds: (n_trs, n_vertices) or (n_vertices,).
         verts: 1D array of vertex indices for the ROI.
     """
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    g = _as_vertex_map(preds, "raw_roi_mean preds")
     verts = _as_vertex_indices(verts, "raw_roi_mean ROI", g.shape[-1])
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set")
@@ -414,7 +442,7 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
             "ROI and reference overlap — the reference must be off-target and "
             "pre-registered, or this is an undeclared normaliser"
         )
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    g = _as_vertex_map(preds, "roi_minus_reference preds")
     _require_finite(g[verts], "roi_minus_reference ROI values")
     _require_finite(g[ref_verts], "roi_minus_reference reference values")
     return float(g[verts].mean() - g[ref_verts].mean())
@@ -443,7 +471,13 @@ def row_times_from_segments(segments) -> np.ndarray:
     Returns:
         (n_rows,) float array of absolute segment start times, in seconds.
     """
-    if segments is None or len(segments) == 0:
+    # I3: materialise ONCE before measuring. len() on a single-pass iterable
+    # raised TypeError, so this boundary did not honour the module's stated
+    # "any iterable, consumed exactly once" contract.
+    if segments is None:
+        raise ValueError("no segments given — pass predict()'s all_segments")
+    segments = list(segments)
+    if len(segments) == 0:
         raise ValueError("no segments given — pass predict()'s all_segments")
     try:
         times = np.array([float(s.start) for s in segments], dtype=float)
@@ -469,7 +503,8 @@ def _resolve_rows(row_times_s: np.ndarray, want_s, tol: float = 0.5) -> np.ndarr
     """Map absolute times to prediction rows, or raise. Never silently approximate."""
     # NaN defeats `err > tol` (NaN > x is False), so a NaN onset silently
     # resolved to a row instead of raising -- the exact drift this guards (A1).
-    rt = _require_finite(np.asarray(row_times_s, dtype=float), "_resolve_rows row times")
+    # I3: np.asarray(generator) yields a 0-d object array, not the values.
+    rt = _require_finite(np.array(list(row_times_s), dtype=float), "_resolve_rows row times")
     want = _require_finite(np.asarray(want_s, dtype=float), "_resolve_rows requested times")
     idx = np.searchsorted(rt, want)
     idx = np.clip(idx, 1, len(rt) - 1)
@@ -528,7 +563,8 @@ def peri_event_timecourse(
     verts = _as_vertex_indices(verts, "peri_event_timecourse ROI", p.shape[1])
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set (selector selected no vertices)")
-    rt = _require_finite(np.asarray(row_times_s, dtype=float), "peri_event_timecourse row_times_s")
+    # I3: materialise once -- np.asarray(generator) does not iterate it.
+    rt = _require_finite(np.array(list(row_times_s), dtype=float), "peri_event_timecourse row_times_s")
     if len(rt) != p.shape[0]:
         raise ValueError(
             f"row_times_s has {len(rt)} entries but preds has {p.shape[0]} rows — "
@@ -579,13 +615,19 @@ def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
           every permutation, or to use a fixed lag.** Treat this function's output
           as a diagnostic to REPORT, not as a lag to test at.
           The degeneracy check is value-based, so it can also false-positive on
-          synthetic data where two genuinely different categories happen to produce
-          proportional means. It compares the per-category MEANS -- the only thing
-          pooling consumes -- so it covers the same course passed twice, with
-          duplicated rows, rescaled, or shifted by a constant. It is **skipped
-          entirely when ``n_lags < 3``**, where every pair of mean-centred courses
-          is collinear by construction and the test cannot separate a degenerate
-          pair from a legitimate one.
+          synthetic data where genuinely different categories happen to produce
+          proportional means. It is expressed on the **pooled course** -- the only
+          quantity this function derives -- so one rule covers the same course
+          passed twice, with duplicated rows, rescaled or offset; a second category
+          whose *mean course* is flat even though its event matrix is not; and
+          three or more categories that cancel to leave one. Inputs with fewer than
+          three lags are refused outright rather than given a weaker guard.
+
+          **What it deliberately does NOT reject:** a category whose mean course is
+          weak but non-zero. "Flat" means zero to floating point at the data's own
+          scale, not statistically small -- a condition that genuinely shows no
+          time-locked response is a real result, not a malformed input. Such a
+          category still dilutes the pool, which is the dominance limit above.
 
     Args:
         category_timecourses: sequence of >= 2 arrays, each (n_events_k, n_lags),
@@ -634,40 +676,65 @@ def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
                 f"category_timecourses[{i}] has 0 events. Its mean is all-NaN and argmax then "
                 "returns 0, fabricating a lag. Drop the empty category deliberately."
             )
-        if np.allclose(c.std(axis=0).sum(), 0.0) and np.allclose(c.mean(axis=0), c.mean()):
-            raise ValueError(
-                f"category_timecourses[{i}] is flat (no structure across lags). A constant or "
-                "all-zero course contributes nothing to the pooled peak and its only effect is "
-                "to dilute the other categories -- which restores target-only selection."
-            )
-    # Compare the per-category MEANS, which is the only thing pooling consumes.
-    # Comparing the raw event matrices under a `shape ==` precondition let
-    # [tc, vstack([tc, tc])] (the same course, duplicated rows), [tc, tc*2] and
-    # [tc, tc+1] through -- every one argmax-identical to the target alone (F5).
+    n_lags = courses[0].shape[1]
+    if n_lags < 3:
+        raise ValueError(
+            f"peak_lag_trs needs at least 3 lags, got {n_lags}. With two lags every pair of "
+            "mean-centred courses is [a, -a] and [b, -b], so every degeneracy test below is "
+            "either vacuous or rejects all legitimate data. Refusing is honest; a weaker guard "
+            "below three lags was a silent hole."
+        )
+
+    # I4. The degeneracy is a property of the POOLED course -- the only thing this
+    # function derives -- not of pairs of raw event matrices. The previous version
+    # tested pairwise collinearity of category means, which missed every
+    # configuration where no PAIR is collinear but the pool still collapses:
+    # a category whose mean course is flat (its raw matrix is not constant, so the
+    # old flat check keyed on `c.std(axis=0)` never fired, and the pairwise check
+    # `continue`d past it on zero norm), and mutually cancelling categories.
     means = [c.mean(axis=0) for c in courses]
-    # With only two lags every pair of mean-centred courses is [a, -a] and [b, -b],
-    # so collinearity is automatic and the test would reject all legitimate data.
-    # Stated as a limit rather than silently skipped -- see the warning above.
-    if means[0].size >= 3:
-        for i in range(len(courses)):
-            for j in range(i + 1, len(courses)):
-                mi, mj = means[i] - means[i].mean(), means[j] - means[j].mean()
-                ni, nj = float(np.linalg.norm(mi)), float(np.linalg.norm(mj))
-                if ni == 0.0 or nj == 0.0:
-                    continue
-                if np.isclose(float(mi @ mj) / (ni * nj), 1.0):
-                    raise ValueError(
-                        f"category_timecourses[{i}] and [{j}] have the same mean course up to a "
-                        "positive scale and a constant offset, so their pooled average is "
-                        "argmax-identical to either one alone and carries no information the "
-                        "target's own course did not already carry. This is the >= 2 formality "
-                        "again -- measured type-I 0.2032 against a nominal 0.025. It covers the "
-                        "same course passed twice, with duplicated rows, rescaled, or offset. "
-                        "Pass genuinely different categories."
-                    )
+    centred = [m - m.mean() for m in means]
+    norms = [float(np.linalg.norm(c)) for c in centred]
+    # "Zero" means zero to floating point at the data's own scale -- NOT a
+    # statistical smallness threshold. A category with a weak but real mean
+    # response is accepted: refusing to compute because one condition showed no
+    # time-locked response would reject a legitimate empirical result. That case
+    # falls under the dominance limit in the warning above, which no input check
+    # can fix.
+    def _is_zero(nrm: float, m: np.ndarray) -> bool:
+        return nrm <= 1e-12 * max(1.0, float(np.abs(m).max()))
+
+    for i, (nrm, m) in enumerate(zip(norms, means)):
+        if _is_zero(nrm, m):
+            raise ValueError(
+                f"category_timecourses[{i}] has a flat mean course (no structure across lags). "
+                "It contributes nothing to the pooled peak and its only effect is to dilute the "
+                "others -- which restores target-only selection. Note this is a property of the "
+                "MEAN course: events that disagree in sign average to flat while the raw event "
+                "matrix looks perfectly structured."
+            )
+
     # Grand average = mean of the per-category means, so a category with more
     # events does not dominate the pooled course.
     pooled = np.mean(means, axis=0)
+    pc = pooled - pooled.mean()
+    pn = float(np.linalg.norm(pc))
+    if _is_zero(pn, pooled):
+        raise ValueError(
+            "the pooled course is flat: the categories cancel exactly, so argmax returns 0 and "
+            "fabricates a lag. Pass categories that do not sum to a constant."
+        )
+    for i, (c, nrm) in enumerate(zip(centred, norms)):
+        if np.isclose(float(pc @ c) / (pn * nrm), 1.0):
+            raise ValueError(
+                f"the pooled course is argmax-identical to category_timecourses[{i}] alone (it "
+                "is that category's mean course up to a positive scale and a constant offset), "
+                "so pooling carries no information that one category did not already carry. "
+                "This is the '>= 2 categories' formality -- measured type-I 0.2032 against a "
+                "nominal 0.025. It covers the same course passed twice, with duplicated rows, "
+                "rescaled or offset; a second category whose mean course is flat; and three or "
+                "more categories that cancel to leave one. Pass genuinely different categories."
+            )
     return int(np.argmax(pooled)) - int(pre_trs)
 
 
@@ -905,10 +972,8 @@ def define_froi(
             ``np.argsort`` sorts NaN last ascending and ``[::-1]`` then promotes
             it to FIRST, so a dead vertex would be ranked maximally selective.
     """
-    a = np.asarray(loc_a, dtype=float)
-    b = np.asarray(loc_b, dtype=float)
-    a = a.mean(axis=0) if a.ndim == 2 else a
-    b = b.mean(axis=0) if b.ndim == 2 else b
+    a = _as_vertex_map(loc_a, "define_froi loc_a")
+    b = _as_vertex_map(loc_b, "define_froi loc_b")
     if a.shape != b.shape:
         raise ValueError("localizer conditions disagree on shape")
     # define_froi was the ONLY selector entry point that never called the

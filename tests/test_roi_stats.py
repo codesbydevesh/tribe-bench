@@ -763,6 +763,53 @@ def test_froi_is_deterministic_under_ties_across_representations():
     )
 
 
+def test_higher_rank_preds_are_rejected_before_n_vertices_is_derived():
+    """I1 plumbing. A 3-D array was accepted: n_vertices came from shape[-1] while
+    g[verts] indexed axis 0, so the range and ambiguity checks validated against an
+    axis the selector never touched and the answer was finite, plausible, wrong."""
+    p3 = np.arange(2 * 4 * N_V, dtype=float).reshape(2, 4, N_V)
+    for label, call in (
+        ("spatial_z",           lambda: spatial_z(p3, np.array([0, 1]))),
+        ("raw_roi_mean",        lambda: raw_roi_mean(p3, np.array([0, 1]))),
+        ("roi_minus_reference", lambda: roi_minus_reference(p3, np.array([0, 1]), np.array([2, 3]))),
+        ("define_froi",         lambda: define_froi(p3, np.zeros((2, 4, N_V)), np.arange(20, 50), top_n=5)),
+    ):
+        with pytest.raises(ValueError, match="n_vertices"):
+            call()
+    # the documented ranks still work
+    flat = np.arange(N_V, dtype=float)
+    assert np.isfinite(raw_roi_mean(flat, np.array([0, 1])))
+    assert np.isfinite(raw_roi_mean(np.tile(flat, (4, 1)), np.array([0, 1])))
+
+
+def test_masked_selectors_are_rejected_rather_than_silently_unmasked():
+    """I1. np.asarray drops the mask, so the masked entries rejoin the selection and
+    two encodings of one vertex set disagree. Reject rather than guess."""
+    m = np.ma.masked_array([10, 11, 12], mask=[0, 1, 0])
+    with pytest.raises(ValueError, match="masked array"):
+        _R._as_vertex_indices(m, "sel", N_V)
+
+
+def test_duplicate_error_names_the_value_that_actually_repeats():
+    """The repeat mask was built from np.sort(idx) and applied to the unsorted idx,
+    so the message named whichever value sat at that position."""
+    with pytest.raises(ValueError, match=r"e\.g\. \[5\]"):
+        _R._as_vertex_indices(np.array([5, 5, 3]), "sel", N_V)
+
+
+def test_single_pass_iterables_work_at_the_segment_and_row_time_boundaries():
+    """I3 claimed 'any iterable accepted at a public boundary'. These two boundaries
+    called len() / np.asarray on the argument and raised TypeError on a generator."""
+    class _S:
+        def __init__(self, t): self.start = t
+    got = row_times_from_segments(_S(t) for t in (0.0, 1.0, 2.0))
+    assert np.allclose(got, [0.0, 1.0, 2.0])
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    a = peri_event_timecourse(preds, np.array([10, 11]), [1.0], (x for x in [0., 1., 2., 3.]), 0, 0)
+    b = peri_event_timecourse(preds, np.array([10, 11]), [1.0], [0., 1., 2., 3.], 0, 0)
+    assert np.allclose(a, b)
+
+
 def test_froi_is_returned_in_canonical_ascending_order():
     """define_froi returns a SELECTOR, so it must satisfy the selector contract it
     will be fed back into. Ranking is by contrast; the returned set is ascending."""
@@ -791,6 +838,80 @@ def test_contrast_without_a_comparison_category_raises_not_returns_a_bare_mean()
     name of a contrast — the most misleading thing this module could return."""
     with pytest.raises(ValueError, match="at least one other category"):
         event_locked_contrast([1.0, 2.0, 3.0], [])
+
+
+# Declared READ EXTENT per function: does the statistic read the whole vertex map,
+# or only the region its selector picks out? This is I2's "per-function declaration
+# rather than a default", made checkable. Getting it wrong in either direction is a
+# defect: too narrow returns a silent nan, too wide rejects data it never reads.
+_WHOLE_MAP_CONSUMERS = {"spatial_z"}          # divides by brain-wide mean and sd
+_REGION_LOCAL_CONSUMERS = {                   # read only the selected vertices
+    "raw_roi_mean", "roi_minus_reference", "glm_contrast_z",
+    "peri_event_timecourse", "event_locked_response", "define_froi",
+}
+
+
+def _poison_outside_the_region_cases():
+    """One call per function with a non-finite value placed OUTSIDE the region its
+    selector picks out — the placement every existing fixture avoids."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    dirty = preds.copy(); dirty[0, 30] = np.nan     # vertex 30 is in no ROI below
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    times = np.arange(4.0)
+    far = np.where(np.arange(N_V) == 5, np.nan, 0.0)   # vertex 5 is outside the parcel
+    return {
+        "spatial_z":             lambda: _R.spatial_z(dirty, roi),
+        "raw_roi_mean":          lambda: _R.raw_roi_mean(dirty, roi),
+        "roi_minus_reference":   lambda: _R.roi_minus_reference(dirty, roi, ref),
+        "glm_contrast_z":        lambda: _R.glm_contrast_z(dirty, preds, roi),
+        "peri_event_timecourse": lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
+        "event_locked_response": lambda: _R.event_locked_response(dirty, roi, [1.0], times, 0),
+        "define_froi":           lambda: _R.define_froi(far, np.zeros(N_V), np.arange(20, 50), top_n=5),
+    }
+
+
+def test_each_guard_covers_exactly_the_data_its_statistic_reads():
+    """MECHANISM TEST for I2/F4. Every non-finite fixture in this suite places the
+    poison INSIDE the selected region, which is the one placement where a guard
+    that is too narrow still looks correct. spatial_z divides by the whole-map mean
+    and sd, so for it the outside case is the entire point — and it returned a
+    silent nan. Here the read EXTENT is the assertion."""
+    cases = _poison_outside_the_region_cases()
+    declared = _WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS
+    assert set(cases) == declared, (
+        "every function reading vertex data must declare its read extent: "
+        f"undeclared={sorted(set(cases) - declared)}, unexercised={sorted(declared - set(cases))}"
+    )
+    for name, call in cases.items():
+        if name in _WHOLE_MAP_CONSUMERS:
+            with pytest.raises(ValueError, match="non-finite"):
+                call()
+        else:
+            # too WIDE is also a defect: this data is never read, so rejecting it
+            # would refuse a perfectly usable input
+            out = np.asarray(call(), dtype=float)
+            assert np.all(np.isfinite(out)), (
+                f"{name} reads only its selected region, so a non-finite value outside it "
+                f"must not affect the result — got {out}"
+            )
+
+
+def test_the_declared_read_extent_matches_what_the_code_actually_reads():
+    """The declaration above is only worth something if it is checked against the
+    implementation. A whole-map consumer is exactly one that divides by a statistic
+    of the full map."""
+    import inspect as _i
+    for name in _WHOLE_MAP_CONSUMERS:
+        src = _i.getsource(getattr(_R, name))
+        assert "g.std()" in src or "g.mean()" in src, (
+            f"{name} is declared a whole-map consumer but does not compute a whole-map statistic"
+        )
+    for name in _REGION_LOCAL_CONSUMERS:
+        src = _i.getsource(getattr(_R, name))
+        assert "g.std()" not in src and "g.mean()" not in src, (
+            f"{name} is declared region-local but computes a whole-map statistic; its guard "
+            "extent declaration is wrong"
+        )
 
 
 def test_reference_region_is_guarded_as_well_as_the_roi():
@@ -960,29 +1081,49 @@ def test_peak_lag_rejects_every_degenerate_configuration_that_satisfies_the_coun
     rng = np.random.default_rng(7)
     tc = rng.normal(0.0, 0.05, (6, 12)); tc[:, 6] += 1.0 + rng.normal(0, 0.01, 6)
     other = rng.normal(0.0, 0.05, (6, 12)); other[:, 3] += 1.0 + rng.normal(0, 0.01, 6)
+    r = rng.normal(0.0, 1.0, (1, 12))
+    a = np.zeros((4, 12)); a[:, 3] = 1.0
+    b = np.zeros((4, 12)); b[:, 3] = -1.0
     for label, courses, why in [
-        ("same object twice",     [tc, tc],                       "same mean course"),
-        ("a copy",                [tc, tc.copy()],                "same mean course"),
-        # I4/F5: the semantic degeneracy is "the pooled course carries nothing the
-        # target's own course did not". These are all argmax-identical to the
-        # target alone, and every one of them passed the old syntactic check.
-        ("rows duplicated",       [tc, np.vstack([tc, tc])],      "same mean course"),
-        ("rescaled",              [tc, tc * 2.0],                 "same mean course"),
-        ("constant offset",       [tc, tc + 1.0],                 "same mean course"),
-        ("rescaled and offset",   [tc, tc * 3.0 + 7.0],           "same mean course"),
+        ("same object twice",     [tc, tc],                       "argmax-identical"),
+        ("a copy",                [tc, tc.copy()],                "argmax-identical"),
+        # I4/F5: the degeneracy is a property of the POOLED course, the only
+        # quantity this function derives. Every one of these passed the earlier
+        # syntactic check on raw event matrices.
+        ("rows duplicated",       [tc, np.vstack([tc, tc])],      "argmax-identical"),
+        ("rescaled",              [tc, tc * 2.0],                 "argmax-identical"),
+        ("constant offset",       [tc, tc + 1.0],                 "argmax-identical"),
+        ("rescaled and offset",   [tc, tc * 3.0 + 7.0],           "argmax-identical"),
         ("rows duplicated 3x, rescaled",
-                                  [tc, np.vstack([tc, tc, tc]) * 0.5], "same mean course"),
-        ("all-zero filler",       [tc, np.zeros_like(tc)],        "flat"),
-        ("constant filler",       [tc, np.full_like(tc, 7.0)],    "flat"),
+                                  [tc, np.vstack([tc, tc, tc]) * 0.5], "argmax-identical"),
+        # A category whose MEAN course is flat although its event matrix is not.
+        # The predecessor keyed flatness on c.std(axis=0) over the raw matrix, so
+        # it never fired here, and the pairwise check `continue`d past it.
+        ("flat mean, structured events",   [tc, np.vstack([r, -r])],         "flat mean course"),
+        ("flat mean at a constant offset", [tc, np.vstack([r + 5, -r + 5])], "flat mean course"),
+        ("all-zero filler",       [tc, np.zeros_like(tc)],        "flat mean course"),
+        ("constant filler",       [tc, np.full_like(tc, 7.0)],    "flat mean course"),
+        # Three categories where NO PAIR is collinear, yet two cancel and the pool
+        # reduces to the target alone.
+        ("a cancelling pair",     [tc, a, b],                     "argmax-identical"),
+        # Everything cancels: argmax would return 0 and fabricate a lag.
+        ("total cancellation",    [tc, -tc],                      "pooled course is flat"),
         ("an empty category",     [tc, np.zeros((0, 12))],        "0 events"),
     ]:
         # match= pins WHICH rule fired: a bare pytest.raises(ValueError) let a
         # reverted guard survive because a different guard raised instead.
         with pytest.raises(ValueError, match=why):
             peak_lag_trs(courses, pre_trs=2)
-    # A negatively-proportional course is NOT degenerate — it carries real
-    # opposing information — so the guard must not reject it.
-    peak_lag_trs([tc, -tc], pre_trs=2)
+    # Fewer than three lags is refused outright rather than given a weaker guard,
+    # because at two lags every mean-centred course is [a, -a] and the degeneracy
+    # tests are either vacuous or reject everything.
+    with pytest.raises(ValueError, match="at least 3 lags"):
+        peak_lag_trs([np.zeros((4, 2)), np.ones((4, 2))], pre_trs=0)
+    # NOT rejected: a category whose mean response is weak but real. Refusing this
+    # would reject a legitimate empirical result — a condition that simply shows no
+    # time-locked response. "Flat" means zero to floating point, not small.
+    weak = rng.normal(0.0, 0.05, (6, 12)); weak[:3, 4] += 1.0; weak[3:, 4] -= 1.0
+    assert isinstance(peak_lag_trs([tc, weak], pre_trs=2), int)
     # Genuinely different categories still work, and the expected value is pinned
     # EXACTLY. This previously asserted `in (1, 4)`, where 4 is the target-only
     # answer -- the C5 defect the function exists to prevent -- so the assertion
@@ -1150,6 +1291,50 @@ def test_selector_arg_names_still_cover_every_selector_parameter():
     )
 
 
+def _nonfinite_coverage():
+    """(covered, required) as (function, parameter) PAIRS.
+
+    Shared by the completeness test and by its planted-violation self-test, so
+    weakening the granularity here fails both rather than silently passing one.
+    Keying on the bare function name let one poisoned argument stand in for every
+    array argument of a multi-argument function — the roi_minus_reference
+    precedent (I5/F3).
+    """
+    covered = set(_nonfinite_entry_points())
+    required = set()
+    for name, fn in _public_functions().items():
+        if name in _NO_ARRAY_INPUT:
+            continue
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        for pname in params:
+            if pname in _ARRAY_DATA_PARAMS:
+                required.add(f"{name}:{pname}")
+    return covered, required
+
+
+def test_completeness_is_measured_per_argument_not_per_function(monkeypatch):
+    """Self-test for the coverage granularity. A planted function with TWO array
+    arguments, only one of which is poisoned, must be reported as a gap. Under
+    function-name keying it is not — that is F3 exactly."""
+    def _two_arrays(preds, other_vals):
+        return float(np.asarray(preds).mean() + np.asarray(other_vals).mean())
+
+    monkeypatch.setattr(_R, "planted_two_array_fn", _two_arrays, raising=False)
+    monkeypatch.setitem(
+        _nonfinite_entry_points.__dict__, "_unused", None)  # keep the map callable
+    covered, required = _nonfinite_coverage()
+    assert "planted_two_array_fn:preds" in required
+    assert "planted_two_array_fn:other_vals" in required, (
+        "the second array argument was not required, so one poisoned argument "
+        "would satisfy completeness for the whole function"
+    )
+    # neither is in the hand-written map, so both must surface as gaps
+    assert {"planted_two_array_fn:preds", "planted_two_array_fn:other_vals"} <= (required - covered)
+
+
 def test_discovery_machinery_catches_a_planted_partial(monkeypatch):
     """The machinery needs a POSITIVE test, or 'it found everything' is unfalsifiable.
 
@@ -1190,14 +1375,7 @@ def test_the_nonfinite_map_is_complete_not_merely_long():
     3 of ~10 call sites. _nonfinite_entry_points is a HAND-WRITTEN map, so the
     same overclaim is possible — this cross-checks it against introspection so an
     unlisted public function fails here instead of going untested."""
-    covered = set(_nonfinite_entry_points())
-    required = set()
-    for name, fn in _public_functions().items():
-        if name in _NO_ARRAY_INPUT:
-            continue
-        for pname in _inspect.signature(fn).parameters:
-            if pname in _ARRAY_DATA_PARAMS:
-                required.add(f"{name}:{pname}")
+    covered, required = _nonfinite_coverage()
     missing = sorted(required - covered)
     assert not missing, (
         "these (function, argument) pairs consume array data and are never poisoned. "

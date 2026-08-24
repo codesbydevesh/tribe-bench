@@ -141,3 +141,93 @@ Two further defects were found by the new tests rather than by mutation:
 * `_selector_entry_points` still filtered on `__module__` after `_public_functions` had been
   rewritten not to. The planted-partial self-test caught it. The F2 fix had been applied to the
   enumeration helper but not to the selector discovery that actually uses it.
+
+---
+
+## Third battery — after the second review (45 mutations, all detected)
+
+107 tests. Baseline verified green before the run.
+
+| id | group | detected | invariant / defect reintroduced |
+|----|-------|----------|----------------------------------|
+| O01 | ORIGINAL | yes | negative indices accepted; they defeat the overlap guard |
+| O02 | ORIGINAL | yes | duplicate indices double-weight a vertex in every ROI mean |
+| O03 | ORIGINAL | yes | 0/1 ambiguity resolved by guessing, the original silent wrong ROI |
+| O04 | ORIGINAL | yes | out-of-range indices accepted |
+| O05 | ORIGINAL | yes | empty category fabricates a lag via all-NaN argmax |
+| O07 | ORIGINAL | yes | pooling reduced to the target's own course (C5) |
+| O08 | ORIGINAL | yes | pooled SE instead of Welch; not level-alpha at unequal n |
+| O09 | ORIGINAL | yes | biased variance in ONE arm of the contrast SE (asymmetric estimator) |
+| O10 | ORIGINAL | yes | top_n >= parcel size, a silent no-op selection |
+| O11 | ORIGINAL | yes | empty parcel accepted |
+| O12 | ORIGINAL | yes | empty ROI returns nan instead of raising (first occurrence: spatial_z) |
+| O13 | ORIGINAL | yes | fROI returned unsorted |
+| O14 | ORIGINAL | yes | non-integer float indices silently truncated |
+| O15 | ORIGINAL | yes | permutation p can be exactly zero; invalid estimator |
+| O16 | ORIGINAL | yes | contrast with no comparison category returns a bare mean |
+| R01 | REVIEWER | yes | F1: 2-D boolean mask of size n read in flat C order -> wrong vertex set |
+| R02 | REVIEWER | yes | F1: 1-D rule exempts booleans, the exact shape of the original bypass |
+| R03 | REVIEWER | yes | F4: spatial_z guards only the ROI while dividing by whole-map statistics |
+| R05 | REVIEWER | yes | F6: u_statistic recomputes from exhausted iterators -> finite wrong U=0.0 |
+| C01 | CLASS | yes | I1: integer selectors keep caller order; representations diverge |
+| C02 | CLASS | yes | I1: bare scalar selector accepted |
+| C03 | CLASS | yes | I1: boolean mask of the wrong length accepted |
+| C04 | CLASS | yes | I1: object/string dtype reaches np.isfinite and raises TypeError |
+| C05 | CLASS | yes | I1/F7: unstable tie-break; two encodings give different fROIs |
+| C06 | CLASS | yes | I2: spatial_z accepts non-finite anywhere and returns nan |
+| C07 | CLASS | yes | I2: only one of two conditions guarded |
+| C08 | CLASS | yes | I2: only the ROI guarded, not the reference |
+| C09 | CLASS | yes | I3: exact_perm_p re-reads consumed arguments |
+| C10 | CLASS | yes | I3: mc_perm_p measures an argument it has already consumed |
+| C11 | CLASS | yes | I3: perm_null_deltas calls len() on a consumed argument |
+| O06 | CLASS | yes | a category whose MEAN course is flat dilutes the pool back to target-only |
+| R04 | REVIEWER | yes | F5: pooled-collinearity rule removed; scaled/offset/row-duplicated copies pass |
+| C12 | CLASS | yes | I4: degeneracy judged from the first event only, not the mean course |
+| C13 | CLASS | yes | I4: the <3-lag hole reopened, where every course pair is collinear |
+| C14 | CLASS | yes | I4: no mean-centring, so a constant-offset duplicate slips through |
+| C19 | CLASS | yes | I4: total cancellation accepted; argmax of a flat pool fabricates lag 0 |
+| C20 | CLASS | yes | I4 over-rejection: a weak but real mean response treated as flat |
+| C21 | CLASS | yes | I1: 3-D preds accepted; n_vertices then describes an axis verts never indexes |
+| C22 | CLASS | yes | I1: masked selector silently unmasked, two encodings of one set disagree |
+| C23 | CLASS | yes | I3: row_times_from_segments rejects a single-pass iterable |
+| C24 | CLASS | yes | I3: row_times_s generator becomes a 0-d object array |
+| C15 | CLASS | yes | I5/F3: coverage keyed on function name on BOTH sides, the faithful F3 revert |
+| C16 | CLASS | yes | I5: an array argument silently loses its non-finite coverage |
+| C17 | CLASS | yes | I5/F2: selector discovery returns nothing, so every selector rule is vacuous |
+| C18 | CLASS | yes | I5/F2: enumeration filters on __module__ again, hiding partials/wrappers |
+
+### A mutation that could not fail, and what it cost
+
+The second review found that **R03** — the *mandatory* F4 regression, the one mutation whose whole
+job was to prove `spatial_z`'s guard extent was asserted — was invalid:
+
+```python
+'g = _require_finite(g[verts], "spatial_z map") and g or g'
+```
+
+`ndarray and ndarray` raises `ValueError: truth value ... is ambiguous` on **every** call,
+including clean data. It was therefore detected by ordinary `spatial_z` tests and by not one
+non-finite test. The previous ledger row claiming R03 established F4 coverage was an overclaim,
+and it is withdrawn. Narrowing the guard back to the ROI by hand left the suite **green at 62
+passed** with F4 fully restored.
+
+R03 now perturbs behaviour only on the non-finite path. The real correction is not the mutation
+but `test_each_guard_covers_exactly_the_data_its_statistic_reads`, which declares each function's
+read extent and asserts it in **both** directions.
+
+### Other battery defects the second review found
+
+* **C15** did not reintroduce F3. It only *added* bare names to `covered`, which cannot make
+  anything missing, and it was detected by an unrelated `stale` assertion. A faithful F3 revert —
+  keying both sides on the function name — passed the suite. Fixed by factoring the coverage
+  computation into a helper shared by the completeness test and a new planted-violation self-test,
+  then retargeting C15 at that helper.
+* **O09** and **O12** use `replace(..., 1)` and so hit only the first occurrence. They test
+  something narrower than their descriptions claimed; the descriptions now say so.
+* **O06** and **R04** were left duplicated across two sections after the I4 rewrite and reported
+  STALE. Deduplicated.
+
+Running total of mutations that proved nothing and were redesigned rather than quietly replaced:
+**seven** (R02, R05, C09, C17 from the first pass; R03, C15, plus the O06/R04 duplicates here).
+That count is kept deliberately: it is the honest measure of how much of a mutation score is
+evidence and how much is bookkeeping.
