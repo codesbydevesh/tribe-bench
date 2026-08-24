@@ -41,3 +41,103 @@ Ordinary execution passed in both cases. Only deliberate breakage exposed them.
 A third gap was found the same way while wiring the discovery contract: `roi_minus_reference` takes
 TWO selectors and the harness only ever exercised the first — the same 'guarded one argument of two'
 pattern that produced F3, this time in the test suite. Both positions are now exercised.
+
+---
+
+## Second mechanism pass — mutation battery (39 mutations, all detected)
+
+Run against a **verified-green baseline**: the script now refuses to run unless the unmutated
+suite passes first. An earlier run of this battery reported 39/39 while one baseline test was
+failing — under `pytest -x` a red baseline makes every mutant report DETECTED, so that result
+was void. The guard exists because that happened.
+
+Groups: **ORIGINAL** = the 16 author-designed mutations from the first pass; **REVIEWER** = the 5
+that survived the independent review, now mandatory regressions; **CLASS** = new mutations
+probing each stated invariant (I1-I5), including cases neither the author nor the reviewer
+demonstrated.
+
+| id | group | detected | invariant / defect reintroduced |
+|----|-------|----------|----------------------------------|
+| O01 | ORIGINAL | yes | negative indices accepted; they defeat the overlap guard |
+| O02 | ORIGINAL | yes | duplicate indices double-weight a vertex in every ROI mean |
+| O03 | ORIGINAL | yes | 0/1 ambiguity resolved by guessing, the original silent wrong ROI |
+| O04 | ORIGINAL | yes | out-of-range indices accepted |
+| O05 | ORIGINAL | yes | empty category fabricates a lag via all-NaN argmax |
+| O06 | ORIGINAL | yes | flat filler category dilutes the pool back to target-only |
+| O07 | ORIGINAL | yes | pooling reduced to the target's own course (C5) |
+| O08 | ORIGINAL | yes | pooled SE instead of Welch; not level-alpha at unequal n |
+| O09 | ORIGINAL | yes | biased variance in the contrast SE |
+| O10 | ORIGINAL | yes | top_n >= parcel size, a silent no-op selection |
+| O11 | ORIGINAL | yes | empty parcel accepted |
+| O12 | ORIGINAL | yes | empty ROI returns nan instead of raising |
+| O13 | ORIGINAL | yes | fROI returned unsorted |
+| O14 | ORIGINAL | yes | non-integer float indices silently truncated |
+| O15 | ORIGINAL | yes | permutation p can be exactly zero; invalid estimator |
+| O16 | ORIGINAL | yes | contrast with no comparison category returns a bare mean |
+| R01 | REVIEWER | yes | F1: 2-D boolean mask of size n read in flat C order -> wrong vertex set |
+| R02 | REVIEWER | yes | F1: 1-D rule exempts booleans, the exact shape of the original bypass |
+| R03 | REVIEWER | yes | F4: spatial_z guards only the ROI while dividing by whole-map statistics |
+| R04 | REVIEWER | yes | F5: syntactic duplicate check; scaled/offset/row-duplicated copies pass |
+| R05 | REVIEWER | yes | F6: u_statistic recomputes from exhausted iterators -> finite wrong U=0.0 |
+| C01 | CLASS | yes | I1: integer selectors keep caller order; representations diverge |
+| C02 | CLASS | yes | I1: bare scalar selector accepted |
+| C03 | CLASS | yes | I1: boolean mask of the wrong length accepted |
+| C04 | CLASS | yes | I1: object/string dtype reaches np.isfinite and raises TypeError |
+| C05 | CLASS | yes | I1/F7: unstable tie-break; two encodings give different fROIs |
+| C06 | CLASS | yes | I2: spatial_z accepts non-finite anywhere and returns nan |
+| C07 | CLASS | yes | I2: only one of two conditions guarded |
+| C08 | CLASS | yes | I2: only the ROI guarded, not the reference |
+| C09 | CLASS | yes | I3: exact_perm_p re-reads consumed arguments |
+| C10 | CLASS | yes | I3: mc_perm_p measures an argument it has already consumed |
+| C11 | CLASS | yes | I3: perm_null_deltas calls len() on a consumed argument |
+| C12 | CLASS | yes | I4: degeneracy judged from the first event only, not the mean course |
+| C13 | CLASS | yes | I4: degeneracy check disabled entirely |
+| C14 | CLASS | yes | I4: no mean-centring, so a constant-offset duplicate slips through |
+| C15 | CLASS | yes | I5/F3: coverage keyed on function name again, so one argument stands for all |
+| C16 | CLASS | yes | I5: an array argument silently loses its non-finite coverage |
+| C17 | CLASS | yes | I5/F2: selector discovery returns nothing, so every selector rule is vacuous |
+| C18 | CLASS | yes | I5/F2: enumeration filters on __module__ again, hiding partials/wrappers |
+
+Reproduce: `python3 scripts/mutate_roi_stats.py --jobs 3` (each mutation runs in a fresh copy
+under /tmp; the repository is never modified).
+
+### Mutations that were redesigned because they proved nothing
+
+Recorded rather than quietly replaced — a mutation that cannot fail is not evidence.
+
+* **R02** originally read the mask with `ravel(order='F')`. For a 1-D array Fortran order *is* C
+  order, and 2-D masks are now rejected upstream, so the mutant was **equivalent** — it survived
+  because it changed nothing. Replaced with `arr.ndim != 1 and arr.dtype != bool`, which
+  reintroduces the F1 bypass exactly.
+* **R05** deleted the reassignment from the validated array. The names had already been bound to
+  materialised lists above, so this too was **equivalent**. Replaced with iteration over the
+  original `face_vals`/`scene_vals`, which is the actual F6 defect.
+* **C09** never applied: the search string carried the wrong error label. A `NOT_APPLIED`
+  mutation is reported as STALE rather than counted as a pass.
+* **C17** originally injected an early `return` into a test. Mutating a test into a no-op can
+  never be detected by that same suite, so it was an **invalid** mutation by construction.
+  Replaced with a mutation of the selector-discovery helper, which the planted-violation
+  self-tests do detect.
+
+### What the battery found that the author did not anticipate
+
+Seven survivors in the first valid run, each a real gap rather than a bad mutation:
+
+| survivor | what had no test |
+|----------|------------------|
+| O13 | the fROI was never asserted to be ascending, and the fixture's contrast rank happened to coincide with vertex order |
+| O15 | nothing pinned the `(ge + 1) / (n_perm + 1)` estimator floor, so `p = 0` was reportable |
+| O16 | a contrast with no comparison category could return a bare mean under the name of a contrast |
+| C08 | `roi_minus_reference` was poisoned only inside the ROI, so dropping the reference-side guard changed nothing |
+| C12 | every fixture had identical events, so a guard reading only the first event was indistinguishable from one reading the mean |
+| C14 | no constant-offset duplicate was tested, so mean-centring could be removed |
+| R04 | the degenerate-configuration test contained no rescaled, offset, or row-duplicated course |
+
+Two further defects were found by the new tests rather than by mutation:
+
+* `perm_null_deltas` calls `len()` on an already-consumed argument — a **sixth** instance of the
+  I3 class, found by the representation-invariance harness on its first run. Neither the author
+  nor the independent reviewer had identified it.
+* `_selector_entry_points` still filtered on `__module__` after `_public_functions` had been
+  rewritten not to. The planted-partial self-test caught it. The F2 fix had been applied to the
+  enumeration helper but not to the selector discovery that actually uses it.

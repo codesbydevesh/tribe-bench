@@ -613,13 +613,17 @@ _SELECTOR_ARGS = ("verts", "ref_verts", "parcel_verts")
 def _selector_entry_points():
     """Every public function taking a vertex selector, found by introspection."""
     out = []
-    for name, fn in vars(_R).items():
-        if name.startswith("_") or not callable(fn):
-            continue
-        if getattr(fn, "__module__", None) != _R.__name__:
+    # Enumerate via _public_functions (module membership, imports declared by
+    # name) rather than vars() + a __module__ filter. The filter dropped every
+    # public callable that is not a plain `def`, so a module-level partial with a
+    # parameter named `verts` was never discovered here either (I5/F2).
+    for name, fn in _public_functions().items():
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
             continue
         for arg in _SELECTOR_ARGS:
-            if arg in _inspect.signature(fn).parameters:
+            if arg in params:
                 out.append((name, fn, arg))   # one entry PER selector argument
     return out
 
@@ -674,6 +678,18 @@ def test_every_selector_entry_point_rejects_the_whole_bad_selector_CLASS():
         "duplicate index":            (np.array([10, 10, 11]),  "duplicate"),
         "out of range":               (np.array([10, N_V + 5]), ">= n_vertices"),
         "non-integer float":          (np.array([10.5, 11.0]),  "integer vertex indices"),
+        # --- shape and dtype rules the docstring advertised with no coverage (F8).
+        # A 2-D BOOLEAN mask whose size equals n_vertices was accepted and read in
+        # flat C order, silently selecting a different vertex set (F1).
+        "2-D bool mask, size == n":   (np.column_stack([mask[:N_V // 2], mask[N_V // 2:]]),
+                                       "must be 1-D"),
+        "2-D integer selector":       (np.array([[10, 11], [12, 13]]), "must be 1-D"),
+        "3-D bool mask, size == n":   (mask.reshape(2, 3, 10), "must be 1-D"),
+        "mask of wrong length":       (np.zeros(N_V - 1, dtype=bool), "boolean mask has length"),
+        "python scalar":              (5, "scalar"),
+        "numpy scalar":               (np.int64(5), "scalar"),
+        "object dtype":               (np.array([10, 11], dtype=object), "dtype"),
+        "string dtype":               (np.array(["10", "11"]), "dtype"),
     }
     for name, fn, _arg in eps:
         # the good selector must still work in this argument position
@@ -685,14 +701,140 @@ def test_every_selector_entry_point_rejects_the_whole_bad_selector_CLASS():
                 _call_with_selector(name, fn, bad, _arg)
 
 
-def test_bool_mask_and_equivalent_indices_agree_at_every_entry_point():
-    """The two representations must be interchangeable, or one of them is wrong."""
-    mask = np.zeros(N_V, bool); mask[[10, 11, 12]] = True
-    idx = np.flatnonzero(mask)
-    for name, fn, _arg in _selector_entry_points():
-        a = _call_with_selector(name, fn, mask, _arg)
-        b = _call_with_selector(name, fn, idx, _arg)
-        assert np.allclose(np.asarray(a, float), np.asarray(b, float)), name
+def _equivalent_selector_representations(verts=(10, 11, 12)):
+    """Every accepted encoding of ONE vertex set, including a SHUFFLED index array.
+
+    The predecessor of this harness compared a mask against np.flatnonzero(mask),
+    which is already ascending — so it could not detect that integer arrays
+    preserved caller order while masks did not (I1/F7).
+    """
+    mask = np.zeros(N_V, bool); mask[list(verts)] = True
+    return {
+        "bool mask":        mask,
+        "ascending idx":    np.array(verts),
+        "shuffled idx":     np.array(list(verts)[::-1]),
+        "python list":      list(verts),
+        "python tuple":     tuple(verts),
+        "int8 indices":     np.array(verts, dtype=np.int8),
+        "whole-valued float": np.array(verts, dtype=float),
+        "non-contiguous":   np.array([v for v in verts for _ in (0, 1)])[::2],
+    }
+
+
+def test_selector_canonicalises_identically_across_every_representation():
+    """I1. A selector denotes a SET, so every encoding of one set must canonicalise
+    to one array — 1-D, ascending, unique, integer."""
+    canon = {k: _R._as_vertex_indices(v, n_vertices=N_V)
+             for k, v in _equivalent_selector_representations().items()}
+    expect = np.array([10, 11, 12])
+    for label, got in canon.items():
+        assert np.array_equal(got, expect), f"{label} canonicalised to {got}, expected {expect}"
+        assert got.dtype.kind == "i", f"{label} produced dtype {got.dtype}"
+
+
+def test_every_entry_point_agrees_across_every_selector_representation():
+    """I1, applied per (function, selector argument). Representation must never
+    change the answer, because order carries no meaning in a vertex set."""
+    reps = _equivalent_selector_representations()
+    for name, fn, arg in _selector_entry_points():
+        results = {label: np.asarray(_call_with_selector(name, fn, sel, arg), dtype=float)
+                   for label, sel in reps.items()}
+        ref_label, ref = next(iter(results.items()))
+        for label, got in results.items():
+            assert np.allclose(got, ref), (
+                f"{name}({arg}) gave {got} for '{label}' but {ref} for '{ref_label}' — "
+                "two encodings of the same vertex set disagree"
+            )
+
+
+def test_froi_is_deterministic_under_ties_across_representations():
+    """I1/F7. With a tied localizer contrast an unstable argsort returned different
+    fROIs for two encodings of one parcel. The contract: rank by descending
+    contrast, break ties by LOWEST vertex index."""
+    tied = np.zeros(N_V)
+    parcel = (0, 1, 2)
+    outs = {label: define_froi(tied, tied, sel, top_n=2)
+            for label, sel in _equivalent_selector_representations(parcel).items()}
+    first = next(iter(outs.values()))
+    for label, got in outs.items():
+        assert np.array_equal(got, first), f"{label} gave {got}, another encoding gave {first}"
+    assert np.array_equal(first, [0, 1]), (
+        f"tie-break must prefer the lowest vertex index, got {first}"
+    )
+
+
+def test_froi_is_returned_in_canonical_ascending_order():
+    """define_froi returns a SELECTOR, so it must satisfy the selector contract it
+    will be fed back into. Ranking is by contrast; the returned set is ascending."""
+    # Contrast RANK must be the reverse of vertex order, or "sorted output" and
+    # "selection order" coincide and the assertion proves nothing.
+    loc_a = np.zeros(N_V); loc_a[[22, 31, 40]] = [3.0, 5.0, 9.0]
+    out = define_froi(loc_a, np.zeros(N_V), np.arange(20, 50), top_n=3)
+    assert np.array_equal(out, np.sort(out)), f"fROI not ascending: {out}"
+    assert set(out.tolist()) == {22, 31, 40}
+    # and it round-trips as a selector without further normalisation
+    assert np.array_equal(_R._as_vertex_indices(out, n_vertices=N_V), out)
+
+
+def test_permutation_p_can_never_be_exactly_zero():
+    """The (ge + 1) / (n_perm + 1) estimator keeps the p-value valid. Reporting
+    p = 0 from a finite permutation set is a claim the data cannot support."""
+    face, other = [10.0] * 8, [0.0] * 8          # perfect separation
+    p = mc_perm_p(face, other, n_perm=200, seed=0)
+    assert p > 0.0, "Monte-Carlo p reached exactly zero"
+    assert p == pytest.approx(1 / 201), f"estimator floor should be 1/(n_perm+1), got {p}"
+    assert 0.0 < exact_perm_p(face, other) <= 1.0
+
+
+def test_contrast_without_a_comparison_category_raises_not_returns_a_bare_mean():
+    """An 'contrast' computed against nothing is just the target mean wearing the
+    name of a contrast — the most misleading thing this module could return."""
+    with pytest.raises(ValueError, match="at least one other category"):
+        event_locked_contrast([1.0, 2.0, 3.0], [])
+
+
+def test_reference_region_is_guarded_as_well_as_the_roi():
+    """I2, per REGION. roi_minus_reference reads two disjoint regions and must
+    guard both: poisoning only the reference left the ROI-side guard satisfied."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    for label, bad_vertex in (("inside the ROI", 10), ("inside the reference", 50)):
+        dirty = preds.copy(); dirty[0, bad_vertex] = np.nan
+        with pytest.raises(ValueError, match="non-finite"):
+            roi_minus_reference(dirty, roi, ref)
+    # a non-finite value in NEITHER region is genuinely irrelevant to this
+    # statistic, so rejecting it would be stricter than the mechanism requires
+    elsewhere = preds.copy(); elsewhere[0, 30] = np.nan
+    assert np.isfinite(roi_minus_reference(elsewhere, roi, ref))
+
+
+def test_iterable_representations_of_one_sample_agree():
+    """I3. Any iterable accepted at a public boundary is materialised exactly once.
+    Validating one copy and then computing on the original argument exhausted
+    single-pass iterables and returned U=0.0 — finite, wrong, and maximally
+    anti-selective (F6). 'It did not crash' is not the assertion; the VALUE is."""
+    f, s = [3.0, 4.0, 7.0, 9.0], [1.0, 2.0, 5.0, 6.0]
+    cases = {
+        "list":      (lambda: list(f), lambda: list(s)),
+        "tuple":     (lambda: tuple(f), lambda: tuple(s)),
+        "ndarray":   (lambda: np.array(f), lambda: np.array(s)),
+        "generator": (lambda: (x for x in f), lambda: (x for x in s)),
+        "iterator":  (lambda: iter(list(f)), lambda: iter(list(s))),
+    }
+    for fname, fn in (("u_statistic", u_statistic),
+                      ("exact_perm_p", exact_perm_p),
+                      ("perm_p", perm_p),
+                      ("perm_null_deltas", perm_null_deltas)):
+        vals = {label: np.asarray(fn(mk_f(), mk_s()), dtype=float)
+                for label, (mk_f, mk_s) in cases.items()}
+        ref = vals["list"]
+        for label, got in vals.items():
+            assert np.allclose(got, ref), f"{fname}: {label} gave {got}, list gave {ref}"
+    # the specific regression: the generator case must be the real statistic, and
+    # emphatically not 0.0, which is what discarding the validated copy produced
+    assert u_statistic((x for x in f), (x for x in s)) == u_statistic(f, s) == 12.0
+    a = mc_perm_p((x for x in f), (x for x in s), n_perm=200)
+    assert a == mc_perm_p(f, s, n_perm=200)
 
 
 def test_empty_selection_raises_at_every_entry_point_not_just_two():
@@ -716,28 +858,41 @@ def _nonfinite_entry_points():
     tc_b = np.zeros((3, 5)); tc_b[:, 1] = 1.0
     nanvals = [1.0, 2.0, np.nan, 3.0]
     ok = [0.1, 0.2, 0.3, 0.4]
+    parcel = np.arange(20, 50)
+    nan_in_parcel = np.where(np.arange(N_V) == 25, np.nan, 0.0)
+    # Keys are "function:parameter". Coverage is keyed on the PAIR, not on the
+    # function name: keying on the name let one poisoned argument satisfy
+    # completeness for a function with several, which is the exact
+    # roi_minus_reference-two-selectors precedent recurring inside the mechanism
+    # written to close it (I5/F3).
     return {
-        "spatial_z":            lambda: _R.spatial_z(dirty, roi),
-        "raw_roi_mean":         lambda: _R.raw_roi_mean(dirty, roi),
-        "roi_minus_reference":  lambda: _R.roi_minus_reference(dirty, roi, ref),
-        "glm_contrast_z":       lambda: _R.glm_contrast_z(dirty, preds, roi),
-        "glm_contrast_z (B)":   lambda: _R.glm_contrast_z(preds, dirty, roi),
-        "peri_event_timecourse (preds)":  lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
-        "peri_event_timecourse (onset)":  lambda: _R.peri_event_timecourse(preds, roi, [np.nan], times, 0, 0),
-        "peri_event_timecourse (rows)":   lambda: _R.peri_event_timecourse(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0, 0),
-        "event_locked_response (onset)":  lambda: _R.event_locked_response(preds, roi, [np.nan], times, 0),
-        "event_locked_contrast (target)": lambda: _R.event_locked_contrast(nanvals, [ok]),
-        "event_locked_contrast (other)":  lambda: _R.event_locked_contrast(ok, [nanvals]),
+        "spatial_z:preds":            lambda: _R.spatial_z(dirty, roi),
+        "raw_roi_mean:preds":         lambda: _R.raw_roi_mean(dirty, roi),
+        "roi_minus_reference:preds":  lambda: _R.roi_minus_reference(dirty, roi, ref),
+        "glm_contrast_z:preds_a":     lambda: _R.glm_contrast_z(dirty, preds, roi),
+        "glm_contrast_z:preds_b":     lambda: _R.glm_contrast_z(preds, dirty, roi),
+        "peri_event_timecourse:preds":         lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
+        "peri_event_timecourse:onset_times_s": lambda: _R.peri_event_timecourse(preds, roi, [np.nan], times, 0, 0),
+        "peri_event_timecourse:row_times_s":   lambda: _R.peri_event_timecourse(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0, 0),
+        "event_locked_response:preds":         lambda: _R.event_locked_response(dirty, roi, [1.0], times, 0),
+        "event_locked_response:onset_times_s": lambda: _R.event_locked_response(preds, roi, [np.nan], times, 0),
+        "event_locked_response:row_times_s":   lambda: _R.event_locked_response(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0),
+        "event_locked_contrast:target_responses": lambda: _R.event_locked_contrast(nanvals, [ok]),
+        "event_locked_contrast:other_responses":  lambda: _R.event_locked_contrast(ok, [nanvals]),
         # NaN INSIDE the parcel: outside it cannot affect the selection, so
         # rejecting that would be stricter than the mechanism requires.
-        "define_froi":          lambda: _R.define_froi(np.where(np.arange(N_V) == 25, np.nan, 0.0),
-                                                       np.zeros(N_V), np.arange(20, 50), top_n=5),
-        "peak_lag_trs":         lambda: _R.peak_lag_trs([tc_bad, tc_b], pre_trs=2),
-        "u_statistic":          lambda: _R.u_statistic(nanvals, ok),
-        "exact_perm_p":         lambda: _R.exact_perm_p(nanvals, ok),
-        "mc_perm_p":            lambda: _R.mc_perm_p(nanvals + ok, ok + nanvals, n_perm=20),
-        "perm_null_deltas":     lambda: _R.perm_null_deltas(nanvals, ok),
-        "row_times_from_segments": lambda: _R.row_times_from_segments(
+        "define_froi:loc_a":    lambda: _R.define_froi(nan_in_parcel, np.zeros(N_V), parcel, top_n=5),
+        "define_froi:loc_b":    lambda: _R.define_froi(np.zeros(N_V), nan_in_parcel, parcel, top_n=5),
+        "peak_lag_trs:category_timecourses": lambda: _R.peak_lag_trs([tc_bad, tc_b], pre_trs=2),
+        "u_statistic:face_vals":        lambda: _R.u_statistic(nanvals, ok),
+        "u_statistic:scene_vals":       lambda: _R.u_statistic(ok, nanvals),
+        "exact_perm_p:face_vals":       lambda: _R.exact_perm_p(nanvals, ok),
+        "exact_perm_p:scene_vals":      lambda: _R.exact_perm_p(ok, nanvals),
+        "mc_perm_p:face_vals":          lambda: _R.mc_perm_p(nanvals + ok, ok + ok, n_perm=20),
+        "mc_perm_p:other_vals":         lambda: _R.mc_perm_p(ok + ok, nanvals + ok, n_perm=20),
+        "perm_null_deltas:face_vals":   lambda: _R.perm_null_deltas(nanvals, ok),
+        "perm_null_deltas:scene_vals":  lambda: _R.perm_null_deltas(ok, nanvals),
+        "row_times_from_segments:segments": lambda: _R.row_times_from_segments(
             [_Seg(0.0), _Seg(np.nan), _Seg(2.0)]),
     }
 
@@ -800,19 +955,51 @@ def test_peak_lag_rejects_every_degenerate_configuration_that_satisfies_the_coun
     """MECHANISM TEST for C5/F6. ">= 2 categories" is a formality: each of these
     satisfies it while pooling to exactly the target's own course (measured
     type-I 0.2032 vs a nominal 0.025)."""
-    tc = np.zeros((6, 12)); tc[:, 6] = 1.0
-    other = np.zeros((6, 12)); other[:, 3] = 1.0
-    for label, courses in {
-        "same object twice":      [tc, tc],
-        "a copy":                 [tc, tc.copy()],
-        "all-zero filler":        [tc, np.zeros_like(tc)],
-        "constant filler":        [tc, np.full_like(tc, 7.0)],
-        "an empty category":      [tc, np.zeros((0, 12))],
-    }.items():
-        with pytest.raises(ValueError):
+    # Events DIFFER within each category, so a guard that inspects only the first
+    # event rather than the mean course cannot pass this fixture.
+    rng = np.random.default_rng(7)
+    tc = rng.normal(0.0, 0.05, (6, 12)); tc[:, 6] += 1.0 + rng.normal(0, 0.01, 6)
+    other = rng.normal(0.0, 0.05, (6, 12)); other[:, 3] += 1.0 + rng.normal(0, 0.01, 6)
+    for label, courses, why in [
+        ("same object twice",     [tc, tc],                       "same mean course"),
+        ("a copy",                [tc, tc.copy()],                "same mean course"),
+        # I4/F5: the semantic degeneracy is "the pooled course carries nothing the
+        # target's own course did not". These are all argmax-identical to the
+        # target alone, and every one of them passed the old syntactic check.
+        ("rows duplicated",       [tc, np.vstack([tc, tc])],      "same mean course"),
+        ("rescaled",              [tc, tc * 2.0],                 "same mean course"),
+        ("constant offset",       [tc, tc + 1.0],                 "same mean course"),
+        ("rescaled and offset",   [tc, tc * 3.0 + 7.0],           "same mean course"),
+        ("rows duplicated 3x, rescaled",
+                                  [tc, np.vstack([tc, tc, tc]) * 0.5], "same mean course"),
+        ("all-zero filler",       [tc, np.zeros_like(tc)],        "flat"),
+        ("constant filler",       [tc, np.full_like(tc, 7.0)],    "flat"),
+        ("an empty category",     [tc, np.zeros((0, 12))],        "0 events"),
+    ]:
+        # match= pins WHICH rule fired: a bare pytest.raises(ValueError) let a
+        # reverted guard survive because a different guard raised instead.
+        with pytest.raises(ValueError, match=why):
             peak_lag_trs(courses, pre_trs=2)
-    # genuinely different categories still work
-    assert peak_lag_trs([tc, other], pre_trs=2) in (1, 4)
+    # A negatively-proportional course is NOT degenerate — it carries real
+    # opposing information — so the guard must not reject it.
+    peak_lag_trs([tc, -tc], pre_trs=2)
+    # Genuinely different categories still work, and the expected value is pinned
+    # EXACTLY. This previously asserted `in (1, 4)`, where 4 is the target-only
+    # answer -- the C5 defect the function exists to prevent -- so the assertion
+    # could not distinguish correct pooling from the bug (F9). A third category
+    # agreeing with `other` breaks the two-category argmax tie, so the pooled peak
+    # is unambiguous.
+    third = rng.normal(0.0, 0.05, (6, 12)); third[:, 3] += 1.0 + rng.normal(0, 0.01, 6)
+    assert peak_lag_trs([tc, other, third], pre_trs=2) == 1
+    # The pooled course must come from the per-category MEAN, not from a single
+    # event standing in for its category. `atypical` has one outlier event peaking
+    # at lag 9 and five peaking at 3, so a guard or a pooling step that inspects
+    # only the first event gets a different answer than the mean does.
+    atypical = rng.normal(0.0, 0.02, (6, 12))
+    atypical[0, 9] += 3.0     # 3/6 = 0.50 at lag 9 in the mean ...
+    atypical[1:, 3] += 1.0    # ... vs 5/6 = 0.83 at lag 3, an unambiguous margin
+    assert int(np.argmax(atypical[0])) == 9 and int(np.argmax(atypical.mean(axis=0))) == 3
+    assert peak_lag_trs([tc, atypical, third], pre_trs=2) == 1
 
 
 def test_resolve_rows_rejects_non_finite_directly_not_only_via_its_callers():
@@ -850,15 +1037,26 @@ def test_row_times_from_segments_rejects_non_finite_directly():
 # such function consuming array data must appear in the hand-written
 # _nonfinite_entry_points map, which is CHECKED FOR COMPLETENESS below.
 #
-# Discovered:      module-level `def`s in roi_stats, callable, __module__ == roi_stats
-# NOT discovered:  names starting with "_" (private helpers) — tested explicitly instead
-#                  anything imported into the module from elsewhere
-#                  methods on classes (there are none; asserted below)
-#                  functions created after import (none; asserted below)
-# Known limit:     a future selector parameter named something other than
-#                  "verts"/"parcel_verts" would be SKIPPED. Guarded two ways:
-#                  _SELECTOR_ARGS is asserted against the live signatures, and
-#                  _call_with_selector raises AssertionError on an unknown function.
+# TWO SEPARATE GUARANTEES, and the first does not imply the second:
+#   function coverage       — we found every function in the selector family;
+#   representation coverage — for each one we exercised every selector argument
+#                             position and every accepted encoding.
+# The previous version of this block asserted only the first while claiming both.
+#
+# Discovered:      every public callable that is a MEMBER of roi_stats, by dir(),
+#                  regardless of how it was constructed. Enumeration deliberately
+#                  does NOT filter on __module__: that dropped module-level
+#                  functools.partial / np.vectorize / callable instances, one of
+#                  which passed every safeguard with a parameter named `verts`.
+# NOT discovered:  names starting with "_" (private helpers) — tested explicitly
+#                  names declared in _IMPORTED_CALLABLES (imported, not defined here)
+# Fails loudly:    an unclassified parameter on any public callable — every name
+#                  must be declared a selector, array data, or a scalar, so a NEW
+#                  parameter is a failure by default rather than a silent miss.
+#                  A function whose selector argument goes unvalidated fails here
+#                  rather than in S2.
+# Genuine limit:   a public callable with NO inspectable signature is reported as
+#                  unclassified rather than skipped, but cannot be auto-exercised.
 # ==========================================================================
 
 # Public functions that legitimately take NO array data and NO selector.
@@ -866,11 +1064,45 @@ _NO_ARRAY_INPUT = {"iut_pass", "detection_floor", "perm_p"}
 # perm_p is a dispatcher: it forwards to exact_perm_p / mc_perm_p, both of which
 # ARE in the map. Recorded here rather than silently omitted.
 
+# Public callables that are imported into roi_stats rather than defined by it.
+# Declared BY NAME. Enumeration below walks module membership rather than
+# filtering on __module__, because __module__ filtering silently dropped every
+# callable that is not a plain `def` -- a module-level functools.partial,
+# np.vectorize wrapper, callable class instance, or any decorator that does not
+# preserve __module__. One of those with a parameter named `verts` passed all
+# three safeguards with a green suite (I5/F2).
+_IMPORTED_CALLABLES = {"comb", "combinations"}
+
+# Parameters that DO carry array data and therefore need non-finite coverage at
+# their own argument position (selectors are covered by the selector harness).
+_ARRAY_DATA_PARAMS = {
+    "preds", "preds_a", "preds_b", "loc_a", "loc_b",
+    "target_responses", "other_responses", "onset_times_s", "row_times_s",
+    "category_timecourses", "face_vals", "scene_vals", "other_vals", "segments",
+}
+
+# Parameters that carry no array data. Declared explicitly so that a NEW
+# parameter is a failure by default rather than a silent miss.
+_NON_ARRAY_PARAMS = {
+    "top_n", "lag_trs", "pre_trs", "post_trs", "n_perm", "seed", "alpha",
+    "power", "n_sim", "tol", "max_effect", "n_per_group", "noise_sd",
+    "p_a", "p_b",
+}
+
+
+def _public_callables():
+    """Every public callable that is a MEMBER of roi_stats, however it was made.
+
+    Deliberately does not filter on __module__ — see _IMPORTED_CALLABLES.
+    """
+    return {n: getattr(_R, n) for n in dir(_R)
+            if not n.startswith("_") and callable(getattr(_R, n))}
+
 
 def _public_functions():
-    return {n: f for n, f in vars(_R).items()
-            if not n.startswith("_") and callable(f)
-            and getattr(f, "__module__", None) == _R.__name__}
+    """Public callables roi_stats itself defines (imports declared and excluded)."""
+    return {n: f for n, f in _public_callables().items()
+            if n not in _IMPORTED_CALLABLES}
 
 
 def test_discovery_finds_the_functions_it_claims_to():
@@ -894,15 +1126,62 @@ def test_selector_arg_names_still_cover_every_selector_parameter():
     """Known limit made loud: discovery keys on parameter NAME. If a new function
     introduces a differently-named selector this fails, rather than silently
     skipping it."""
-    suspicious = set()
+    # Inverted: EVERY parameter must be classified, so an unrecognised NEW name
+    # fails by default. The previous substring heuristic ("vert"/"parcel"/"roi")
+    # passed for any plausible alternative -- `mask`, `labels`, `nodes`,
+    # `region_a`, `selection` -- and `froi_a` only failed by the luck of
+    # containing "roi" (I5/F2).
+    known = set(_SELECTOR_ARGS) | _NON_ARRAY_PARAMS | _ARRAY_DATA_PARAMS
+    unclassified = set()
     for name, fn in _public_functions().items():
-        for pname in _inspect.signature(fn).parameters:
-            if ("vert" in pname or "parcel" in pname or "roi" in pname.lower()) \
-                    and pname not in _SELECTOR_ARGS:
-                suspicious.add(f"{name}({pname})")
-    assert not suspicious, (
-        "these look like selector parameters but are not in _SELECTOR_ARGS, so the "
-        f"selector tests skip them: {sorted(suspicious)}"
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            unclassified.add(f"{name}(<no signature>)")
+            continue
+        for pname in params:
+            if pname not in known:
+                unclassified.add(f"{name}({pname})")
+    assert not unclassified, (
+        "these parameters are in no declared category, so the harness does not know "
+        "whether they are selectors, array data, or scalars. Add each to "
+        "_SELECTOR_ARGS, _ARRAY_DATA_PARAMS, or _NON_ARRAY_PARAMS: "
+        f"{sorted(unclassified)}"
+    )
+
+
+def test_discovery_machinery_catches_a_planted_partial(monkeypatch):
+    """The machinery needs a POSITIVE test, or 'it found everything' is unfalsifiable.
+
+    A module-level functools.partial with a parameter named `verts` carries no
+    __module__, so the previous __module__ filter dropped it from all three
+    safeguards while it sat in the public namespace, unvalidated (I5/F2)."""
+    import functools
+
+    def _leaky(preds, verts, scale=1.0):
+        return float(np.asarray(preds)[..., np.asarray(verts)].mean() * scale)
+
+    monkeypatch.setattr(_R, "roi_dice_fast", functools.partial(_leaky, scale=2.0),
+                        raising=False)
+    assert "roi_dice_fast" in _public_callables(), "enumeration missed a partial"
+    assert "roi_dice_fast" in _public_functions(), "a partial escaped classification"
+    # and it is picked up as a selector entry point, so the selector rules apply
+    assert "roi_dice_fast" in {n for n, _, _ in _selector_entry_points()}
+
+
+def test_discovery_machinery_catches_a_planted_unclassified_parameter(monkeypatch):
+    """A new selector under a name nobody predicted — `mask`, `labels`, `nodes`,
+    `region_a` — must fail by default. The previous substring heuristic passed
+    every one of these."""
+    def _leaky(preds, region_a):
+        return float(np.asarray(preds)[..., np.asarray(region_a)].mean())
+
+    monkeypatch.setattr(_R, "roi_dice", _leaky, raising=False)
+    known = set(_SELECTOR_ARGS) | _NON_ARRAY_PARAMS | _ARRAY_DATA_PARAMS
+    unclassified = {f"{n}({p})" for n, f in _public_functions().items()
+                    for p in _inspect.signature(f).parameters if p not in known}
+    assert "roi_dice(region_a)" in unclassified, (
+        "an unrecognised parameter name was silently skipped instead of failing"
     )
 
 
@@ -911,12 +1190,24 @@ def test_the_nonfinite_map_is_complete_not_merely_long():
     3 of ~10 call sites. _nonfinite_entry_points is a HAND-WRITTEN map, so the
     same overclaim is possible — this cross-checks it against introspection so an
     unlisted public function fails here instead of going untested."""
-    covered = {k.split(" ")[0] for k in _nonfinite_entry_points()}
-    missing = sorted(n for n in _public_functions()
-                     if n not in covered and n not in _NO_ARRAY_INPUT)
+    covered = set(_nonfinite_entry_points())
+    required = set()
+    for name, fn in _public_functions().items():
+        if name in _NO_ARRAY_INPUT:
+            continue
+        for pname in _inspect.signature(fn).parameters:
+            if pname in _ARRAY_DATA_PARAMS:
+                required.add(f"{name}:{pname}")
+    missing = sorted(required - covered)
     assert not missing, (
-        "these public functions are not in _nonfinite_entry_points and are not "
-        f"declared array-free in _NO_ARRAY_INPUT: {missing}"
+        "these (function, argument) pairs consume array data and are never poisoned. "
+        "Keying coverage on the function NAME let one poisoned argument stand in for "
+        f"all of them -- the roi_minus_reference precedent: {missing}"
     )
+    # every key in the map must correspond to a live (function, parameter) pair,
+    # so a rename cannot leave a test silently pointing at nothing
+    stale = sorted(k for k in covered if k not in required)
+    assert not stale, f"map keys that are not live (function, parameter) pairs: {stale}"
     # and the exemption list must stay honest — every name in it must still exist
     assert not (_NO_ARRAY_INPUT - set(_public_functions())), "stale name in _NO_ARRAY_INPUT"
+    assert not (_IMPORTED_CALLABLES - set(_public_callables())), "stale name in _IMPORTED_CALLABLES"
