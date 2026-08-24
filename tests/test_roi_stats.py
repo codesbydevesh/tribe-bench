@@ -607,6 +607,9 @@ from tribe_tools import roi_stats as _R
 N_V = 60
 
 
+_SELECTOR_ARGS = ("verts", "ref_verts", "parcel_verts")
+
+
 def _selector_entry_points():
     """Every public function taking a vertex selector, found by introspection."""
     out = []
@@ -615,20 +618,25 @@ def _selector_entry_points():
             continue
         if getattr(fn, "__module__", None) != _R.__name__:
             continue
-        for arg in ("verts", "parcel_verts"):
+        for arg in _SELECTOR_ARGS:
             if arg in _inspect.signature(fn).parameters:
-                out.append((name, fn, arg))
-                break
+                out.append((name, fn, arg))   # one entry PER selector argument
     return out
 
 
-def _call_with_selector(name, fn, selector):
+def _call_with_selector(name, fn, selector, which="verts"):
     """Invoke each selector-taking function with valid data and a given selector."""
     preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
     times = np.arange(4.0)
     if name in ("spatial_z", "raw_roi_mean"):
         return fn(preds, selector)
     if name == "roi_minus_reference":
+        # exercise BOTH selector arguments — guarding one of two is the exact
+        # mistake this suite exists to catch
+        if which == "ref_verts":
+            # fixed ROI must be DISJOINT from the selectors under test (10..12),
+            # or the overlap guard fires and masks what we are checking
+            return fn(preds, np.array([30, 31, 32]), selector)
         return fn(preds, selector, np.array([50, 51]))
     if name == "glm_contrast_z":
         return fn(preds + np.arange(4)[:, None], preds, selector)
@@ -668,13 +676,13 @@ def test_every_selector_entry_point_rejects_the_whole_bad_selector_CLASS():
         "non-integer float":          (np.array([10.5, 11.0]),  "integer vertex indices"),
     }
     for name, fn, _arg in eps:
-        # the good selector must still work everywhere
-        _call_with_selector(name, fn, good)
+        # the good selector must still work in this argument position
+        _call_with_selector(name, fn, good, _arg)
         # and a genuine boolean mask must be accepted and mean the same thing
-        _call_with_selector(name, fn, mask)
+        _call_with_selector(name, fn, mask, _arg)
         for label, (bad, why) in bad_cases.items():
             with pytest.raises(ValueError, match=why):
-                _call_with_selector(name, fn, bad)
+                _call_with_selector(name, fn, bad, _arg)
 
 
 def test_bool_mask_and_equivalent_indices_agree_at_every_entry_point():
@@ -682,8 +690,8 @@ def test_bool_mask_and_equivalent_indices_agree_at_every_entry_point():
     mask = np.zeros(N_V, bool); mask[[10, 11, 12]] = True
     idx = np.flatnonzero(mask)
     for name, fn, _arg in _selector_entry_points():
-        a = _call_with_selector(name, fn, mask)
-        b = _call_with_selector(name, fn, idx)
+        a = _call_with_selector(name, fn, mask, _arg)
+        b = _call_with_selector(name, fn, idx, _arg)
         assert np.allclose(np.asarray(a, float), np.asarray(b, float)), name
 
 
@@ -694,7 +702,7 @@ def test_empty_selection_raises_at_every_entry_point_not_just_two():
     empty_mask = np.zeros(N_V, bool)
     for name, fn, _arg in _selector_entry_points():
         with pytest.raises(ValueError, match="empty"):
-            _call_with_selector(name, fn, empty_mask)
+            _call_with_selector(name, fn, empty_mask, _arg)
 
 
 def _nonfinite_entry_points():
@@ -831,3 +839,84 @@ def test_row_times_from_segments_rejects_non_finite_directly():
     guard passed and rows then resolved to the wrong times."""
     with pytest.raises(ValueError, match="non-finite"):
         row_times_from_segments([_Seg(0.0), _Seg(np.nan), _Seg(2.0)])
+
+
+# ==========================================================================
+# THE DISCOVERY CONTRACT — what these tests do and do not find automatically
+#
+# CLAIM (precise): every module-level, public, non-imported function in
+# tribe_tools.roi_stats whose signature contains a parameter named in
+# _SELECTOR_ARGS is automatically included in the selector tests; and every
+# such function consuming array data must appear in the hand-written
+# _nonfinite_entry_points map, which is CHECKED FOR COMPLETENESS below.
+#
+# Discovered:      module-level `def`s in roi_stats, callable, __module__ == roi_stats
+# NOT discovered:  names starting with "_" (private helpers) — tested explicitly instead
+#                  anything imported into the module from elsewhere
+#                  methods on classes (there are none; asserted below)
+#                  functions created after import (none; asserted below)
+# Known limit:     a future selector parameter named something other than
+#                  "verts"/"parcel_verts" would be SKIPPED. Guarded two ways:
+#                  _SELECTOR_ARGS is asserted against the live signatures, and
+#                  _call_with_selector raises AssertionError on an unknown function.
+# ==========================================================================
+
+# Public functions that legitimately take NO array data and NO selector.
+_NO_ARRAY_INPUT = {"iut_pass", "detection_floor", "perm_p"}
+# perm_p is a dispatcher: it forwards to exact_perm_p / mc_perm_p, both of which
+# ARE in the map. Recorded here rather than silently omitted.
+
+
+def _public_functions():
+    return {n: f for n, f in vars(_R).items()
+            if not n.startswith("_") and callable(f)
+            and getattr(f, "__module__", None) == _R.__name__}
+
+
+def test_discovery_finds_the_functions_it_claims_to():
+    """The discovery mechanism needs its own test, or the coverage claim rests on
+    an untested helper."""
+    pub = _public_functions()
+    assert len(pub) >= 15, f"discovery found only {len(pub)} public functions"
+    # no classes hiding methods that discovery would miss
+    assert not [n for n, f in pub.items() if _inspect.isclass(f)], "a class appeared; discovery only walks functions"
+    # every discovered selector function really does take a selector
+    for name, fn, arg in _selector_entry_points():
+        assert arg in _inspect.signature(fn).parameters
+    # and the reverse: no public function takes a selector arg without being discovered
+    found = {n for n, _, _ in _selector_entry_points()}
+    for name, fn in pub.items():
+        if set(_inspect.signature(fn).parameters) & set(_SELECTOR_ARGS):
+            assert name in found, f"{name} takes a selector but discovery missed it"
+
+
+def test_selector_arg_names_still_cover_every_selector_parameter():
+    """Known limit made loud: discovery keys on parameter NAME. If a new function
+    introduces a differently-named selector this fails, rather than silently
+    skipping it."""
+    suspicious = set()
+    for name, fn in _public_functions().items():
+        for pname in _inspect.signature(fn).parameters:
+            if ("vert" in pname or "parcel" in pname or "roi" in pname.lower()) \
+                    and pname not in _SELECTOR_ARGS:
+                suspicious.add(f"{name}({pname})")
+    assert not suspicious, (
+        "these look like selector parameters but are not in _SELECTOR_ARGS, so the "
+        f"selector tests skip them: {sorted(suspicious)}"
+    )
+
+
+def test_the_nonfinite_map_is_complete_not_merely_long():
+    """The predecessor of this suite claimed 'rejected everywhere' while covering
+    3 of ~10 call sites. _nonfinite_entry_points is a HAND-WRITTEN map, so the
+    same overclaim is possible — this cross-checks it against introspection so an
+    unlisted public function fails here instead of going untested."""
+    covered = {k.split(" ")[0] for k in _nonfinite_entry_points()}
+    missing = sorted(n for n in _public_functions()
+                     if n not in covered and n not in _NO_ARRAY_INPUT)
+    assert not missing, (
+        "these public functions are not in _nonfinite_entry_points and are not "
+        f"declared array-free in _NO_ARRAY_INPUT: {missing}"
+    )
+    # and the exemption list must stay honest — every name in it must still exist
+    assert not (_NO_ARRAY_INPUT - set(_public_functions())), "stale name in _NO_ARRAY_INPUT"
