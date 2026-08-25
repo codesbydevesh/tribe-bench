@@ -45,10 +45,31 @@ Hemisphere = Literal["left", "right", "both"]
 ## tribe_tools/model.py
 
 ```python
+TRIBEV2_REVISION: str      = "f894e783020944dcd96e5568550afe2aa9743f9f"
+TRIBEV2_CKPT_SHA256: str   = "9c79ffff6b642b7b0c71d558c935fb3fa33f2788bfb509feead94fafbba2f321"
+TRIBEV2_CKPT_BYTES: int    = 708_856_138
+
+def fetch_pinned_checkpoint(
+    revision: str = TRIBEV2_REVISION,
+    expected_sha256: Optional[str] = TRIBEV2_CKPT_SHA256,
+    dest: Optional[Path] = None,
+) -> Path:
+    """Download config.yaml + best.ckpt at an EXACT revision and verify the hash.
+
+    Returns a local directory suitable for load_model(checkpoint_dir=...).
+    Raises ValueError if the checkpoint hash does not match.
+
+    WHY: TribeModel.from_pretrained has NO `revision` parameter -- it calls
+    hf_hub_download(repo_id, filename) with no pin, so the floating main branch
+    is whatever Meta last pushed. It DOES accept a local directory, so pinning
+    is done by resolving the revision ourselves and handing over a local path.
+
 def load_model(
     device: str = "cuda",
     cache_folder: Optional[Path] = None,
     config_update: Optional[dict] = None,
+    revision: Optional[str] = TRIBEV2_REVISION,
+    checkpoint_dir: Optional[Path] = None,
 ) -> "TribeModel":
     """
     Load TRIBE v2 model via TribeModel.from_pretrained("facebook/tribev2").
@@ -68,6 +89,10 @@ def load_model(
 
                 data.video_feature.infra.keep_in_ram: False
                 data.audio_feature.infra.keep_in_ram: False
+
+        revision: HuggingFace commit SHA to pin. Defaults to TRIBEV2_REVISION.
+            Pass None to accept the floating branch (NOT for recorded runs).
+        checkpoint_dir: pre-fetched local directory; skips resolution entirely.
                 data.text_feature.infra.keep_in_ram: False
                     keep_in_ram defaults to True on all three extractors, so every
                     feature read during dataloading is retained forever and RSS

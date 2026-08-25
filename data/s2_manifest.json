@@ -1,0 +1,3789 @@
+{
+  "schema_version": 1,
+  "design_fingerprint": "8e743096ac3f2583",
+  "config": {
+    "categories": [
+      "faces",
+      "bodies",
+      "places",
+      "objects",
+      "characters"
+    ],
+    "exemplars_per_category": 25,
+    "soa_s": 8.0,
+    "on_duration_s": 1.0,
+    "lead_in_s": 25.0,
+    "tail_out_s": 25.0,
+    "fps": 8,
+    "frame_size": [
+      256,
+      256
+    ],
+    "grey_level": 128,
+    "order_seed": 20260824,
+    "model_id": "facebook/tribev2",
+    "model_revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
+    "stimulus_set": "fLoc",
+    "stimulus_subcategories": [
+      [
+        "faces",
+        [
+          "adult",
+          "child"
+        ]
+      ],
+      [
+        "bodies",
+        [
+          "body",
+          "limb"
+        ]
+      ],
+      [
+        "places",
+        [
+          "house",
+          "corridor"
+        ]
+      ],
+      [
+        "objects",
+        [
+          "car",
+          "instrument"
+        ]
+      ],
+      [
+        "characters",
+        [
+          "word",
+          "number"
+        ]
+      ]
+    ],
+    "stimulus_selection_rule": "round_robin_over_subcategories_sorted_by_name",
+    "stimulus_set_version": "de6a26cc269a2c7075461a4c839bfd628f225c95",
+    "stimulus_set_doi": "10.1523/JNEUROSCI.0803-15.2015",
+    "primary_lag_trs": 5,
+    "alternative_lag_trs": 0,
+    "report_lags": [
+      -2,
+      -1,
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "peak_lag_policy": "measure_and_report_only",
+    "peak_tolerance_trs": 1,
+    "primary_statistic": "event_locked_contrast",
+    "secondary_statistics": [
+      "glm_contrast_z",
+      "roi_minus_reference",
+      "spatial_z"
+    ],
+    "n_perm": 10000,
+    "perm_seed": 0,
+    "alpha": 0.025,
+    "require_detection_floor": true,
+    "isi_baseline_as_category": true,
+    "isi_baseline_role": "secondary",
+    "log_window_packing": true,
+    "model_window_s": 100.0,
+    "compute_s_per_stimulus_s": 11.5
+  },
+  "provenance": {
+    "model_id": "facebook/tribev2",
+    "code_commit": "3c5f299b8788ddaa034a96916d3b0de736bb98b2",
+    "code_tree_dirty": true,
+    "model_revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
+    "stimulus_set": "fLoc",
+    "stimulus_set_version": "de6a26cc269a2c7075461a4c839bfd628f225c95",
+    "stimulus_set_doi": "10.1523/JNEUROSCI.0803-15.2015",
+    "images": {
+      "source_repo": "VPNL/fLoc",
+      "commit": "de6a26cc269a2c7075461a4c839bfd628f225c95",
+      "selection_rule": "round_robin_over_subcategories_sorted_by_name",
+      "licence": "none stated by VPNL/fLoc \u2014 DO NOT REDISTRIBUTE",
+      "n": 125,
+      "files": {
+        "faces_000": {
+          "path": "data/floc/faces/adult-1.jpg",
+          "sha256": "be467c0ae30927a25d618650d328b983c843bcc532f6390a8368921cf9004e78",
+          "bytes": 130264
+        },
+        "faces_001": {
+          "path": "data/floc/faces/adult-10.jpg",
+          "sha256": "e9077853af5a2952da76a8b3e56a183a7965e5275921b9432b20a28cfbf7fbf1",
+          "bytes": 80952
+        },
+        "faces_002": {
+          "path": "data/floc/faces/adult-100.jpg",
+          "sha256": "89ff1b648e4e85bf0a68ade01b4a3bbb1c877cedd90104496d89a0f878be7d23",
+          "bytes": 123575
+        },
+        "faces_003": {
+          "path": "data/floc/faces/adult-101.jpg",
+          "sha256": "545a6abc2d407565dedd9026bfc93c7774a5e986d6eecfe0df08645a3618c4fb",
+          "bytes": 115018
+        },
+        "faces_004": {
+          "path": "data/floc/faces/adult-102.jpg",
+          "sha256": "0761496f120842bbde665838a49f87afe6c9bf0adacf7985caa37d7a4b522cd6",
+          "bytes": 126651
+        },
+        "faces_005": {
+          "path": "data/floc/faces/adult-103.jpg",
+          "sha256": "23e33ae6127ef368ae36c109a14cf658a1a5098e716e7c75f7148e3606b274b7",
+          "bytes": 110860
+        },
+        "faces_006": {
+          "path": "data/floc/faces/adult-104.jpg",
+          "sha256": "3103cf31bbb652ceea66a997d196fcfc5ef9b6f7249193353ee95c9b928a1d43",
+          "bytes": 101909
+        },
+        "faces_007": {
+          "path": "data/floc/faces/adult-105.jpg",
+          "sha256": "9537cf69ea4cb2cfd941dfb082d170e324af10390b3c0c91cf7879800879ca2c",
+          "bytes": 79532
+        },
+        "faces_008": {
+          "path": "data/floc/faces/adult-106.jpg",
+          "sha256": "0074b7ba5c18b0e5b52cc0ae108bdce146f374afd78f27bc5486310424bb19d3",
+          "bytes": 69216
+        },
+        "faces_009": {
+          "path": "data/floc/faces/adult-107.jpg",
+          "sha256": "592251f45e3718bfc9b6b3f16634d8646f0fafcf23d2d866b65cbbac3c22d6f4",
+          "bytes": 97048
+        },
+        "faces_010": {
+          "path": "data/floc/faces/adult-108.jpg",
+          "sha256": "aa48f860bf225a0959e54b88d49a3e68b1c40f71e00131fb901479f7f1b26a03",
+          "bytes": 107057
+        },
+        "faces_011": {
+          "path": "data/floc/faces/adult-109.jpg",
+          "sha256": "2d0b7e338bf7c0dbf9fe8c8b5f1a2c2b948b8dd43779f271bee5d782e3054627",
+          "bytes": 120871
+        },
+        "faces_012": {
+          "path": "data/floc/faces/adult-11.jpg",
+          "sha256": "e93533285aed543df2a17e2e8f12918ae6b91c585504dab48f858fc8d1e214ed",
+          "bytes": 105418
+        },
+        "faces_013": {
+          "path": "data/floc/faces/child-1.jpg",
+          "sha256": "2678596846323f5acaa6a4274ea31a759d57ee3cbe61c88edaa7673675bede1a",
+          "bytes": 122402
+        },
+        "faces_014": {
+          "path": "data/floc/faces/child-10.jpg",
+          "sha256": "97ce07618310fc72e2b24ab169396a6dedd7041fc4e929893589c37d861a04bb",
+          "bytes": 100257
+        },
+        "faces_015": {
+          "path": "data/floc/faces/child-100.jpg",
+          "sha256": "31b00318717dd32f13c0ddb8b7941849941f6a811f7309813c53eaf7dfdaf102",
+          "bytes": 96045
+        },
+        "faces_016": {
+          "path": "data/floc/faces/child-101.jpg",
+          "sha256": "07034d1733e3c2fe02181ee58ba0e24c082dde6bc370497e83a4cc888ec9cc4a",
+          "bytes": 81595
+        },
+        "faces_017": {
+          "path": "data/floc/faces/child-102.jpg",
+          "sha256": "974d42d6bbeaa2717ae6476c1e77811b666937ce33d296dd54f12d8c9753e9f7",
+          "bytes": 125412
+        },
+        "faces_018": {
+          "path": "data/floc/faces/child-103.jpg",
+          "sha256": "77ee7429e3e49ed35d8ba5dcf7eb4c967a54816dccc092b8866317d8449826b3",
+          "bytes": 129499
+        },
+        "faces_019": {
+          "path": "data/floc/faces/child-104.jpg",
+          "sha256": "31c6970a90dcc1487beab20ca2f218f203e332716872d74eae155be9ed5b351f",
+          "bytes": 105870
+        },
+        "faces_020": {
+          "path": "data/floc/faces/child-105.jpg",
+          "sha256": "c8845ea2eac1ef178476b0ad571bff7bb17990f6f6fb5b0d79f34c07ddace605",
+          "bytes": 80034
+        },
+        "faces_021": {
+          "path": "data/floc/faces/child-106.jpg",
+          "sha256": "dfe3c8d067d5562d78867fe5f4c91863c38f6c12630d673e9b1af6a1a5fdb114",
+          "bytes": 104416
+        },
+        "faces_022": {
+          "path": "data/floc/faces/child-107.jpg",
+          "sha256": "de0afcaa42b6892cc4eeafda6b38c254be98da8acf4df1addf6badabc3aed0b2",
+          "bytes": 103957
+        },
+        "faces_023": {
+          "path": "data/floc/faces/child-108.jpg",
+          "sha256": "e59ee32ddf025d90c404bc3b59d9263139fa87c0bf043c5b93526bc619c1ad89",
+          "bytes": 103773
+        },
+        "faces_024": {
+          "path": "data/floc/faces/child-109.jpg",
+          "sha256": "6239aaf97d6356539d7c1c3acf601997e20f3ee1e228cd400cf8e44e233eabd2",
+          "bytes": 106567
+        },
+        "bodies_000": {
+          "path": "data/floc/bodies/body-1.jpg",
+          "sha256": "75a785146e842ff7f5ca5ec6f4cf0fed74d8a87a5059892238dd2a174eabeeb6",
+          "bytes": 109954
+        },
+        "bodies_001": {
+          "path": "data/floc/bodies/body-10.jpg",
+          "sha256": "2d1a2f955b62a1c16e3c917e21a2b5f412ec4f97d97d9b7156a9d67066a8c377",
+          "bytes": 122810
+        },
+        "bodies_002": {
+          "path": "data/floc/bodies/body-100.jpg",
+          "sha256": "1c8e5d2c1a69827779e22aea2f856932ff2133d4fab57d3cd7fe095e2ed8296e",
+          "bytes": 126820
+        },
+        "bodies_003": {
+          "path": "data/floc/bodies/body-101.jpg",
+          "sha256": "96a266e162fba9fbada78fdb57b3cb3d869c6d1c3f4fa181c53176be7486c922",
+          "bytes": 85388
+        },
+        "bodies_004": {
+          "path": "data/floc/bodies/body-102.jpg",
+          "sha256": "128f9ca141a1001b6d27d8be58f172363b3f030933733372d402b5e527a06892",
+          "bytes": 131405
+        },
+        "bodies_005": {
+          "path": "data/floc/bodies/body-103.jpg",
+          "sha256": "67529cb3ae7fc8a5a1aeeb4d9193c3574db5ff40ee7b94a7f7cdb11ccf2e7e7a",
+          "bytes": 156353
+        },
+        "bodies_006": {
+          "path": "data/floc/bodies/body-104.jpg",
+          "sha256": "f77a5e67c61905f123b1c9bb587c95f0e1915fe8b9b7b75e64fc124675058db4",
+          "bytes": 83292
+        },
+        "bodies_007": {
+          "path": "data/floc/bodies/body-105.jpg",
+          "sha256": "5d2a32e1302abaf6c8947c0921521a28ea2814a12340d1103a968f0b052824ee",
+          "bytes": 128214
+        },
+        "bodies_008": {
+          "path": "data/floc/bodies/body-106.jpg",
+          "sha256": "c36008dcaacc9e55b1b67d3e9d3c3337d611dd30dcd1d2f726504c8b4bf146ea",
+          "bytes": 75886
+        },
+        "bodies_009": {
+          "path": "data/floc/bodies/body-107.jpg",
+          "sha256": "be92985bbb5f7c17c1c1035813f2961a8759b35bc16e743355f968aef2258098",
+          "bytes": 86140
+        },
+        "bodies_010": {
+          "path": "data/floc/bodies/body-108.jpg",
+          "sha256": "fa6435803772789c7eb0849a3a09598e8ea7cf4a35d8651a943363ee9d0b03ab",
+          "bytes": 120077
+        },
+        "bodies_011": {
+          "path": "data/floc/bodies/body-109.jpg",
+          "sha256": "9b9aa86c453b9b9468537fb07339e062258bd5c5f0622801b187f4d8ea85aff7",
+          "bytes": 94505
+        },
+        "bodies_012": {
+          "path": "data/floc/bodies/body-11.jpg",
+          "sha256": "1353e4ef2f651be8419452d0c928020f119d658589d9ab7f7d2fa75c4eb68a18",
+          "bytes": 139194
+        },
+        "bodies_013": {
+          "path": "data/floc/bodies/limb-1.jpg",
+          "sha256": "9ba22f1362371defcbc3c30bc4aa0eeebad11c420df4bd546484a437d412c21d",
+          "bytes": 120364
+        },
+        "bodies_014": {
+          "path": "data/floc/bodies/limb-10.jpg",
+          "sha256": "a0740977b0b3926c731666c572aeb8bfee20db0c7f3cbc34070c3034218d4e36",
+          "bytes": 147176
+        },
+        "bodies_015": {
+          "path": "data/floc/bodies/limb-100.jpg",
+          "sha256": "908db4ee021950541ab7ecba7c7091dc0dc0c9f60d8a2fc4387019be12035f35",
+          "bytes": 163799
+        },
+        "bodies_016": {
+          "path": "data/floc/bodies/limb-101.jpg",
+          "sha256": "6cdd962aaf01795efdf6d1436a9669c951df552e0e626d4fdbce67ba3ee94297",
+          "bytes": 159797
+        },
+        "bodies_017": {
+          "path": "data/floc/bodies/limb-102.jpg",
+          "sha256": "50eeed1d3ea91675f57983f5f3590678282cb4971859afe982a12e4436d46edf",
+          "bytes": 129554
+        },
+        "bodies_018": {
+          "path": "data/floc/bodies/limb-103.jpg",
+          "sha256": "a5c952f4b3ff18160b54672db15a0fb3ef2a9813d08ff3cd93ac6a0b28246398",
+          "bytes": 150884
+        },
+        "bodies_019": {
+          "path": "data/floc/bodies/limb-104.jpg",
+          "sha256": "947267903784eff215eb186a6f974ba361f747fad11d3127b77c48ce053e69a2",
+          "bytes": 119928
+        },
+        "bodies_020": {
+          "path": "data/floc/bodies/limb-105.jpg",
+          "sha256": "00dc528bb0679b2a42a61779a0a0d9c24fc439e69053b433afee8e91c5af5908",
+          "bytes": 131547
+        },
+        "bodies_021": {
+          "path": "data/floc/bodies/limb-106.jpg",
+          "sha256": "11f3f732af2b7474ca2e0759ada0cc4892fcbb1f319fb30aaf81d5d1c033baf1",
+          "bytes": 154440
+        },
+        "bodies_022": {
+          "path": "data/floc/bodies/limb-107.jpg",
+          "sha256": "e458d5ec006dfb19febca36425118963d13e2d1303269b729d4b3b4ea63f5a8f",
+          "bytes": 95626
+        },
+        "bodies_023": {
+          "path": "data/floc/bodies/limb-108.jpg",
+          "sha256": "973bc01fcafb236ca374d8f7577d5009aa1d61f48bdf21200e787b0d676ef718",
+          "bytes": 107840
+        },
+        "bodies_024": {
+          "path": "data/floc/bodies/limb-109.jpg",
+          "sha256": "071573dfb75a8880f2e9b299347831f92d6640df430da20a0b6ab569dcb07b74",
+          "bytes": 151929
+        },
+        "places_000": {
+          "path": "data/floc/places/corridor-1.jpg",
+          "sha256": "6fb53c59b502a44877e891169cbb749af9c344b03439a1c4b584156f8467c009",
+          "bytes": 128715
+        },
+        "places_001": {
+          "path": "data/floc/places/corridor-10.jpg",
+          "sha256": "6bcacaba148401d5525a107cce8c03e3cd1d21ebbc17d41d026210dc7d9b0c55",
+          "bytes": 98132
+        },
+        "places_002": {
+          "path": "data/floc/places/corridor-100.jpg",
+          "sha256": "cd732986ce7efb1e4837078e445fd569a6d463725196528338651ad057f46471",
+          "bytes": 101799
+        },
+        "places_003": {
+          "path": "data/floc/places/corridor-101.jpg",
+          "sha256": "653baa5f0d07f15f7846535801a985965090821a081a79b6762c2534b345cbce",
+          "bytes": 141359
+        },
+        "places_004": {
+          "path": "data/floc/places/corridor-102.jpg",
+          "sha256": "85c3adc781328cd68402e8645f7814e466c3e7822ac6cf725fa1b981e63936cd",
+          "bytes": 105528
+        },
+        "places_005": {
+          "path": "data/floc/places/corridor-103.jpg",
+          "sha256": "f55a13459e362db121b3bba668737487d2bb7422348685002d62359673ea9f8f",
+          "bytes": 125213
+        },
+        "places_006": {
+          "path": "data/floc/places/corridor-104.jpg",
+          "sha256": "87fcb7969ec6a21a3447139616fe34a5c8b4e4a85c34cfe9be433c992af7e2fa",
+          "bytes": 119435
+        },
+        "places_007": {
+          "path": "data/floc/places/corridor-105.jpg",
+          "sha256": "4d6d5a27f3269175c9605f31e35dd90f9633e8655f7c5faf19485b6b635312b7",
+          "bytes": 125032
+        },
+        "places_008": {
+          "path": "data/floc/places/corridor-106.jpg",
+          "sha256": "0d41c3edc1b39e15d8471edfc32b2d8d496700d0562ce48579437a915d0555e7",
+          "bytes": 85202
+        },
+        "places_009": {
+          "path": "data/floc/places/corridor-107.jpg",
+          "sha256": "aa1536fcf02bedb57b449558a8398d848df5542ff7ef6f4a1a5cca962779ae62",
+          "bytes": 92193
+        },
+        "places_010": {
+          "path": "data/floc/places/corridor-108.jpg",
+          "sha256": "1f2efc69a84d4207007cc246c5b886e06aa198946c68c45f584cd57b7408f801",
+          "bytes": 127033
+        },
+        "places_011": {
+          "path": "data/floc/places/corridor-109.jpg",
+          "sha256": "bc43dcf3f64085c991f74a032ab108ba86f2f0f059dc6df1a29eeecaa8a29a38",
+          "bytes": 97783
+        },
+        "places_012": {
+          "path": "data/floc/places/house-1.jpg",
+          "sha256": "05a84406a77f637acd8dfdb97f9e41ee3390df1250d834f218fff1c11474be45",
+          "bytes": 149336
+        },
+        "places_013": {
+          "path": "data/floc/places/house-10.jpg",
+          "sha256": "536c73b71e8bb1303e61043ec30d954ca5ae2ded90c14d93c282ff96209f91d8",
+          "bytes": 148695
+        },
+        "places_014": {
+          "path": "data/floc/places/house-100.jpg",
+          "sha256": "adfcbcb0c87608691733e61dd9815287c80a8f17577fbe0d3f9927a146b6c700",
+          "bytes": 151085
+        },
+        "places_015": {
+          "path": "data/floc/places/house-101.jpg",
+          "sha256": "4c83cd4012de9b3fae04726f45718441c5abedd9bd957239742b419f2eacc52f",
+          "bytes": 99308
+        },
+        "places_016": {
+          "path": "data/floc/places/house-102.jpg",
+          "sha256": "f48f3e50f3d3c68a5e043c3c60866a302caf5d82ab2c085b4f7b71374f635233",
+          "bytes": 111406
+        },
+        "places_017": {
+          "path": "data/floc/places/house-103.jpg",
+          "sha256": "c71fb5445a463757377a959678d840dabaa3070f7a3d7288b0ae7b398c776767",
+          "bytes": 151818
+        },
+        "places_018": {
+          "path": "data/floc/places/house-104.jpg",
+          "sha256": "b6b55b1ef3eb9eccc031574ec21c4ad0ce8101b51491811bed0e1f9ce3871c5c",
+          "bytes": 128335
+        },
+        "places_019": {
+          "path": "data/floc/places/house-105.jpg",
+          "sha256": "27d1f405fa09aeba7c1ffaddc8c5a97638ebc5d07192c6c7f2514d494bb80302",
+          "bytes": 99814
+        },
+        "places_020": {
+          "path": "data/floc/places/house-106.jpg",
+          "sha256": "d7be40c63dbf54020be3bb53e098999c519ddbfe5e3f4ab1a654c87e991dbe81",
+          "bytes": 151608
+        },
+        "places_021": {
+          "path": "data/floc/places/house-107.jpg",
+          "sha256": "60796e481a0e0769adcc9098c25ea6358e079661fd65146daf2dcbfaf8f13efe",
+          "bytes": 95167
+        },
+        "places_022": {
+          "path": "data/floc/places/house-108.jpg",
+          "sha256": "7375eaaee56798b640ffaf01998350ab9881cb214451889a175d5978f9b9f24c",
+          "bytes": 143202
+        },
+        "places_023": {
+          "path": "data/floc/places/house-109.jpg",
+          "sha256": "861e4d2b69d75f86e58206a324122b7a8c351d55b3c03ee66754212d497fdbc6",
+          "bytes": 126707
+        },
+        "places_024": {
+          "path": "data/floc/places/house-11.jpg",
+          "sha256": "ae1a85290414c8e4066bb284f978bfb2488bedc7ec72e24235796acbafbd8b44",
+          "bytes": 159917
+        },
+        "objects_000": {
+          "path": "data/floc/objects/car-1.jpg",
+          "sha256": "a1127a8c20c8bb3a8b744b066cad5dafc83adb1a532e5955b399533d178dd95d",
+          "bytes": 117318
+        },
+        "objects_001": {
+          "path": "data/floc/objects/car-10.jpg",
+          "sha256": "3b4ffdf417046a18bcc0c470f90de93e288f1476aab1e6cfe28b555667e23c9c",
+          "bytes": 102546
+        },
+        "objects_002": {
+          "path": "data/floc/objects/car-100.jpg",
+          "sha256": "5dc1d44c034e801e8e43a13dd50c32748f96a2b17cec90b5332f0753bcd18ab2",
+          "bytes": 81724
+        },
+        "objects_003": {
+          "path": "data/floc/objects/car-101.jpg",
+          "sha256": "4fa0cabcad168b5d3b780b2016ebba27bc60e7f95ebefdcb7247fae828a73bc2",
+          "bytes": 134170
+        },
+        "objects_004": {
+          "path": "data/floc/objects/car-102.jpg",
+          "sha256": "2bcfc1d7e3b08e28000cc28cfee416cd0d8b7760cf8056b248b26b84e82b68ed",
+          "bytes": 147960
+        },
+        "objects_005": {
+          "path": "data/floc/objects/car-103.jpg",
+          "sha256": "9a3b64b63ff56220f8f6804aa02616e7aa417de94181bbca7e63d827524c068f",
+          "bytes": 103732
+        },
+        "objects_006": {
+          "path": "data/floc/objects/car-104.jpg",
+          "sha256": "20159cdf23049e32fe379713bd97a0d3f81b8480cd5d9c487c50661280cafc79",
+          "bytes": 113698
+        },
+        "objects_007": {
+          "path": "data/floc/objects/car-105.jpg",
+          "sha256": "a327a7478c37c8c7d2c4a52bdeafca8629cabec5d3749f10696e5aef5cd998e5",
+          "bytes": 128344
+        },
+        "objects_008": {
+          "path": "data/floc/objects/car-106.jpg",
+          "sha256": "d5b9d9d2233f8f1514467cf95dd6d4b56cfbd64c2333d5ab7e09cba18a417659",
+          "bytes": 149165
+        },
+        "objects_009": {
+          "path": "data/floc/objects/car-107.jpg",
+          "sha256": "6b60fa5aa5af7b5eb9c723127750b2e7dbf45b8bc0d1142aef48297cdfe63c3e",
+          "bytes": 98473
+        },
+        "objects_010": {
+          "path": "data/floc/objects/car-108.jpg",
+          "sha256": "085c9740a8a37b9ca962cc4abeba5201460079b1b70effc1a08f411f9a5a4203",
+          "bytes": 158169
+        },
+        "objects_011": {
+          "path": "data/floc/objects/car-109.jpg",
+          "sha256": "43444e79b5f45b09c53627b3d54358bd8e107c46f76a1636d3e1ec9841b1d8f8",
+          "bytes": 73815
+        },
+        "objects_012": {
+          "path": "data/floc/objects/car-11.jpg",
+          "sha256": "392b0e1b8b8feadeb49e2f2455c7e5677de90ab91003f5b47fa98f12ae3e72ae",
+          "bytes": 163631
+        },
+        "objects_013": {
+          "path": "data/floc/objects/instrument-1.jpg",
+          "sha256": "db83c197fed61fa8090bdca60f19e53bcfcee80db49bec3e88932b8bba030592",
+          "bytes": 147178
+        },
+        "objects_014": {
+          "path": "data/floc/objects/instrument-10.jpg",
+          "sha256": "3eaddf81fe11bddb7da2617ab6912592026872288191c81cf96654f11b2fd10c",
+          "bytes": 128908
+        },
+        "objects_015": {
+          "path": "data/floc/objects/instrument-100.jpg",
+          "sha256": "a8934f22c848824ec6df7b98f9be2aa6f008d4576771dbbca105b628121f5cdb",
+          "bytes": 108667
+        },
+        "objects_016": {
+          "path": "data/floc/objects/instrument-101.jpg",
+          "sha256": "5a923c49b70345a41d3aa7535ca291d4e1017f5352f2e51d7b489bd2fe147060",
+          "bytes": 159996
+        },
+        "objects_017": {
+          "path": "data/floc/objects/instrument-102.jpg",
+          "sha256": "fe8ff1ba7565060702aef19ca7b094b65ee1f60d8c27f5815252aec7cb069949",
+          "bytes": 147965
+        },
+        "objects_018": {
+          "path": "data/floc/objects/instrument-103.jpg",
+          "sha256": "3b6f084417130bec10eb68030eb934f15eed9718a0ec91056226b6d82d29216d",
+          "bytes": 107982
+        },
+        "objects_019": {
+          "path": "data/floc/objects/instrument-104.jpg",
+          "sha256": "2c1e9b3e87dd8385b92ea9c03bc76f34720b0225b885b4930c119d778c351e9c",
+          "bytes": 151789
+        },
+        "objects_020": {
+          "path": "data/floc/objects/instrument-105.jpg",
+          "sha256": "ce3cca7a3d244423ee5e2eb3d1f01f0bf1780f532e513d41cfd52351ab50a036",
+          "bytes": 135740
+        },
+        "objects_021": {
+          "path": "data/floc/objects/instrument-106.jpg",
+          "sha256": "00694ff6bf2017fdc69777b00d72a70b07706a0b8ab2fc0f46a6b82d0b7bda30",
+          "bytes": 85325
+        },
+        "objects_022": {
+          "path": "data/floc/objects/instrument-107.jpg",
+          "sha256": "0ae24acf4ded7472739d6bd5631a82c1283206c31357e4734836de9cf57926eb",
+          "bytes": 77086
+        },
+        "objects_023": {
+          "path": "data/floc/objects/instrument-108.jpg",
+          "sha256": "ef8b3edeff449efa7d43c8277660fe878b45a9fdb8f2459b883415d0660ca764",
+          "bytes": 147549
+        },
+        "objects_024": {
+          "path": "data/floc/objects/instrument-109.jpg",
+          "sha256": "965ab6d78bfeb38503f8f11573913fa1aca0628f2064e824a073bea6def5772a",
+          "bytes": 174543
+        },
+        "characters_000": {
+          "path": "data/floc/characters/number-1.jpg",
+          "sha256": "13d4536af32d10b3c0eb754b98b995e0cc0f52e6ac9309856aca7619b5a643df",
+          "bytes": 159849
+        },
+        "characters_001": {
+          "path": "data/floc/characters/number-10.jpg",
+          "sha256": "7332ec6d75e7958e5b5d91f54551727c21e51c99934836f819762e59aa3a3e4f",
+          "bytes": 107994
+        },
+        "characters_002": {
+          "path": "data/floc/characters/number-100.jpg",
+          "sha256": "a3750f91451bdcb2ec89ab8c86f57f340e72575fbcff7a8332b440feabd5498d",
+          "bytes": 134129
+        },
+        "characters_003": {
+          "path": "data/floc/characters/number-101.jpg",
+          "sha256": "30645ec594fb5ff07addc5b62424a5df69e62dbb06236fbe7cb78ca517ea3464",
+          "bytes": 140004
+        },
+        "characters_004": {
+          "path": "data/floc/characters/number-102.jpg",
+          "sha256": "91be3020f620d178829d754d53471e07b1e1fd91478a2f2f3d166a2a14aebf5d",
+          "bytes": 85151
+        },
+        "characters_005": {
+          "path": "data/floc/characters/number-103.jpg",
+          "sha256": "9f23fa982b9bc231c6a22c21676b40b1bcdc179b7a4a88fe803e5f5b64419c45",
+          "bytes": 124133
+        },
+        "characters_006": {
+          "path": "data/floc/characters/number-104.jpg",
+          "sha256": "883a0b42a1ca5858bd6c157e2a882414954ce2c4d925cdcca8f6db0face29617",
+          "bytes": 135242
+        },
+        "characters_007": {
+          "path": "data/floc/characters/number-105.jpg",
+          "sha256": "74dd9177962581c445a006c94d93e133c8a1a910d8473c34028e16e56ff2bf11",
+          "bytes": 141079
+        },
+        "characters_008": {
+          "path": "data/floc/characters/number-106.jpg",
+          "sha256": "8a49dc13d734e3a8610d428ec64ecd68ff1a99146e9dfa339bd33b4eb9f0872d",
+          "bytes": 124586
+        },
+        "characters_009": {
+          "path": "data/floc/characters/number-107.jpg",
+          "sha256": "39cb79846b46465cbaf6b0e3992b26f2c6aa65644f7d90fc3cbd87597ce248cd",
+          "bytes": 180743
+        },
+        "characters_010": {
+          "path": "data/floc/characters/number-108.jpg",
+          "sha256": "31d370de2ff253f1b2b9f7c0a96dcef71d7934b9b9d38dba2efe320b9c649e40",
+          "bytes": 78788
+        },
+        "characters_011": {
+          "path": "data/floc/characters/number-109.jpg",
+          "sha256": "d29fdb134b7c69dda873e64f131dadbf330659022ef54e1a296c295025111844",
+          "bytes": 93761
+        },
+        "characters_012": {
+          "path": "data/floc/characters/word-1.jpg",
+          "sha256": "c309f643cf261cfb220059c623cd2f2c7d89c9cd3cd763c5bc8975c307943407",
+          "bytes": 169538
+        },
+        "characters_013": {
+          "path": "data/floc/characters/word-10.jpg",
+          "sha256": "55c7e977892a9cbf0220c8a88a70fc720551f609142ae09dc6c99e865f82cedf",
+          "bytes": 144609
+        },
+        "characters_014": {
+          "path": "data/floc/characters/word-100.jpg",
+          "sha256": "c0152797556f8adb4f69007f5bcc2fa590fd3920f6530b9c52c5f8a4369d8933",
+          "bytes": 137222
+        },
+        "characters_015": {
+          "path": "data/floc/characters/word-101.jpg",
+          "sha256": "93fda059679e27a9d53d659bfffa36f61ba815b03e507e562adff56f8826fa27",
+          "bytes": 92875
+        },
+        "characters_016": {
+          "path": "data/floc/characters/word-102.jpg",
+          "sha256": "7604c0a2903ec3d142df80d3f5960412641f13d478b03de327b42ed042073937",
+          "bytes": 79576
+        },
+        "characters_017": {
+          "path": "data/floc/characters/word-103.jpg",
+          "sha256": "2778b622771976fddb973a55fb777f203af378800ecc5065c7af9dbcc23de24f",
+          "bytes": 109840
+        },
+        "characters_018": {
+          "path": "data/floc/characters/word-104.jpg",
+          "sha256": "ba8306526327626a55128f8153623e5dd7a3e25bc8e38136ebffcfc87ec3deb1",
+          "bytes": 141550
+        },
+        "characters_019": {
+          "path": "data/floc/characters/word-105.jpg",
+          "sha256": "73952bde829e1137219a7ef3446a58a89659b28943c77f8a49bb6e20d3efc8ad",
+          "bytes": 99364
+        },
+        "characters_020": {
+          "path": "data/floc/characters/word-106.jpg",
+          "sha256": "eb9383d0c2d6846b52870a56b307f50321b53e01f3134cc8a5204dc494f81e42",
+          "bytes": 144862
+        },
+        "characters_021": {
+          "path": "data/floc/characters/word-107.jpg",
+          "sha256": "e7a4f56442b00e34972fee3586bf7c0dd015495e4c98e655609cb161b2f4b860",
+          "bytes": 139542
+        },
+        "characters_022": {
+          "path": "data/floc/characters/word-108.jpg",
+          "sha256": "0692f42ca35ee6ca6755c73ec6a5564904dec9f15b731b2052b570791c5eacf9",
+          "bytes": 92043
+        },
+        "characters_023": {
+          "path": "data/floc/characters/word-109.jpg",
+          "sha256": "bcb0ba8a3ce0c5443a6ae7d152c65b8c5d3389fd61c566e707446a37b72d589b",
+          "bytes": 84632
+        },
+        "characters_024": {
+          "path": "data/floc/characters/word-11.jpg",
+          "sha256": "ccd193f1e32f3794e17bc619000068445a0a6da034ea7bee7b036d2b6bcf0c86",
+          "bytes": 121440
+        }
+      }
+    },
+    "video": {
+      "path": "data/s2_stimulus.mp4",
+      "sha256": "5564c0104e2bff552714cdc02a1e47377ccbf5ec8365333eaa1bf77301ff25ba",
+      "bytes": 2738154,
+      "n_frames": 8400,
+      "fps": 8,
+      "duration_s": 1050.0,
+      "width": 256,
+      "height": 256,
+      "stimulus_frames": 1000,
+      "grey_frames": 7400,
+      "placeholders": false
+    },
+    "atlas": null,
+    "features_to_use": null,
+    "environment": {
+      "python": "3.12.3",
+      "platform": "Linux-6.17.0-1021-azure-x86_64-with-glibc2.39",
+      "numpy": "2.5.1",
+      "torch": null,
+      "transformers": null,
+      "cv2": "4.10.0",
+      "mne": "1.12.1",
+      "nilearn": "0.13.1",
+      "pandas": "3.0.3",
+      "cuda": null,
+      "gpu": null
+    },
+    "roi_mapping_status": "Methods \u00a75.9 (arXiv 2605.04326, from the LaTeX source; the HTML renderings truncate before\nthis section) states verbatim:\n\n    \"To extract regions of interest, we used the Glasser Multimodal parcellation. FFA, EBA,\n     PPA, VWFA, A5, 45, STS, TPJ, MTG respectively correspond to the following ROI labels:\n     FFC, V4t, PH, A5, 45, STSv, PGi, TE1a.\"\n\nNINE functional names against EIGHT parcel labels. Exactly one name has no parcel.\n\nWhere the gap must be, argued from the text alone: `A5` and `45` appear on BOTH sides and\nmust correspond to themselves. A5 is left-position 5 but right-position 4, so the off-by-one\nis already present by position 5 -- the omission therefore lies among the first four, the\nvisual regions. The tail is then consistent: STS->STSv, TPJ->PGi, MTG->TE1a.\n\nConsequences, with the two premises kept SEPARATE:\n\n  * FROM THE TEXT ALONE, four readings survive -- the omission may be at any of the four\n    visual positions -- and each is an internally consistent order-preserving zip:\n        omit FFA :  EBA->FFC   PPA->V4t   VWFA->PH\n        omit EBA :  FFA->FFC   PPA->V4t   VWFA->PH\n        omit PPA :  FFA->FFC   EBA->V4t   VWFA->PH\n        omit VWFA:  FFA->FFC   EBA->V4t   PPA->PH\n    So NO visual mapping is forced by the text. An earlier version of this note claimed the\n    remaining assignments \"cannot absorb\" an omission at position 1 or 2. That is FALSE --\n    they absorb it perfectly -- and the claim is withdrawn.\n\n  * ONE ADDITIONAL PREMISE, from the meaning of the Glasser labels rather than from the\n    paper: FFC is the Fusiform Face *Complex*, so EBA->FFC is untenable; and V4t is lateral\n    occipitotemporal while PPA is medial parahippocampal, so PPA->V4t is untenable. That\n    excludes the first two readings and leaves FFA->FFC and EBA->V4t in both survivors.\n    The conclusion is well supported; it is NOT text-only, and is labelled as such.\n\n  * PH remains contested between PPA and VWFA, so neither may gate. Note the asymmetry:\n    VWFA->PH holds in three of the four textual readings and PPA->PH in only one, which\n    mildly favours PPA being the omitted name. Not acted on -- recorded.\n\nAlso: \u00a72.5 orders the regions FFA, PPA, EBA, VWFA while \u00a75.9 orders them FFA, EBA, PPA,\nVWFA. Zipping against the results text instead of the methods text silently swaps PPA and\nEBA -- which is how our Gate-0 EBA proxy came to pool V4t with PH.",
+    "packing_attenuation": "The 100 s window is a full self-attention context, so each event's prediction mixes in a window mean shared by every event in that window. That shared term CANCELS in 'category minus mean of others', so packing cannot bias the contrast or flip its sign -- but it scales the MAGNITUDE by an unmeasured factor <= 1. The paper may have fed each static image as its own clip, in which case its contrast is undiluted and ours is not directly comparable in effect size. Because `recovered` requires effect > floor, a false 'Not recovered' is therefore a live failure mode. A null under this protocol means 'not recovered under continuous packing', NOT 'TRIBE fails'. Written down before the answer is seen.",
+    "checkpoint": {
+      "repo": "facebook/tribev2",
+      "revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
+      "file": "best.ckpt",
+      "sha256": "9c79ffff6b642b7b0c71d558c935fb3fa33f2788bfb509feead94fafbba2f321",
+      "bytes": 708856138
+    }
+  },
+  "timing": {
+    "soa_s": 8.0,
+    "on_duration_s": 1.0,
+    "isi_s": 7.0,
+    "lead_in_s": 25.0,
+    "tail_out_s": 25.0,
+    "total_duration_s": 1050.0,
+    "n_events": 125
+  },
+  "parcels": [
+    {
+      "name": "FFA",
+      "labels": [
+        "FFC"
+      ],
+      "hemi": "right",
+      "provenance": "record",
+      "stop_eligible": true,
+      "source": "Methods \u00a75.9, position 1 -> FFC. SECURE (see PARCEL_LIST_MISALIGNMENT). Right hemisphere: FFA is right-lateralised and Gate 0 used FFCr.",
+      "mapping_verified": true
+    },
+    {
+      "name": "EBA",
+      "labels": [
+        "V4t"
+      ],
+      "hemi": "both",
+      "provenance": "record",
+      "stop_eligible": true,
+      "source": "Methods \u00a75.9, position 2 -> V4t. SECURE. NOTE this is V4t ALONE: the Gate-0 proxy also pooled PH, which \u00a75.9 assigns to a different functional label, so the paper's category boundary fell INSIDE our old ROI.",
+      "mapping_verified": true
+    },
+    {
+      "name": "PPA",
+      "labels": [
+        "PH"
+      ],
+      "hemi": "both",
+      "provenance": "record",
+      "stop_eligible": false,
+      "source": "AMBIGUOUS. \u00a75.9 lists NINE functional names against EIGHT parcels, so exactly one visual region has no parcel. PH is claimed by PPA (if VWFA is the omission) or by VWFA (if PPA is the omission). Unresolvable from the paper.",
+      "mapping_verified": false
+    },
+    {
+      "name": "VWFA",
+      "labels": [
+        "PH"
+      ],
+      "hemi": "left",
+      "provenance": "record",
+      "stop_eligible": false,
+      "source": "AMBIGUOUS -- the same PH as PPA, for the same reason. Both readings are reported; neither may fire the stop rule.",
+      "mapping_verified": false
+    },
+    {
+      "name": "PPA_literature",
+      "labels": [
+        "PHA1",
+        "PHA2",
+        "PHA3",
+        "VMV1",
+        "VMV2",
+        "VMV3"
+      ],
+      "hemi": "both",
+      "provenance": "secondary",
+      "stop_eligible": false,
+      "source": "The standard literature PPA definition, NOT the paper's. Gate 0 v3b reached d=+2.529, p=0.0002 with it, so it is kept for continuity -- but \u00a75.9 names a single parcel, so this union cannot be the replication-of-record.",
+      "mapping_verified": false
+    },
+    {
+      "name": "EBA_gate0_union",
+      "labels": [
+        "V4t",
+        "PH"
+      ],
+      "hemi": "both",
+      "provenance": "secondary",
+      "stop_eligible": false,
+      "source": "Gate-0 union (D021). Retained for continuity with the July run ONLY. It straddles the paper's own category boundary, so a null here means nothing about replication.",
+      "mapping_verified": false
+    },
+    {
+      "name": "V1_control",
+      "labels": [
+        "V1"
+      ],
+      "hemi": "both",
+      "provenance": "secondary",
+      "stop_eligible": false,
+      "source": "Non-specific control: should NOT show category selectivity. A positive here indicates a pipeline artefact, not a finding.",
+      "mapping_verified": false
+    }
+  ],
+  "stop_eligible": [
+    "FFA",
+    "EBA"
+  ],
+  "events": [
+    {
+      "event_id": 0,
+      "stimulus_id": "objects_013",
+      "category": "objects",
+      "order_index": 0,
+      "onset_s": 25.0,
+      "duration_s": 1.0,
+      "offset_s": 26.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 1,
+      "stimulus_id": "objects_008",
+      "category": "objects",
+      "order_index": 1,
+      "onset_s": 33.0,
+      "duration_s": 1.0,
+      "offset_s": 34.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 2,
+      "stimulus_id": "places_017",
+      "category": "places",
+      "order_index": 2,
+      "onset_s": 41.0,
+      "duration_s": 1.0,
+      "offset_s": 42.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 3,
+      "stimulus_id": "characters_010",
+      "category": "characters",
+      "order_index": 3,
+      "onset_s": 49.0,
+      "duration_s": 1.0,
+      "offset_s": 50.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 4,
+      "stimulus_id": "places_011",
+      "category": "places",
+      "order_index": 4,
+      "onset_s": 57.0,
+      "duration_s": 1.0,
+      "offset_s": 58.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 5,
+      "stimulus_id": "objects_011",
+      "category": "objects",
+      "order_index": 5,
+      "onset_s": 65.0,
+      "duration_s": 1.0,
+      "offset_s": 66.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 6,
+      "stimulus_id": "bodies_020",
+      "category": "bodies",
+      "order_index": 6,
+      "onset_s": 73.0,
+      "duration_s": 1.0,
+      "offset_s": 74.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 7,
+      "stimulus_id": "places_005",
+      "category": "places",
+      "order_index": 7,
+      "onset_s": 81.0,
+      "duration_s": 1.0,
+      "offset_s": 82.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 8,
+      "stimulus_id": "characters_006",
+      "category": "characters",
+      "order_index": 8,
+      "onset_s": 89.0,
+      "duration_s": 1.0,
+      "offset_s": 90.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 9,
+      "stimulus_id": "characters_016",
+      "category": "characters",
+      "order_index": 9,
+      "onset_s": 97.0,
+      "duration_s": 1.0,
+      "offset_s": 98.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 10,
+      "stimulus_id": "characters_012",
+      "category": "characters",
+      "order_index": 10,
+      "onset_s": 105.0,
+      "duration_s": 1.0,
+      "offset_s": 106.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 11,
+      "stimulus_id": "objects_019",
+      "category": "objects",
+      "order_index": 11,
+      "onset_s": 113.0,
+      "duration_s": 1.0,
+      "offset_s": 114.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 12,
+      "stimulus_id": "objects_012",
+      "category": "objects",
+      "order_index": 12,
+      "onset_s": 121.0,
+      "duration_s": 1.0,
+      "offset_s": 122.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 13,
+      "stimulus_id": "bodies_022",
+      "category": "bodies",
+      "order_index": 13,
+      "onset_s": 129.0,
+      "duration_s": 1.0,
+      "offset_s": 130.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 14,
+      "stimulus_id": "characters_002",
+      "category": "characters",
+      "order_index": 14,
+      "onset_s": 137.0,
+      "duration_s": 1.0,
+      "offset_s": 138.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 15,
+      "stimulus_id": "bodies_011",
+      "category": "bodies",
+      "order_index": 15,
+      "onset_s": 145.0,
+      "duration_s": 1.0,
+      "offset_s": 146.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 16,
+      "stimulus_id": "places_022",
+      "category": "places",
+      "order_index": 16,
+      "onset_s": 153.0,
+      "duration_s": 1.0,
+      "offset_s": 154.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 17,
+      "stimulus_id": "objects_009",
+      "category": "objects",
+      "order_index": 17,
+      "onset_s": 161.0,
+      "duration_s": 1.0,
+      "offset_s": 162.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 18,
+      "stimulus_id": "objects_004",
+      "category": "objects",
+      "order_index": 18,
+      "onset_s": 169.0,
+      "duration_s": 1.0,
+      "offset_s": 170.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 19,
+      "stimulus_id": "bodies_005",
+      "category": "bodies",
+      "order_index": 19,
+      "onset_s": 177.0,
+      "duration_s": 1.0,
+      "offset_s": 178.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 20,
+      "stimulus_id": "characters_020",
+      "category": "characters",
+      "order_index": 20,
+      "onset_s": 185.0,
+      "duration_s": 1.0,
+      "offset_s": 186.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 21,
+      "stimulus_id": "faces_018",
+      "category": "faces",
+      "order_index": 21,
+      "onset_s": 193.0,
+      "duration_s": 1.0,
+      "offset_s": 194.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 22,
+      "stimulus_id": "objects_000",
+      "category": "objects",
+      "order_index": 22,
+      "onset_s": 201.0,
+      "duration_s": 1.0,
+      "offset_s": 202.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 23,
+      "stimulus_id": "places_001",
+      "category": "places",
+      "order_index": 23,
+      "onset_s": 209.0,
+      "duration_s": 1.0,
+      "offset_s": 210.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 24,
+      "stimulus_id": "objects_014",
+      "category": "objects",
+      "order_index": 24,
+      "onset_s": 217.0,
+      "duration_s": 1.0,
+      "offset_s": 218.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 25,
+      "stimulus_id": "characters_005",
+      "category": "characters",
+      "order_index": 25,
+      "onset_s": 225.0,
+      "duration_s": 1.0,
+      "offset_s": 226.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 26,
+      "stimulus_id": "characters_003",
+      "category": "characters",
+      "order_index": 26,
+      "onset_s": 233.0,
+      "duration_s": 1.0,
+      "offset_s": 234.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 27,
+      "stimulus_id": "objects_002",
+      "category": "objects",
+      "order_index": 27,
+      "onset_s": 241.0,
+      "duration_s": 1.0,
+      "offset_s": 242.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 28,
+      "stimulus_id": "objects_018",
+      "category": "objects",
+      "order_index": 28,
+      "onset_s": 249.0,
+      "duration_s": 1.0,
+      "offset_s": 250.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 29,
+      "stimulus_id": "places_012",
+      "category": "places",
+      "order_index": 29,
+      "onset_s": 257.0,
+      "duration_s": 1.0,
+      "offset_s": 258.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 30,
+      "stimulus_id": "objects_021",
+      "category": "objects",
+      "order_index": 30,
+      "onset_s": 265.0,
+      "duration_s": 1.0,
+      "offset_s": 266.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 31,
+      "stimulus_id": "characters_019",
+      "category": "characters",
+      "order_index": 31,
+      "onset_s": 273.0,
+      "duration_s": 1.0,
+      "offset_s": 274.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 32,
+      "stimulus_id": "characters_014",
+      "category": "characters",
+      "order_index": 32,
+      "onset_s": 281.0,
+      "duration_s": 1.0,
+      "offset_s": 282.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 33,
+      "stimulus_id": "faces_014",
+      "category": "faces",
+      "order_index": 33,
+      "onset_s": 289.0,
+      "duration_s": 1.0,
+      "offset_s": 290.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 34,
+      "stimulus_id": "objects_022",
+      "category": "objects",
+      "order_index": 34,
+      "onset_s": 297.0,
+      "duration_s": 1.0,
+      "offset_s": 298.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 35,
+      "stimulus_id": "bodies_004",
+      "category": "bodies",
+      "order_index": 35,
+      "onset_s": 305.0,
+      "duration_s": 1.0,
+      "offset_s": 306.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 36,
+      "stimulus_id": "places_023",
+      "category": "places",
+      "order_index": 36,
+      "onset_s": 313.0,
+      "duration_s": 1.0,
+      "offset_s": 314.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 37,
+      "stimulus_id": "places_000",
+      "category": "places",
+      "order_index": 37,
+      "onset_s": 321.0,
+      "duration_s": 1.0,
+      "offset_s": 322.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 38,
+      "stimulus_id": "characters_008",
+      "category": "characters",
+      "order_index": 38,
+      "onset_s": 329.0,
+      "duration_s": 1.0,
+      "offset_s": 330.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 39,
+      "stimulus_id": "characters_022",
+      "category": "characters",
+      "order_index": 39,
+      "onset_s": 337.0,
+      "duration_s": 1.0,
+      "offset_s": 338.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 40,
+      "stimulus_id": "characters_015",
+      "category": "characters",
+      "order_index": 40,
+      "onset_s": 345.0,
+      "duration_s": 1.0,
+      "offset_s": 346.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 41,
+      "stimulus_id": "characters_013",
+      "category": "characters",
+      "order_index": 41,
+      "onset_s": 353.0,
+      "duration_s": 1.0,
+      "offset_s": 354.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 42,
+      "stimulus_id": "bodies_019",
+      "category": "bodies",
+      "order_index": 42,
+      "onset_s": 361.0,
+      "duration_s": 1.0,
+      "offset_s": 362.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 43,
+      "stimulus_id": "objects_006",
+      "category": "objects",
+      "order_index": 43,
+      "onset_s": 369.0,
+      "duration_s": 1.0,
+      "offset_s": 370.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 44,
+      "stimulus_id": "faces_016",
+      "category": "faces",
+      "order_index": 44,
+      "onset_s": 377.0,
+      "duration_s": 1.0,
+      "offset_s": 378.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 45,
+      "stimulus_id": "bodies_006",
+      "category": "bodies",
+      "order_index": 45,
+      "onset_s": 385.0,
+      "duration_s": 1.0,
+      "offset_s": 386.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 46,
+      "stimulus_id": "characters_021",
+      "category": "characters",
+      "order_index": 46,
+      "onset_s": 393.0,
+      "duration_s": 1.0,
+      "offset_s": 394.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 47,
+      "stimulus_id": "places_013",
+      "category": "places",
+      "order_index": 47,
+      "onset_s": 401.0,
+      "duration_s": 1.0,
+      "offset_s": 402.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 48,
+      "stimulus_id": "characters_018",
+      "category": "characters",
+      "order_index": 48,
+      "onset_s": 409.0,
+      "duration_s": 1.0,
+      "offset_s": 410.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 49,
+      "stimulus_id": "places_015",
+      "category": "places",
+      "order_index": 49,
+      "onset_s": 417.0,
+      "duration_s": 1.0,
+      "offset_s": 418.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 50,
+      "stimulus_id": "characters_009",
+      "category": "characters",
+      "order_index": 50,
+      "onset_s": 425.0,
+      "duration_s": 1.0,
+      "offset_s": 426.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 51,
+      "stimulus_id": "objects_023",
+      "category": "objects",
+      "order_index": 51,
+      "onset_s": 433.0,
+      "duration_s": 1.0,
+      "offset_s": 434.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 52,
+      "stimulus_id": "places_024",
+      "category": "places",
+      "order_index": 52,
+      "onset_s": 441.0,
+      "duration_s": 1.0,
+      "offset_s": 442.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 53,
+      "stimulus_id": "characters_000",
+      "category": "characters",
+      "order_index": 53,
+      "onset_s": 449.0,
+      "duration_s": 1.0,
+      "offset_s": 450.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 54,
+      "stimulus_id": "faces_007",
+      "category": "faces",
+      "order_index": 54,
+      "onset_s": 457.0,
+      "duration_s": 1.0,
+      "offset_s": 458.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 55,
+      "stimulus_id": "bodies_003",
+      "category": "bodies",
+      "order_index": 55,
+      "onset_s": 465.0,
+      "duration_s": 1.0,
+      "offset_s": 466.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 56,
+      "stimulus_id": "bodies_008",
+      "category": "bodies",
+      "order_index": 56,
+      "onset_s": 473.0,
+      "duration_s": 1.0,
+      "offset_s": 474.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 57,
+      "stimulus_id": "objects_017",
+      "category": "objects",
+      "order_index": 57,
+      "onset_s": 481.0,
+      "duration_s": 1.0,
+      "offset_s": 482.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 58,
+      "stimulus_id": "bodies_012",
+      "category": "bodies",
+      "order_index": 58,
+      "onset_s": 489.0,
+      "duration_s": 1.0,
+      "offset_s": 490.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 59,
+      "stimulus_id": "characters_007",
+      "category": "characters",
+      "order_index": 59,
+      "onset_s": 497.0,
+      "duration_s": 1.0,
+      "offset_s": 498.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 60,
+      "stimulus_id": "bodies_014",
+      "category": "bodies",
+      "order_index": 60,
+      "onset_s": 505.0,
+      "duration_s": 1.0,
+      "offset_s": 506.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 61,
+      "stimulus_id": "faces_022",
+      "category": "faces",
+      "order_index": 61,
+      "onset_s": 513.0,
+      "duration_s": 1.0,
+      "offset_s": 514.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 62,
+      "stimulus_id": "places_021",
+      "category": "places",
+      "order_index": 62,
+      "onset_s": 521.0,
+      "duration_s": 1.0,
+      "offset_s": 522.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 63,
+      "stimulus_id": "characters_017",
+      "category": "characters",
+      "order_index": 63,
+      "onset_s": 529.0,
+      "duration_s": 1.0,
+      "offset_s": 530.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 64,
+      "stimulus_id": "faces_001",
+      "category": "faces",
+      "order_index": 64,
+      "onset_s": 537.0,
+      "duration_s": 1.0,
+      "offset_s": 538.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 65,
+      "stimulus_id": "places_007",
+      "category": "places",
+      "order_index": 65,
+      "onset_s": 545.0,
+      "duration_s": 1.0,
+      "offset_s": 546.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 66,
+      "stimulus_id": "places_010",
+      "category": "places",
+      "order_index": 66,
+      "onset_s": 553.0,
+      "duration_s": 1.0,
+      "offset_s": 554.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 67,
+      "stimulus_id": "objects_016",
+      "category": "objects",
+      "order_index": 67,
+      "onset_s": 561.0,
+      "duration_s": 1.0,
+      "offset_s": 562.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 68,
+      "stimulus_id": "bodies_023",
+      "category": "bodies",
+      "order_index": 68,
+      "onset_s": 569.0,
+      "duration_s": 1.0,
+      "offset_s": 570.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 69,
+      "stimulus_id": "faces_003",
+      "category": "faces",
+      "order_index": 69,
+      "onset_s": 577.0,
+      "duration_s": 1.0,
+      "offset_s": 578.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 70,
+      "stimulus_id": "places_002",
+      "category": "places",
+      "order_index": 70,
+      "onset_s": 585.0,
+      "duration_s": 1.0,
+      "offset_s": 586.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 71,
+      "stimulus_id": "bodies_007",
+      "category": "bodies",
+      "order_index": 71,
+      "onset_s": 593.0,
+      "duration_s": 1.0,
+      "offset_s": 594.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 72,
+      "stimulus_id": "faces_021",
+      "category": "faces",
+      "order_index": 72,
+      "onset_s": 601.0,
+      "duration_s": 1.0,
+      "offset_s": 602.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 73,
+      "stimulus_id": "bodies_018",
+      "category": "bodies",
+      "order_index": 73,
+      "onset_s": 609.0,
+      "duration_s": 1.0,
+      "offset_s": 610.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 74,
+      "stimulus_id": "faces_017",
+      "category": "faces",
+      "order_index": 74,
+      "onset_s": 617.0,
+      "duration_s": 1.0,
+      "offset_s": 618.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 75,
+      "stimulus_id": "bodies_017",
+      "category": "bodies",
+      "order_index": 75,
+      "onset_s": 625.0,
+      "duration_s": 1.0,
+      "offset_s": 626.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 76,
+      "stimulus_id": "objects_003",
+      "category": "objects",
+      "order_index": 76,
+      "onset_s": 633.0,
+      "duration_s": 1.0,
+      "offset_s": 634.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 77,
+      "stimulus_id": "places_019",
+      "category": "places",
+      "order_index": 77,
+      "onset_s": 641.0,
+      "duration_s": 1.0,
+      "offset_s": 642.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 78,
+      "stimulus_id": "faces_006",
+      "category": "faces",
+      "order_index": 78,
+      "onset_s": 649.0,
+      "duration_s": 1.0,
+      "offset_s": 650.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 79,
+      "stimulus_id": "bodies_016",
+      "category": "bodies",
+      "order_index": 79,
+      "onset_s": 657.0,
+      "duration_s": 1.0,
+      "offset_s": 658.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 80,
+      "stimulus_id": "bodies_009",
+      "category": "bodies",
+      "order_index": 80,
+      "onset_s": 665.0,
+      "duration_s": 1.0,
+      "offset_s": 666.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 81,
+      "stimulus_id": "faces_024",
+      "category": "faces",
+      "order_index": 81,
+      "onset_s": 673.0,
+      "duration_s": 1.0,
+      "offset_s": 674.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 82,
+      "stimulus_id": "faces_005",
+      "category": "faces",
+      "order_index": 82,
+      "onset_s": 681.0,
+      "duration_s": 1.0,
+      "offset_s": 682.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 83,
+      "stimulus_id": "faces_011",
+      "category": "faces",
+      "order_index": 83,
+      "onset_s": 689.0,
+      "duration_s": 1.0,
+      "offset_s": 690.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 84,
+      "stimulus_id": "objects_024",
+      "category": "objects",
+      "order_index": 84,
+      "onset_s": 697.0,
+      "duration_s": 1.0,
+      "offset_s": 698.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 85,
+      "stimulus_id": "faces_010",
+      "category": "faces",
+      "order_index": 85,
+      "onset_s": 705.0,
+      "duration_s": 1.0,
+      "offset_s": 706.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 86,
+      "stimulus_id": "faces_008",
+      "category": "faces",
+      "order_index": 86,
+      "onset_s": 713.0,
+      "duration_s": 1.0,
+      "offset_s": 714.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 87,
+      "stimulus_id": "faces_013",
+      "category": "faces",
+      "order_index": 87,
+      "onset_s": 721.0,
+      "duration_s": 1.0,
+      "offset_s": 722.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 88,
+      "stimulus_id": "faces_012",
+      "category": "faces",
+      "order_index": 88,
+      "onset_s": 729.0,
+      "duration_s": 1.0,
+      "offset_s": 730.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 89,
+      "stimulus_id": "characters_011",
+      "category": "characters",
+      "order_index": 89,
+      "onset_s": 737.0,
+      "duration_s": 1.0,
+      "offset_s": 738.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 90,
+      "stimulus_id": "faces_023",
+      "category": "faces",
+      "order_index": 90,
+      "onset_s": 745.0,
+      "duration_s": 1.0,
+      "offset_s": 746.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 91,
+      "stimulus_id": "places_014",
+      "category": "places",
+      "order_index": 91,
+      "onset_s": 753.0,
+      "duration_s": 1.0,
+      "offset_s": 754.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 92,
+      "stimulus_id": "places_003",
+      "category": "places",
+      "order_index": 92,
+      "onset_s": 761.0,
+      "duration_s": 1.0,
+      "offset_s": 762.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 93,
+      "stimulus_id": "objects_020",
+      "category": "objects",
+      "order_index": 93,
+      "onset_s": 769.0,
+      "duration_s": 1.0,
+      "offset_s": 770.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 94,
+      "stimulus_id": "places_018",
+      "category": "places",
+      "order_index": 94,
+      "onset_s": 777.0,
+      "duration_s": 1.0,
+      "offset_s": 778.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 95,
+      "stimulus_id": "bodies_015",
+      "category": "bodies",
+      "order_index": 95,
+      "onset_s": 785.0,
+      "duration_s": 1.0,
+      "offset_s": 786.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 96,
+      "stimulus_id": "faces_002",
+      "category": "faces",
+      "order_index": 96,
+      "onset_s": 793.0,
+      "duration_s": 1.0,
+      "offset_s": 794.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 97,
+      "stimulus_id": "bodies_001",
+      "category": "bodies",
+      "order_index": 97,
+      "onset_s": 801.0,
+      "duration_s": 1.0,
+      "offset_s": 802.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 98,
+      "stimulus_id": "characters_004",
+      "category": "characters",
+      "order_index": 98,
+      "onset_s": 809.0,
+      "duration_s": 1.0,
+      "offset_s": 810.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 99,
+      "stimulus_id": "places_004",
+      "category": "places",
+      "order_index": 99,
+      "onset_s": 817.0,
+      "duration_s": 1.0,
+      "offset_s": 818.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 100,
+      "stimulus_id": "characters_023",
+      "category": "characters",
+      "order_index": 100,
+      "onset_s": 825.0,
+      "duration_s": 1.0,
+      "offset_s": 826.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 101,
+      "stimulus_id": "objects_005",
+      "category": "objects",
+      "order_index": 101,
+      "onset_s": 833.0,
+      "duration_s": 1.0,
+      "offset_s": 834.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 102,
+      "stimulus_id": "places_009",
+      "category": "places",
+      "order_index": 102,
+      "onset_s": 841.0,
+      "duration_s": 1.0,
+      "offset_s": 842.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 103,
+      "stimulus_id": "objects_001",
+      "category": "objects",
+      "order_index": 103,
+      "onset_s": 849.0,
+      "duration_s": 1.0,
+      "offset_s": 850.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 104,
+      "stimulus_id": "characters_024",
+      "category": "characters",
+      "order_index": 104,
+      "onset_s": 857.0,
+      "duration_s": 1.0,
+      "offset_s": 858.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 105,
+      "stimulus_id": "bodies_000",
+      "category": "bodies",
+      "order_index": 105,
+      "onset_s": 865.0,
+      "duration_s": 1.0,
+      "offset_s": 866.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 106,
+      "stimulus_id": "faces_015",
+      "category": "faces",
+      "order_index": 106,
+      "onset_s": 873.0,
+      "duration_s": 1.0,
+      "offset_s": 874.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 107,
+      "stimulus_id": "bodies_021",
+      "category": "bodies",
+      "order_index": 107,
+      "onset_s": 881.0,
+      "duration_s": 1.0,
+      "offset_s": 882.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 108,
+      "stimulus_id": "bodies_024",
+      "category": "bodies",
+      "order_index": 108,
+      "onset_s": 889.0,
+      "duration_s": 1.0,
+      "offset_s": 890.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 109,
+      "stimulus_id": "characters_001",
+      "category": "characters",
+      "order_index": 109,
+      "onset_s": 897.0,
+      "duration_s": 1.0,
+      "offset_s": 898.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 110,
+      "stimulus_id": "bodies_010",
+      "category": "bodies",
+      "order_index": 110,
+      "onset_s": 905.0,
+      "duration_s": 1.0,
+      "offset_s": 906.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 111,
+      "stimulus_id": "objects_015",
+      "category": "objects",
+      "order_index": 111,
+      "onset_s": 913.0,
+      "duration_s": 1.0,
+      "offset_s": 914.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 112,
+      "stimulus_id": "objects_007",
+      "category": "objects",
+      "order_index": 112,
+      "onset_s": 921.0,
+      "duration_s": 1.0,
+      "offset_s": 922.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 113,
+      "stimulus_id": "faces_004",
+      "category": "faces",
+      "order_index": 113,
+      "onset_s": 929.0,
+      "duration_s": 1.0,
+      "offset_s": 930.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 114,
+      "stimulus_id": "faces_000",
+      "category": "faces",
+      "order_index": 114,
+      "onset_s": 937.0,
+      "duration_s": 1.0,
+      "offset_s": 938.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 115,
+      "stimulus_id": "places_016",
+      "category": "places",
+      "order_index": 115,
+      "onset_s": 945.0,
+      "duration_s": 1.0,
+      "offset_s": 946.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 116,
+      "stimulus_id": "places_020",
+      "category": "places",
+      "order_index": 116,
+      "onset_s": 953.0,
+      "duration_s": 1.0,
+      "offset_s": 954.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 117,
+      "stimulus_id": "faces_009",
+      "category": "faces",
+      "order_index": 117,
+      "onset_s": 961.0,
+      "duration_s": 1.0,
+      "offset_s": 962.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 118,
+      "stimulus_id": "faces_019",
+      "category": "faces",
+      "order_index": 118,
+      "onset_s": 969.0,
+      "duration_s": 1.0,
+      "offset_s": 970.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 119,
+      "stimulus_id": "places_008",
+      "category": "places",
+      "order_index": 119,
+      "onset_s": 977.0,
+      "duration_s": 1.0,
+      "offset_s": 978.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 120,
+      "stimulus_id": "bodies_002",
+      "category": "bodies",
+      "order_index": 120,
+      "onset_s": 985.0,
+      "duration_s": 1.0,
+      "offset_s": 986.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 121,
+      "stimulus_id": "objects_010",
+      "category": "objects",
+      "order_index": 121,
+      "onset_s": 993.0,
+      "duration_s": 1.0,
+      "offset_s": 994.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 122,
+      "stimulus_id": "bodies_013",
+      "category": "bodies",
+      "order_index": 122,
+      "onset_s": 1001.0,
+      "duration_s": 1.0,
+      "offset_s": 1002.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 123,
+      "stimulus_id": "faces_020",
+      "category": "faces",
+      "order_index": 123,
+      "onset_s": 1009.0,
+      "duration_s": 1.0,
+      "offset_s": 1010.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    },
+    {
+      "event_id": 124,
+      "stimulus_id": "places_006",
+      "category": "places",
+      "order_index": 124,
+      "onset_s": 1017.0,
+      "duration_s": 1.0,
+      "offset_s": 1018.0,
+      "isi_s": 7.0,
+      "soa_s": 8.0
+    }
+  ],
+  "grey_intervals_s": [
+    [
+      0.0,
+      25.0
+    ],
+    [
+      26.0,
+      33.0
+    ],
+    [
+      34.0,
+      41.0
+    ],
+    [
+      42.0,
+      49.0
+    ],
+    [
+      50.0,
+      57.0
+    ],
+    [
+      58.0,
+      65.0
+    ],
+    [
+      66.0,
+      73.0
+    ],
+    [
+      74.0,
+      81.0
+    ],
+    [
+      82.0,
+      89.0
+    ],
+    [
+      90.0,
+      97.0
+    ],
+    [
+      98.0,
+      105.0
+    ],
+    [
+      106.0,
+      113.0
+    ],
+    [
+      114.0,
+      121.0
+    ],
+    [
+      122.0,
+      129.0
+    ],
+    [
+      130.0,
+      137.0
+    ],
+    [
+      138.0,
+      145.0
+    ],
+    [
+      146.0,
+      153.0
+    ],
+    [
+      154.0,
+      161.0
+    ],
+    [
+      162.0,
+      169.0
+    ],
+    [
+      170.0,
+      177.0
+    ],
+    [
+      178.0,
+      185.0
+    ],
+    [
+      186.0,
+      193.0
+    ],
+    [
+      194.0,
+      201.0
+    ],
+    [
+      202.0,
+      209.0
+    ],
+    [
+      210.0,
+      217.0
+    ],
+    [
+      218.0,
+      225.0
+    ],
+    [
+      226.0,
+      233.0
+    ],
+    [
+      234.0,
+      241.0
+    ],
+    [
+      242.0,
+      249.0
+    ],
+    [
+      250.0,
+      257.0
+    ],
+    [
+      258.0,
+      265.0
+    ],
+    [
+      266.0,
+      273.0
+    ],
+    [
+      274.0,
+      281.0
+    ],
+    [
+      282.0,
+      289.0
+    ],
+    [
+      290.0,
+      297.0
+    ],
+    [
+      298.0,
+      305.0
+    ],
+    [
+      306.0,
+      313.0
+    ],
+    [
+      314.0,
+      321.0
+    ],
+    [
+      322.0,
+      329.0
+    ],
+    [
+      330.0,
+      337.0
+    ],
+    [
+      338.0,
+      345.0
+    ],
+    [
+      346.0,
+      353.0
+    ],
+    [
+      354.0,
+      361.0
+    ],
+    [
+      362.0,
+      369.0
+    ],
+    [
+      370.0,
+      377.0
+    ],
+    [
+      378.0,
+      385.0
+    ],
+    [
+      386.0,
+      393.0
+    ],
+    [
+      394.0,
+      401.0
+    ],
+    [
+      402.0,
+      409.0
+    ],
+    [
+      410.0,
+      417.0
+    ],
+    [
+      418.0,
+      425.0
+    ],
+    [
+      426.0,
+      433.0
+    ],
+    [
+      434.0,
+      441.0
+    ],
+    [
+      442.0,
+      449.0
+    ],
+    [
+      450.0,
+      457.0
+    ],
+    [
+      458.0,
+      465.0
+    ],
+    [
+      466.0,
+      473.0
+    ],
+    [
+      474.0,
+      481.0
+    ],
+    [
+      482.0,
+      489.0
+    ],
+    [
+      490.0,
+      497.0
+    ],
+    [
+      498.0,
+      505.0
+    ],
+    [
+      506.0,
+      513.0
+    ],
+    [
+      514.0,
+      521.0
+    ],
+    [
+      522.0,
+      529.0
+    ],
+    [
+      530.0,
+      537.0
+    ],
+    [
+      538.0,
+      545.0
+    ],
+    [
+      546.0,
+      553.0
+    ],
+    [
+      554.0,
+      561.0
+    ],
+    [
+      562.0,
+      569.0
+    ],
+    [
+      570.0,
+      577.0
+    ],
+    [
+      578.0,
+      585.0
+    ],
+    [
+      586.0,
+      593.0
+    ],
+    [
+      594.0,
+      601.0
+    ],
+    [
+      602.0,
+      609.0
+    ],
+    [
+      610.0,
+      617.0
+    ],
+    [
+      618.0,
+      625.0
+    ],
+    [
+      626.0,
+      633.0
+    ],
+    [
+      634.0,
+      641.0
+    ],
+    [
+      642.0,
+      649.0
+    ],
+    [
+      650.0,
+      657.0
+    ],
+    [
+      658.0,
+      665.0
+    ],
+    [
+      666.0,
+      673.0
+    ],
+    [
+      674.0,
+      681.0
+    ],
+    [
+      682.0,
+      689.0
+    ],
+    [
+      690.0,
+      697.0
+    ],
+    [
+      698.0,
+      705.0
+    ],
+    [
+      706.0,
+      713.0
+    ],
+    [
+      714.0,
+      721.0
+    ],
+    [
+      722.0,
+      729.0
+    ],
+    [
+      730.0,
+      737.0
+    ],
+    [
+      738.0,
+      745.0
+    ],
+    [
+      746.0,
+      753.0
+    ],
+    [
+      754.0,
+      761.0
+    ],
+    [
+      762.0,
+      769.0
+    ],
+    [
+      770.0,
+      777.0
+    ],
+    [
+      778.0,
+      785.0
+    ],
+    [
+      786.0,
+      793.0
+    ],
+    [
+      794.0,
+      801.0
+    ],
+    [
+      802.0,
+      809.0
+    ],
+    [
+      810.0,
+      817.0
+    ],
+    [
+      818.0,
+      825.0
+    ],
+    [
+      826.0,
+      833.0
+    ],
+    [
+      834.0,
+      841.0
+    ],
+    [
+      842.0,
+      849.0
+    ],
+    [
+      850.0,
+      857.0
+    ],
+    [
+      858.0,
+      865.0
+    ],
+    [
+      866.0,
+      873.0
+    ],
+    [
+      874.0,
+      881.0
+    ],
+    [
+      882.0,
+      889.0
+    ],
+    [
+      890.0,
+      897.0
+    ],
+    [
+      898.0,
+      905.0
+    ],
+    [
+      906.0,
+      913.0
+    ],
+    [
+      914.0,
+      921.0
+    ],
+    [
+      922.0,
+      929.0
+    ],
+    [
+      930.0,
+      937.0
+    ],
+    [
+      938.0,
+      945.0
+    ],
+    [
+      946.0,
+      953.0
+    ],
+    [
+      954.0,
+      961.0
+    ],
+    [
+      962.0,
+      969.0
+    ],
+    [
+      970.0,
+      977.0
+    ],
+    [
+      978.0,
+      985.0
+    ],
+    [
+      986.0,
+      993.0
+    ],
+    [
+      994.0,
+      1001.0
+    ],
+    [
+      1002.0,
+      1009.0
+    ],
+    [
+      1010.0,
+      1017.0
+    ],
+    [
+      1018.0,
+      1050.0
+    ]
+  ],
+  "window_packing": [
+    {
+      "event_id": 0,
+      "category": "objects",
+      "onset_s": 25.0,
+      "window_index": 0,
+      "phase_in_window_s": 25.0,
+      "post_onset_context_s": 75.0
+    },
+    {
+      "event_id": 1,
+      "category": "objects",
+      "onset_s": 33.0,
+      "window_index": 0,
+      "phase_in_window_s": 33.0,
+      "post_onset_context_s": 67.0
+    },
+    {
+      "event_id": 2,
+      "category": "places",
+      "onset_s": 41.0,
+      "window_index": 0,
+      "phase_in_window_s": 41.0,
+      "post_onset_context_s": 59.0
+    },
+    {
+      "event_id": 3,
+      "category": "characters",
+      "onset_s": 49.0,
+      "window_index": 0,
+      "phase_in_window_s": 49.0,
+      "post_onset_context_s": 51.0
+    },
+    {
+      "event_id": 4,
+      "category": "places",
+      "onset_s": 57.0,
+      "window_index": 0,
+      "phase_in_window_s": 57.0,
+      "post_onset_context_s": 43.0
+    },
+    {
+      "event_id": 5,
+      "category": "objects",
+      "onset_s": 65.0,
+      "window_index": 0,
+      "phase_in_window_s": 65.0,
+      "post_onset_context_s": 35.0
+    },
+    {
+      "event_id": 6,
+      "category": "bodies",
+      "onset_s": 73.0,
+      "window_index": 0,
+      "phase_in_window_s": 73.0,
+      "post_onset_context_s": 27.0
+    },
+    {
+      "event_id": 7,
+      "category": "places",
+      "onset_s": 81.0,
+      "window_index": 0,
+      "phase_in_window_s": 81.0,
+      "post_onset_context_s": 19.0
+    },
+    {
+      "event_id": 8,
+      "category": "characters",
+      "onset_s": 89.0,
+      "window_index": 0,
+      "phase_in_window_s": 89.0,
+      "post_onset_context_s": 11.0
+    },
+    {
+      "event_id": 9,
+      "category": "characters",
+      "onset_s": 97.0,
+      "window_index": 0,
+      "phase_in_window_s": 97.0,
+      "post_onset_context_s": 3.0
+    },
+    {
+      "event_id": 10,
+      "category": "characters",
+      "onset_s": 105.0,
+      "window_index": 1,
+      "phase_in_window_s": 5.0,
+      "post_onset_context_s": 95.0
+    },
+    {
+      "event_id": 11,
+      "category": "objects",
+      "onset_s": 113.0,
+      "window_index": 1,
+      "phase_in_window_s": 13.0,
+      "post_onset_context_s": 87.0
+    },
+    {
+      "event_id": 12,
+      "category": "objects",
+      "onset_s": 121.0,
+      "window_index": 1,
+      "phase_in_window_s": 21.0,
+      "post_onset_context_s": 79.0
+    },
+    {
+      "event_id": 13,
+      "category": "bodies",
+      "onset_s": 129.0,
+      "window_index": 1,
+      "phase_in_window_s": 29.0,
+      "post_onset_context_s": 71.0
+    },
+    {
+      "event_id": 14,
+      "category": "characters",
+      "onset_s": 137.0,
+      "window_index": 1,
+      "phase_in_window_s": 37.0,
+      "post_onset_context_s": 63.0
+    },
+    {
+      "event_id": 15,
+      "category": "bodies",
+      "onset_s": 145.0,
+      "window_index": 1,
+      "phase_in_window_s": 45.0,
+      "post_onset_context_s": 55.0
+    },
+    {
+      "event_id": 16,
+      "category": "places",
+      "onset_s": 153.0,
+      "window_index": 1,
+      "phase_in_window_s": 53.0,
+      "post_onset_context_s": 47.0
+    },
+    {
+      "event_id": 17,
+      "category": "objects",
+      "onset_s": 161.0,
+      "window_index": 1,
+      "phase_in_window_s": 61.0,
+      "post_onset_context_s": 39.0
+    },
+    {
+      "event_id": 18,
+      "category": "objects",
+      "onset_s": 169.0,
+      "window_index": 1,
+      "phase_in_window_s": 69.0,
+      "post_onset_context_s": 31.0
+    },
+    {
+      "event_id": 19,
+      "category": "bodies",
+      "onset_s": 177.0,
+      "window_index": 1,
+      "phase_in_window_s": 77.0,
+      "post_onset_context_s": 23.0
+    },
+    {
+      "event_id": 20,
+      "category": "characters",
+      "onset_s": 185.0,
+      "window_index": 1,
+      "phase_in_window_s": 85.0,
+      "post_onset_context_s": 15.0
+    },
+    {
+      "event_id": 21,
+      "category": "faces",
+      "onset_s": 193.0,
+      "window_index": 1,
+      "phase_in_window_s": 93.0,
+      "post_onset_context_s": 7.0
+    },
+    {
+      "event_id": 22,
+      "category": "objects",
+      "onset_s": 201.0,
+      "window_index": 2,
+      "phase_in_window_s": 1.0,
+      "post_onset_context_s": 99.0
+    },
+    {
+      "event_id": 23,
+      "category": "places",
+      "onset_s": 209.0,
+      "window_index": 2,
+      "phase_in_window_s": 9.0,
+      "post_onset_context_s": 91.0
+    },
+    {
+      "event_id": 24,
+      "category": "objects",
+      "onset_s": 217.0,
+      "window_index": 2,
+      "phase_in_window_s": 17.0,
+      "post_onset_context_s": 83.0
+    },
+    {
+      "event_id": 25,
+      "category": "characters",
+      "onset_s": 225.0,
+      "window_index": 2,
+      "phase_in_window_s": 25.0,
+      "post_onset_context_s": 75.0
+    },
+    {
+      "event_id": 26,
+      "category": "characters",
+      "onset_s": 233.0,
+      "window_index": 2,
+      "phase_in_window_s": 33.0,
+      "post_onset_context_s": 67.0
+    },
+    {
+      "event_id": 27,
+      "category": "objects",
+      "onset_s": 241.0,
+      "window_index": 2,
+      "phase_in_window_s": 41.0,
+      "post_onset_context_s": 59.0
+    },
+    {
+      "event_id": 28,
+      "category": "objects",
+      "onset_s": 249.0,
+      "window_index": 2,
+      "phase_in_window_s": 49.0,
+      "post_onset_context_s": 51.0
+    },
+    {
+      "event_id": 29,
+      "category": "places",
+      "onset_s": 257.0,
+      "window_index": 2,
+      "phase_in_window_s": 57.0,
+      "post_onset_context_s": 43.0
+    },
+    {
+      "event_id": 30,
+      "category": "objects",
+      "onset_s": 265.0,
+      "window_index": 2,
+      "phase_in_window_s": 65.0,
+      "post_onset_context_s": 35.0
+    },
+    {
+      "event_id": 31,
+      "category": "characters",
+      "onset_s": 273.0,
+      "window_index": 2,
+      "phase_in_window_s": 73.0,
+      "post_onset_context_s": 27.0
+    },
+    {
+      "event_id": 32,
+      "category": "characters",
+      "onset_s": 281.0,
+      "window_index": 2,
+      "phase_in_window_s": 81.0,
+      "post_onset_context_s": 19.0
+    },
+    {
+      "event_id": 33,
+      "category": "faces",
+      "onset_s": 289.0,
+      "window_index": 2,
+      "phase_in_window_s": 89.0,
+      "post_onset_context_s": 11.0
+    },
+    {
+      "event_id": 34,
+      "category": "objects",
+      "onset_s": 297.0,
+      "window_index": 2,
+      "phase_in_window_s": 97.0,
+      "post_onset_context_s": 3.0
+    },
+    {
+      "event_id": 35,
+      "category": "bodies",
+      "onset_s": 305.0,
+      "window_index": 3,
+      "phase_in_window_s": 5.0,
+      "post_onset_context_s": 95.0
+    },
+    {
+      "event_id": 36,
+      "category": "places",
+      "onset_s": 313.0,
+      "window_index": 3,
+      "phase_in_window_s": 13.0,
+      "post_onset_context_s": 87.0
+    },
+    {
+      "event_id": 37,
+      "category": "places",
+      "onset_s": 321.0,
+      "window_index": 3,
+      "phase_in_window_s": 21.0,
+      "post_onset_context_s": 79.0
+    },
+    {
+      "event_id": 38,
+      "category": "characters",
+      "onset_s": 329.0,
+      "window_index": 3,
+      "phase_in_window_s": 29.0,
+      "post_onset_context_s": 71.0
+    },
+    {
+      "event_id": 39,
+      "category": "characters",
+      "onset_s": 337.0,
+      "window_index": 3,
+      "phase_in_window_s": 37.0,
+      "post_onset_context_s": 63.0
+    },
+    {
+      "event_id": 40,
+      "category": "characters",
+      "onset_s": 345.0,
+      "window_index": 3,
+      "phase_in_window_s": 45.0,
+      "post_onset_context_s": 55.0
+    },
+    {
+      "event_id": 41,
+      "category": "characters",
+      "onset_s": 353.0,
+      "window_index": 3,
+      "phase_in_window_s": 53.0,
+      "post_onset_context_s": 47.0
+    },
+    {
+      "event_id": 42,
+      "category": "bodies",
+      "onset_s": 361.0,
+      "window_index": 3,
+      "phase_in_window_s": 61.0,
+      "post_onset_context_s": 39.0
+    },
+    {
+      "event_id": 43,
+      "category": "objects",
+      "onset_s": 369.0,
+      "window_index": 3,
+      "phase_in_window_s": 69.0,
+      "post_onset_context_s": 31.0
+    },
+    {
+      "event_id": 44,
+      "category": "faces",
+      "onset_s": 377.0,
+      "window_index": 3,
+      "phase_in_window_s": 77.0,
+      "post_onset_context_s": 23.0
+    },
+    {
+      "event_id": 45,
+      "category": "bodies",
+      "onset_s": 385.0,
+      "window_index": 3,
+      "phase_in_window_s": 85.0,
+      "post_onset_context_s": 15.0
+    },
+    {
+      "event_id": 46,
+      "category": "characters",
+      "onset_s": 393.0,
+      "window_index": 3,
+      "phase_in_window_s": 93.0,
+      "post_onset_context_s": 7.0
+    },
+    {
+      "event_id": 47,
+      "category": "places",
+      "onset_s": 401.0,
+      "window_index": 4,
+      "phase_in_window_s": 1.0,
+      "post_onset_context_s": 99.0
+    },
+    {
+      "event_id": 48,
+      "category": "characters",
+      "onset_s": 409.0,
+      "window_index": 4,
+      "phase_in_window_s": 9.0,
+      "post_onset_context_s": 91.0
+    },
+    {
+      "event_id": 49,
+      "category": "places",
+      "onset_s": 417.0,
+      "window_index": 4,
+      "phase_in_window_s": 17.0,
+      "post_onset_context_s": 83.0
+    },
+    {
+      "event_id": 50,
+      "category": "characters",
+      "onset_s": 425.0,
+      "window_index": 4,
+      "phase_in_window_s": 25.0,
+      "post_onset_context_s": 75.0
+    },
+    {
+      "event_id": 51,
+      "category": "objects",
+      "onset_s": 433.0,
+      "window_index": 4,
+      "phase_in_window_s": 33.0,
+      "post_onset_context_s": 67.0
+    },
+    {
+      "event_id": 52,
+      "category": "places",
+      "onset_s": 441.0,
+      "window_index": 4,
+      "phase_in_window_s": 41.0,
+      "post_onset_context_s": 59.0
+    },
+    {
+      "event_id": 53,
+      "category": "characters",
+      "onset_s": 449.0,
+      "window_index": 4,
+      "phase_in_window_s": 49.0,
+      "post_onset_context_s": 51.0
+    },
+    {
+      "event_id": 54,
+      "category": "faces",
+      "onset_s": 457.0,
+      "window_index": 4,
+      "phase_in_window_s": 57.0,
+      "post_onset_context_s": 43.0
+    },
+    {
+      "event_id": 55,
+      "category": "bodies",
+      "onset_s": 465.0,
+      "window_index": 4,
+      "phase_in_window_s": 65.0,
+      "post_onset_context_s": 35.0
+    },
+    {
+      "event_id": 56,
+      "category": "bodies",
+      "onset_s": 473.0,
+      "window_index": 4,
+      "phase_in_window_s": 73.0,
+      "post_onset_context_s": 27.0
+    },
+    {
+      "event_id": 57,
+      "category": "objects",
+      "onset_s": 481.0,
+      "window_index": 4,
+      "phase_in_window_s": 81.0,
+      "post_onset_context_s": 19.0
+    },
+    {
+      "event_id": 58,
+      "category": "bodies",
+      "onset_s": 489.0,
+      "window_index": 4,
+      "phase_in_window_s": 89.0,
+      "post_onset_context_s": 11.0
+    },
+    {
+      "event_id": 59,
+      "category": "characters",
+      "onset_s": 497.0,
+      "window_index": 4,
+      "phase_in_window_s": 97.0,
+      "post_onset_context_s": 3.0
+    },
+    {
+      "event_id": 60,
+      "category": "bodies",
+      "onset_s": 505.0,
+      "window_index": 5,
+      "phase_in_window_s": 5.0,
+      "post_onset_context_s": 95.0
+    },
+    {
+      "event_id": 61,
+      "category": "faces",
+      "onset_s": 513.0,
+      "window_index": 5,
+      "phase_in_window_s": 13.0,
+      "post_onset_context_s": 87.0
+    },
+    {
+      "event_id": 62,
+      "category": "places",
+      "onset_s": 521.0,
+      "window_index": 5,
+      "phase_in_window_s": 21.0,
+      "post_onset_context_s": 79.0
+    },
+    {
+      "event_id": 63,
+      "category": "characters",
+      "onset_s": 529.0,
+      "window_index": 5,
+      "phase_in_window_s": 29.0,
+      "post_onset_context_s": 71.0
+    },
+    {
+      "event_id": 64,
+      "category": "faces",
+      "onset_s": 537.0,
+      "window_index": 5,
+      "phase_in_window_s": 37.0,
+      "post_onset_context_s": 63.0
+    },
+    {
+      "event_id": 65,
+      "category": "places",
+      "onset_s": 545.0,
+      "window_index": 5,
+      "phase_in_window_s": 45.0,
+      "post_onset_context_s": 55.0
+    },
+    {
+      "event_id": 66,
+      "category": "places",
+      "onset_s": 553.0,
+      "window_index": 5,
+      "phase_in_window_s": 53.0,
+      "post_onset_context_s": 47.0
+    },
+    {
+      "event_id": 67,
+      "category": "objects",
+      "onset_s": 561.0,
+      "window_index": 5,
+      "phase_in_window_s": 61.0,
+      "post_onset_context_s": 39.0
+    },
+    {
+      "event_id": 68,
+      "category": "bodies",
+      "onset_s": 569.0,
+      "window_index": 5,
+      "phase_in_window_s": 69.0,
+      "post_onset_context_s": 31.0
+    },
+    {
+      "event_id": 69,
+      "category": "faces",
+      "onset_s": 577.0,
+      "window_index": 5,
+      "phase_in_window_s": 77.0,
+      "post_onset_context_s": 23.0
+    },
+    {
+      "event_id": 70,
+      "category": "places",
+      "onset_s": 585.0,
+      "window_index": 5,
+      "phase_in_window_s": 85.0,
+      "post_onset_context_s": 15.0
+    },
+    {
+      "event_id": 71,
+      "category": "bodies",
+      "onset_s": 593.0,
+      "window_index": 5,
+      "phase_in_window_s": 93.0,
+      "post_onset_context_s": 7.0
+    },
+    {
+      "event_id": 72,
+      "category": "faces",
+      "onset_s": 601.0,
+      "window_index": 6,
+      "phase_in_window_s": 1.0,
+      "post_onset_context_s": 99.0
+    },
+    {
+      "event_id": 73,
+      "category": "bodies",
+      "onset_s": 609.0,
+      "window_index": 6,
+      "phase_in_window_s": 9.0,
+      "post_onset_context_s": 91.0
+    },
+    {
+      "event_id": 74,
+      "category": "faces",
+      "onset_s": 617.0,
+      "window_index": 6,
+      "phase_in_window_s": 17.0,
+      "post_onset_context_s": 83.0
+    },
+    {
+      "event_id": 75,
+      "category": "bodies",
+      "onset_s": 625.0,
+      "window_index": 6,
+      "phase_in_window_s": 25.0,
+      "post_onset_context_s": 75.0
+    },
+    {
+      "event_id": 76,
+      "category": "objects",
+      "onset_s": 633.0,
+      "window_index": 6,
+      "phase_in_window_s": 33.0,
+      "post_onset_context_s": 67.0
+    },
+    {
+      "event_id": 77,
+      "category": "places",
+      "onset_s": 641.0,
+      "window_index": 6,
+      "phase_in_window_s": 41.0,
+      "post_onset_context_s": 59.0
+    },
+    {
+      "event_id": 78,
+      "category": "faces",
+      "onset_s": 649.0,
+      "window_index": 6,
+      "phase_in_window_s": 49.0,
+      "post_onset_context_s": 51.0
+    },
+    {
+      "event_id": 79,
+      "category": "bodies",
+      "onset_s": 657.0,
+      "window_index": 6,
+      "phase_in_window_s": 57.0,
+      "post_onset_context_s": 43.0
+    },
+    {
+      "event_id": 80,
+      "category": "bodies",
+      "onset_s": 665.0,
+      "window_index": 6,
+      "phase_in_window_s": 65.0,
+      "post_onset_context_s": 35.0
+    },
+    {
+      "event_id": 81,
+      "category": "faces",
+      "onset_s": 673.0,
+      "window_index": 6,
+      "phase_in_window_s": 73.0,
+      "post_onset_context_s": 27.0
+    },
+    {
+      "event_id": 82,
+      "category": "faces",
+      "onset_s": 681.0,
+      "window_index": 6,
+      "phase_in_window_s": 81.0,
+      "post_onset_context_s": 19.0
+    },
+    {
+      "event_id": 83,
+      "category": "faces",
+      "onset_s": 689.0,
+      "window_index": 6,
+      "phase_in_window_s": 89.0,
+      "post_onset_context_s": 11.0
+    },
+    {
+      "event_id": 84,
+      "category": "objects",
+      "onset_s": 697.0,
+      "window_index": 6,
+      "phase_in_window_s": 97.0,
+      "post_onset_context_s": 3.0
+    },
+    {
+      "event_id": 85,
+      "category": "faces",
+      "onset_s": 705.0,
+      "window_index": 7,
+      "phase_in_window_s": 5.0,
+      "post_onset_context_s": 95.0
+    },
+    {
+      "event_id": 86,
+      "category": "faces",
+      "onset_s": 713.0,
+      "window_index": 7,
+      "phase_in_window_s": 13.0,
+      "post_onset_context_s": 87.0
+    },
+    {
+      "event_id": 87,
+      "category": "faces",
+      "onset_s": 721.0,
+      "window_index": 7,
+      "phase_in_window_s": 21.0,
+      "post_onset_context_s": 79.0
+    },
+    {
+      "event_id": 88,
+      "category": "faces",
+      "onset_s": 729.0,
+      "window_index": 7,
+      "phase_in_window_s": 29.0,
+      "post_onset_context_s": 71.0
+    },
+    {
+      "event_id": 89,
+      "category": "characters",
+      "onset_s": 737.0,
+      "window_index": 7,
+      "phase_in_window_s": 37.0,
+      "post_onset_context_s": 63.0
+    },
+    {
+      "event_id": 90,
+      "category": "faces",
+      "onset_s": 745.0,
+      "window_index": 7,
+      "phase_in_window_s": 45.0,
+      "post_onset_context_s": 55.0
+    },
+    {
+      "event_id": 91,
+      "category": "places",
+      "onset_s": 753.0,
+      "window_index": 7,
+      "phase_in_window_s": 53.0,
+      "post_onset_context_s": 47.0
+    },
+    {
+      "event_id": 92,
+      "category": "places",
+      "onset_s": 761.0,
+      "window_index": 7,
+      "phase_in_window_s": 61.0,
+      "post_onset_context_s": 39.0
+    },
+    {
+      "event_id": 93,
+      "category": "objects",
+      "onset_s": 769.0,
+      "window_index": 7,
+      "phase_in_window_s": 69.0,
+      "post_onset_context_s": 31.0
+    },
+    {
+      "event_id": 94,
+      "category": "places",
+      "onset_s": 777.0,
+      "window_index": 7,
+      "phase_in_window_s": 77.0,
+      "post_onset_context_s": 23.0
+    },
+    {
+      "event_id": 95,
+      "category": "bodies",
+      "onset_s": 785.0,
+      "window_index": 7,
+      "phase_in_window_s": 85.0,
+      "post_onset_context_s": 15.0
+    },
+    {
+      "event_id": 96,
+      "category": "faces",
+      "onset_s": 793.0,
+      "window_index": 7,
+      "phase_in_window_s": 93.0,
+      "post_onset_context_s": 7.0
+    },
+    {
+      "event_id": 97,
+      "category": "bodies",
+      "onset_s": 801.0,
+      "window_index": 8,
+      "phase_in_window_s": 1.0,
+      "post_onset_context_s": 99.0
+    },
+    {
+      "event_id": 98,
+      "category": "characters",
+      "onset_s": 809.0,
+      "window_index": 8,
+      "phase_in_window_s": 9.0,
+      "post_onset_context_s": 91.0
+    },
+    {
+      "event_id": 99,
+      "category": "places",
+      "onset_s": 817.0,
+      "window_index": 8,
+      "phase_in_window_s": 17.0,
+      "post_onset_context_s": 83.0
+    },
+    {
+      "event_id": 100,
+      "category": "characters",
+      "onset_s": 825.0,
+      "window_index": 8,
+      "phase_in_window_s": 25.0,
+      "post_onset_context_s": 75.0
+    },
+    {
+      "event_id": 101,
+      "category": "objects",
+      "onset_s": 833.0,
+      "window_index": 8,
+      "phase_in_window_s": 33.0,
+      "post_onset_context_s": 67.0
+    },
+    {
+      "event_id": 102,
+      "category": "places",
+      "onset_s": 841.0,
+      "window_index": 8,
+      "phase_in_window_s": 41.0,
+      "post_onset_context_s": 59.0
+    },
+    {
+      "event_id": 103,
+      "category": "objects",
+      "onset_s": 849.0,
+      "window_index": 8,
+      "phase_in_window_s": 49.0,
+      "post_onset_context_s": 51.0
+    },
+    {
+      "event_id": 104,
+      "category": "characters",
+      "onset_s": 857.0,
+      "window_index": 8,
+      "phase_in_window_s": 57.0,
+      "post_onset_context_s": 43.0
+    },
+    {
+      "event_id": 105,
+      "category": "bodies",
+      "onset_s": 865.0,
+      "window_index": 8,
+      "phase_in_window_s": 65.0,
+      "post_onset_context_s": 35.0
+    },
+    {
+      "event_id": 106,
+      "category": "faces",
+      "onset_s": 873.0,
+      "window_index": 8,
+      "phase_in_window_s": 73.0,
+      "post_onset_context_s": 27.0
+    },
+    {
+      "event_id": 107,
+      "category": "bodies",
+      "onset_s": 881.0,
+      "window_index": 8,
+      "phase_in_window_s": 81.0,
+      "post_onset_context_s": 19.0
+    },
+    {
+      "event_id": 108,
+      "category": "bodies",
+      "onset_s": 889.0,
+      "window_index": 8,
+      "phase_in_window_s": 89.0,
+      "post_onset_context_s": 11.0
+    },
+    {
+      "event_id": 109,
+      "category": "characters",
+      "onset_s": 897.0,
+      "window_index": 8,
+      "phase_in_window_s": 97.0,
+      "post_onset_context_s": 3.0
+    },
+    {
+      "event_id": 110,
+      "category": "bodies",
+      "onset_s": 905.0,
+      "window_index": 9,
+      "phase_in_window_s": 5.0,
+      "post_onset_context_s": 95.0
+    },
+    {
+      "event_id": 111,
+      "category": "objects",
+      "onset_s": 913.0,
+      "window_index": 9,
+      "phase_in_window_s": 13.0,
+      "post_onset_context_s": 87.0
+    },
+    {
+      "event_id": 112,
+      "category": "objects",
+      "onset_s": 921.0,
+      "window_index": 9,
+      "phase_in_window_s": 21.0,
+      "post_onset_context_s": 79.0
+    },
+    {
+      "event_id": 113,
+      "category": "faces",
+      "onset_s": 929.0,
+      "window_index": 9,
+      "phase_in_window_s": 29.0,
+      "post_onset_context_s": 71.0
+    },
+    {
+      "event_id": 114,
+      "category": "faces",
+      "onset_s": 937.0,
+      "window_index": 9,
+      "phase_in_window_s": 37.0,
+      "post_onset_context_s": 63.0
+    },
+    {
+      "event_id": 115,
+      "category": "places",
+      "onset_s": 945.0,
+      "window_index": 9,
+      "phase_in_window_s": 45.0,
+      "post_onset_context_s": 55.0
+    },
+    {
+      "event_id": 116,
+      "category": "places",
+      "onset_s": 953.0,
+      "window_index": 9,
+      "phase_in_window_s": 53.0,
+      "post_onset_context_s": 47.0
+    },
+    {
+      "event_id": 117,
+      "category": "faces",
+      "onset_s": 961.0,
+      "window_index": 9,
+      "phase_in_window_s": 61.0,
+      "post_onset_context_s": 39.0
+    },
+    {
+      "event_id": 118,
+      "category": "faces",
+      "onset_s": 969.0,
+      "window_index": 9,
+      "phase_in_window_s": 69.0,
+      "post_onset_context_s": 31.0
+    },
+    {
+      "event_id": 119,
+      "category": "places",
+      "onset_s": 977.0,
+      "window_index": 9,
+      "phase_in_window_s": 77.0,
+      "post_onset_context_s": 23.0
+    },
+    {
+      "event_id": 120,
+      "category": "bodies",
+      "onset_s": 985.0,
+      "window_index": 9,
+      "phase_in_window_s": 85.0,
+      "post_onset_context_s": 15.0
+    },
+    {
+      "event_id": 121,
+      "category": "objects",
+      "onset_s": 993.0,
+      "window_index": 9,
+      "phase_in_window_s": 93.0,
+      "post_onset_context_s": 7.0
+    },
+    {
+      "event_id": 122,
+      "category": "bodies",
+      "onset_s": 1001.0,
+      "window_index": 10,
+      "phase_in_window_s": 1.0,
+      "post_onset_context_s": 99.0
+    },
+    {
+      "event_id": 123,
+      "category": "faces",
+      "onset_s": 1009.0,
+      "window_index": 10,
+      "phase_in_window_s": 9.0,
+      "post_onset_context_s": 91.0
+    },
+    {
+      "event_id": 124,
+      "category": "places",
+      "onset_s": 1017.0,
+      "window_index": 10,
+      "phase_in_window_s": 17.0,
+      "post_onset_context_s": 83.0
+    }
+  ],
+  "compute": {
+    "n_events": 125,
+    "runs": 1,
+    "subjects": 1,
+    "repetitions": 1,
+    "rendered_stimulus_s": 1050.0,
+    "billed_stimulus_s": 1050.0,
+    "compute_s_per_stimulus_s": 11.5,
+    "estimated_gpu_s": 12075.0,
+    "estimated_gpu_h": 3.35,
+    "n_model_windows": 11,
+    "events_per_window": 11.36,
+    "basis": "\u00a73.6 cost model, 11.5 s compute per 1 s of stimulus, measured at N=1 cold. Charged on the full rendered timeline including lead-in, ISIs and tail-out."
+  },
+  "decision_rules": {
+    "blocking_gate": "speech -> auditory cortex must be strongly positive. Both TRIBE papers report auditory/language at near-ceiling and our v3b run got p=0.1448. Controlled by: p_value(A1, speech contrast) < alpha AND effect > detection_floor(A1). If this fails the pipeline is broken and NOTHING downstream is interpretable.",
+    "recovered": "A parcel is RECOVERED iff p_one_sided < alpha AND the observed effect exceeds its OWN detection floor -- computed from that parcel's own noise and n, not a shared constant. Controlled by: (p, effect, floor) at a NAMED lag. Every parcel is scored at BOTH pre-specified lags; 'recovered' without qualification means at the PRIMARY lag, and recovery only at the alternative is a distinct status.",
+    "not_recovered_stop": "Fires iff EVERY stop-eligible parcel produced a USABLE result AND every one failed `recovered`. Controlled by the stop_eligible set ONLY -- currently FFA and EBA, the two parcels \u00a75.9 maps unambiguously. PPA, VWFA and every secondary parcel are structurally incapable of firing it (Parcel.stop_eligible=False, asserted in _validate_parcels). A parcel that did not run, or that returned a non-finite p, effect or floor, makes the evidence INCOMPLETE -- reported as such and blocking the stop rule, because ending GPU spend requires having measured the thing.",
+    "secondary_reporting": "Gate-0 unions, V1 control, the ISI-baseline read and all secondary statistics are REPORTED ALWAYS and DECIDE NOTHING. They may not be promoted to primary after the results are seen.",
+    "packing_attenuation": "The 100 s window is a full self-attention context, so each event's prediction mixes in a window mean shared by every event in that window. That shared term CANCELS in 'category minus mean of others', so packing cannot bias the contrast or flip its sign -- but it scales the MAGNITUDE by an unmeasured factor <= 1. The paper may have fed each static image as its own clip, in which case its contrast is undiluted and ours is not directly comparable in effect size. Because `recovered` requires effect > floor, a false 'Not recovered' is therefore a live failure mode. A null under this protocol means 'not recovered under continuous packing', NOT 'TRIBE fails'. Written down before the answer is seen.",
+    "estimand_note": "The primary estimand is the published contrast: category response minus the mean of the other categories, at the primary lag, in the record parcels. The C2 ISI-baseline variant answers a DIFFERENT question (response vs rest, not vs other categories) and is therefore secondary by construction, not by outcome.",
+    "lag_policy": "PRIMARY = the paper's t=5 (\u00a75.9). ALTERNATIVE = t=0, implied by FmriExtractor(offset=5). Both are fixed in advance and both are read from the SAME peri-event timecourse, so no extra GPU is needed and neither can be chosen after the fact. peak_lag_trs is computed and REPORTED as a diagnostic, never used to select the lag the test is run at -- selecting a lag on the same data inflates type-I to a measured 0.2032. Adjudication rule below.",
+    "lag_adjudication": "If PRIMARY (t=5) recovers -> the replication succeeds on the paper's own protocol; report the t=0 read as a secondary. If PRIMARY fails, ALTERNATIVE (t=0) recovers, AND the measured peak lag is ~0 -> that is evidence for the double-lag hypothesis (source-of-truth.md:51), and it must be reported as 'not replicated at the published lag; recovered at the lag implied by the model card' -- NOT as a plain replication. If BOTH fail -> 'Not recovered' for that parcel, and the stop rule applies. The measured peak lag is reported in every case, since it is the quantity that adjudicates the conflict."
+  },
+  "lag_conflict": "The single most decision-critical ambiguity in S2, resolved by measurement rather than by\nchoosing a side in advance.\n\n  Methods \u00a75.9, verbatim:\n    \"we obtain contrast maps by simply selecting the predicted response at t=5 after the\n     image is shown (which is the peak of the response as shown in Figure 4A), and\n     substracting the average responses at t=5 for the other categories.\"   [sic]\n\n  ops/source-of-truth.md:51, VERIFIED from the model source:\n    FmriExtractor(offset=5) means the model learns stimulus(t) -> BOLD(t+5), so the output is\n    ALREADY hemodynamically aligned and an event-locked read at onset+5 lands on\n    BOLD(onset+10) -- about 18% of peak (canonical HRF h(10)/h(5) = 0.183).\n\nBoth cannot hold: the paper says its predicted response PEAKS at t=5; if the output were\nalready aligned the peak would sit at t=0. Reading the wrong one costs roughly 5.5x in\namplitude and would produce a failed replication for a reason unrelated to the model.\n\nThis is NOT resolved by picking one. A single peri-event timecourse yields every lag from\none forward pass, so both reads come free from the same run. The primary follows the paper\n(we are replicating it), the alternative is pre-specified, and the MEASURED peak adjudicates.\nSee DecisionRules.lag_adjudication.\n\nConsequence for the contrast: \u00a75.9 also settles M4. The GLM belongs to the LANGUAGE\nexperiments (\"we fit a General Linear Model ... nilearn FirstLevelModel\"); the visual\ncontrast is the plain peak-minus-mean-of-other-categories subtraction above, with no GLM and\nno z-scoring. Figure 4's caption says otherwise and contradicts its own Methods; the Methods\ntext is the more specific statement and is the one implemented here."
+}

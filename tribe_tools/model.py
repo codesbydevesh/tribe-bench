@@ -26,12 +26,70 @@ def _check_tribev2():
         )
 
 
+# TRIBE v2 checkpoint, PINNED. Resolved from the HuggingFace API 2026-08-24;
+# repo lastModified 2026-03-27T09:07:48Z.
+TRIBEV2_REPO = "facebook/tribev2"
+TRIBEV2_REVISION = "f894e783020944dcd96e5568550afe2aa9743f9f"
+TRIBEV2_CKPT_SHA256 = "9c79ffff6b642b7b0c71d558c935fb3fa33f2788bfb509feead94fafbba2f321"
+TRIBEV2_CKPT_BYTES = 708_856_138
+
+
+def fetch_pinned_checkpoint(revision: str = TRIBEV2_REVISION,
+                            expected_sha256: Optional[str] = TRIBEV2_CKPT_SHA256,
+                            dest: Optional[Path] = None) -> Path:
+    """Resolve TRIBE v2 at an EXACT revision and verify the checkpoint hash.
+
+    ``TribeModel.from_pretrained`` has **no** ``revision`` parameter: it calls
+    ``hf_hub_download(repo_id, filename)`` against the floating branch, so a re-run
+    six months from now silently gets whatever Meta last pushed, with no signal
+    anywhere. It DOES accept a local directory, so the pin is done by resolving the
+    revision here and handing it a path.
+
+    Returns:
+        Local directory containing config.yaml and best.ckpt.
+
+    Raises:
+        ValueError: if the downloaded checkpoint does not match ``expected_sha256``.
+            A silently different checkpoint is exactly the failure this exists to
+            prevent, so a mismatch is fatal rather than a warning.
+    """
+    import hashlib
+    from huggingface_hub import hf_hub_download
+
+    kw = {"repo_id": TRIBEV2_REPO}
+    if revision:
+        kw["revision"] = revision
+    if dest is not None:
+        Path(dest).mkdir(parents=True, exist_ok=True)
+        kw["local_dir"] = str(dest)
+
+    cfg = Path(hf_hub_download(filename="config.yaml", **kw))
+    ckpt = Path(hf_hub_download(filename="best.ckpt", **kw))
+
+    if expected_sha256:
+        h = hashlib.sha256()
+        with open(ckpt, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        got = h.hexdigest()
+        if got != expected_sha256:
+            raise ValueError(
+                f"checkpoint hash mismatch at revision {revision}: expected "
+                f"{expected_sha256}, got {got}. Refusing to run -- the weights are not "
+                "the ones this experiment was designed against."
+            )
+    logger.info("TRIBE v2 pinned at revision %s (checkpoint verified)", revision)
+    return ckpt.parent if ckpt.parent == cfg.parent else cfg.parent
+
+
 def load_model(
     device: str = "cuda",
     cache_folder: Optional[Path] = None,
     config_update: Optional[dict] = None,
+    revision: Optional[str] = TRIBEV2_REVISION,
+    checkpoint_dir: Optional[Path] = None,
 ):
-    """Load TRIBE v2 via TribeModel.from_pretrained("facebook/tribev2").
+    """Load TRIBE v2 via TribeModel.from_pretrained, PINNED to a known revision.
 
     Args:
         device: "cuda" or "cpu". CPU works but is very slow.
@@ -48,6 +106,10 @@ def load_model(
                 (batch_size, n_vertices, n_TRs) float32, ~524 MB at 64.
             None of these keys participates in an extractor cache uid, so passing
             them does not invalidate already-cached features.
+
+        revision: HuggingFace commit SHA to pin. Defaults to TRIBEV2_REVISION.
+            Pass None to accept the floating branch -- never for a recorded run.
+        checkpoint_dir: a pre-fetched local directory; skips resolution entirely.
 
     Returns:
         TribeModel instance ready for prediction.
@@ -74,8 +136,17 @@ def load_model(
     if config_update:
         kwargs["config_update"] = dict(config_update)
 
-    logger.info("Loading TRIBE v2 model...")
-    model = TribeModel.from_pretrained("facebook/tribev2", **kwargs)
+    # Resolve the pin OURSELVES and pass a local directory: from_pretrained takes
+    # no revision, so handing it the bare repo id would use the floating branch.
+    if checkpoint_dir is None and revision:
+        checkpoint_dir = fetch_pinned_checkpoint(revision=revision)
+    source = str(checkpoint_dir) if checkpoint_dir is not None else TRIBEV2_REPO
+    if checkpoint_dir is None:
+        logger.warning("Loading TRIBE v2 from the FLOATING branch (revision=None). "
+                       "Results from this load are not reproducible.")
+
+    logger.info("Loading TRIBE v2 model from %s ...", source)
+    model = TribeModel.from_pretrained(source, **kwargs)
     logger.info("TRIBE v2 model loaded.")
     return model
 
