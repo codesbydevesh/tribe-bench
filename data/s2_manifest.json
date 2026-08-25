@@ -100,8 +100,8 @@
   },
   "provenance": {
     "model_id": "facebook/tribev2",
-    "code_commit": "7a1f71e896b7e702a7b88375326c2464444e7330",
-    "code_tree_dirty": false,
+    "code_commit": "3c5f299b8788ddaa034a96916d3b0de736bb98b2",
+    "code_tree_dirty": true,
     "model_revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
     "stimulus_set": "fLoc",
     "stimulus_set_version": "de6a26cc269a2c7075461a4c839bfd628f225c95",
@@ -740,7 +740,19 @@
         }
       }
     },
-    "video": null,
+    "video": {
+      "path": "data/s2_stimulus.mp4",
+      "sha256": "5564c0104e2bff552714cdc02a1e47377ccbf5ec8365333eaa1bf77301ff25ba",
+      "bytes": 2738154,
+      "n_frames": 8400,
+      "fps": 8,
+      "duration_s": 1050.0,
+      "width": 256,
+      "height": 256,
+      "stimulus_frames": 1000,
+      "grey_frames": 7400,
+      "placeholders": false
+    },
     "atlas": null,
     "features_to_use": null,
     "environment": {
@@ -763,9 +775,7 @@
       "revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
       "file": "best.ckpt",
       "sha256": "9c79ffff6b642b7b0c71d558c935fb3fa33f2788bfb509feead94fafbba2f321",
-      "bytes": 708856138,
-      "pinned_by": "tribe_tools.model.fetch_pinned_checkpoint (from_pretrained takes no revision)",
-      "verified": "revision resolves via the HF API; hash checked at load, mismatch is fatal. The 708 MB file was NOT downloaded on the dev box."
+      "bytes": 708856138
     }
   },
   "timing": {

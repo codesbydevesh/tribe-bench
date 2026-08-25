@@ -35,6 +35,7 @@ class RenderResult:
     height: int
     stimulus_frames: int
     grey_frames: int
+    placeholders: bool = True
 
 
 def _exemplar_frame(cfg: S2Config, ev: Event) -> np.ndarray:
@@ -79,12 +80,47 @@ def frame_plan(cfg: S2Config, events: list[Event]) -> np.ndarray:
     return plan
 
 
+def load_stimulus_image(path: str | Path, cfg: S2Config) -> np.ndarray:
+    """Load one real stimulus image at the encoder's native size.
+
+    Resized to ``cfg.frame_size`` with INTER_AREA, which is the correct filter for
+    downscaling; the default bilinear aliases fine detail, and characters/VWFA is
+    the condition that depends on legible small text.
+    """
+    import cv2
+
+    img = cv2.imread(str(path), cv2.IMREAD_COLOR)
+    if img is None:
+        raise FileNotFoundError(f"could not read stimulus image: {path}")
+    h, w = cfg.frame_size
+    if img.shape[:2] != (h, w):
+        interp = cv2.INTER_AREA if (img.shape[0] > h or img.shape[1] > w) else cv2.INTER_CUBIC
+        img = cv2.resize(img, (w, h), interpolation=interp)
+    return img
+
+
 def render(cfg: S2Config = S2, out_path: str | Path = "data/s2_stimulus.mp4",
-           *, events: list[Event] | None = None) -> RenderResult:
-    """Render the continuous silent video. Returns what was ACTUALLY written."""
+           *, events: list[Event] | None = None,
+           images: dict | None = None) -> RenderResult:
+    """Render the continuous silent video. Returns what was ACTUALLY written.
+
+    Args:
+        images: ``{stimulus_id: {"path": ...}}`` from
+            ``s2_design.resolve_stimulus_images``. REQUIRED for a real run. If
+            omitted, deterministic placeholders are drawn instead -- usable for a
+            dry run, never for a recorded one, and ``RenderResult.placeholders``
+            records which it was so the two cannot be confused.
+    """
     import cv2
 
     events = events if events is not None else build_schedule(cfg)
+    if images is not None:
+        missing = sorted({e.stimulus_id for e in events} - set(images))
+        if missing:
+            raise ValueError(
+                f"{len(missing)} scheduled stimuli have no image: {missing[:5]}. "
+                "Refusing to render a stimulus that does not match the schedule."
+            )
     plan = frame_plan(cfg, events)
     by_id = {e.event_id: e for e in events}
     out_path = Path(out_path)
@@ -104,7 +140,9 @@ def render(cfg: S2Config = S2, out_path: str | Path = "data/s2_stimulus.mp4",
                 writer.write(grey)
             else:
                 if eid not in cache:
-                    cache[eid] = _exemplar_frame(cfg, by_id[int(eid)])
+                    ev_ = by_id[int(eid)]
+                    cache[eid] = (load_stimulus_image(images[ev_.stimulus_id]["path"], cfg)
+                                  if images is not None else _exemplar_frame(cfg, ev_))
                 writer.write(cache[eid])
                 n_stim += 1
     finally:
@@ -115,6 +153,7 @@ def render(cfg: S2Config = S2, out_path: str | Path = "data/s2_stimulus.mp4",
         path=out_path, n_frames=probe["n_frames"], fps=probe["fps"],
         duration_s=probe["duration_s"], width=probe["width"], height=probe["height"],
         stimulus_frames=n_stim, grey_frames=int(len(plan) - n_stim),
+        placeholders=images is None,
     )
 
 

@@ -154,6 +154,31 @@ def main() -> int:
     check("Compute", "runs / subjects / repetitions are stated",
           all(k in est for k in ("runs", "subjects", "repetitions")))
 
+    # -------------------------------------------------- runnable artifacts
+    probe_p = Path("data/s2_stimulus_probe.json")
+    check("Runnable", "run script exists and separates CPU prep from GPU inference",
+          Path("scripts/s2_run.py").exists()
+          and "--prepare" in Path("scripts/s2_run.py").read_text()
+          and "--infer" in Path("scripts/s2_run.py").read_text())
+    check("Runnable", "stimulus video rendered from the frozen spec", probe_p.exists())
+    if probe_p.exists():
+        pv = json.loads(probe_p.read_text())
+        check("Runnable", "video matches the spec (duration/fps/size/frames)",
+              abs(pv["duration_s"] - S2.stimulus_duration_s) <= 1.0 / S2.fps
+              and pv["fps"] == S2.fps and (pv["height"], pv["width"]) == tuple(S2.frame_size)
+              and pv["n_frames"] == int(round(S2.stimulus_duration_s * S2.fps)),
+              f"{pv['n_frames']}f @ {pv['fps']}fps, {pv['duration_s']:.1f}s, "
+              f"{pv['width']}x{pv['height']}")
+        check("Runnable", "video built from REAL images, not placeholders",
+              pv.get("placeholders") is False)
+        check("Runnable", "video sha256 recorded", bool(pv.get("sha256")), pv["sha256"][:16])
+    else:
+        for n in ("video matches the spec (duration/fps/size/frames)",
+                  "video built from REAL images, not placeholders", "video sha256 recorded"):
+            check("Runnable", n, False, "no probe; run --prepare")
+    check("Runnable", "CPU end-to-end validation passed",
+          Path("data/s2_report_stub.json").exists(), "s2_run.py --infer --stub")
+
     # ------------------------------- un-retrofittable provenance (review B)
     check("Provenance", "model revision SHA is pinned", S2.model_revision is not None,
           "fill S2Config.model_revision on the GPU box; from_pretrained does NOT pass "
