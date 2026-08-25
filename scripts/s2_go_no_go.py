@@ -28,15 +28,28 @@ from neurocheck.s2_design import (  # noqa: E402
     stop_eligible_parcels,
 )
 
-ITEMS: list[tuple[str, str, bool, str]] = []
+# A failing check means one of four very different things, and conflating them is
+# how "53/57" gets misread as "the experiment is broken". Every item declares which
+# kind of failure it would represent, so the report can say so rather than leaving
+# the reader to guess.
+#
+#   design       the frozen experiment is wrong or internally inconsistent -> STOP
+#   environment  the inputs on THIS machine are missing or do not match -> fix inputs
+#   checker      a defect in this script -> fix the script, the design is untouched
+#   local-only   an artefact that exists only on the preparing machine and is
+#                intentionally absent elsewhere -> not a prerequisite here
+FailureKind = str
+ITEMS: list[tuple[str, str, bool, str, FailureKind]] = []
 
 
-def check(section: str, name: str, ok: bool, detail: str = "") -> None:
-    ITEMS.append((section, name, ok, detail))
+def check(section: str, name: str, ok: bool, detail: str = "",
+          kind: FailureKind = "design") -> None:
+    ITEMS.append((section, name, ok, detail, kind))
 
 
-def manual(section: str, name: str, ok: bool, detail: str) -> None:
-    ITEMS.append((section, name + "  [MANUAL]", ok, detail))
+def manual(section: str, name: str, ok: bool, detail: str,
+           kind: FailureKind = "environment") -> None:
+    ITEMS.append((section, name + "  [MANUAL]", ok, detail, kind))
 
 
 def main() -> int:
@@ -111,14 +124,14 @@ def main() -> int:
     stub = Path("data/s2_report_stub.json")
     check("Consistency", "CPU end-to-end validation on record",
           stub.exists() or (dry / "s2_manifest_full.json").exists(),
-          str(stub) if stub.exists() else f"{dry}/s2_manifest_full.json")
+          str(stub) if stub.exists() else f"{dry}/s2_manifest_full.json", kind="environment")
     try:
         ok = json.loads(stub.read_text()).get("stub") is True if stub.exists() else \
             all((dry / f).exists() for f in
                 ("s2_manifest_tiny.json", "s2_events_tiny.csv", "s2_report_tiny.json"))
     except Exception:
         ok = False
-    check("Consistency", "validation outputs are machine-readable", ok)
+    check("Consistency", "validation outputs are machine-readable", ok, kind="environment")
 
     # ------------------------------------------------------------------ C2
     check("C2", "ISI-baseline read is classified BEFORE results",
@@ -152,7 +165,7 @@ def main() -> int:
         sha, dirty = "", "unknown"
     check("Provenance", "code commit is capturable", bool(sha), sha[:12])
     check("Provenance", "working tree is clean at freeze time", dirty == "",
-          "uncommitted changes" if dirty else "clean")
+          "uncommitted changes" if dirty else "clean", kind="environment")
     check("Provenance", "design fingerprint is stable",
           build_manifest(S2)["design_fingerprint"] == S2.fingerprint(),
           S2.fingerprint())
@@ -171,7 +184,7 @@ def main() -> int:
           Path("scripts/s2_run.py").exists()
           and "--prepare" in Path("scripts/s2_run.py").read_text()
           and "--infer" in Path("scripts/s2_run.py").read_text())
-    check("Runnable", "stimulus video rendered from the frozen spec", probe_p.exists())
+    check("Runnable", "stimulus video rendered from the frozen spec", probe_p.exists(), kind="environment")
     if probe_p.exists():
         pv = json.loads(probe_p.read_text())
         check("Runnable", "video matches the spec (duration/fps/size/frames)",
@@ -188,7 +201,7 @@ def main() -> int:
                   "video built from REAL images, not placeholders", "video sha256 recorded"):
             check("Runnable", n, False, "no probe; run --prepare")
     check("Runnable", "CPU end-to-end validation passed",
-          Path("data/s2_report_stub.json").exists(), "s2_run.py --infer --stub")
+          Path("data/s2_report_stub.json").exists(), "s2_run.py --infer --stub", kind="environment")
 
     # ------------------------------- un-retrofittable provenance (review B)
     check("Provenance", "model revision SHA is pinned", S2.model_revision is not None,
@@ -205,7 +218,7 @@ def main() -> int:
     try:
         rec = json.loads(man_path.read_text())["provenance"]
     except Exception as exc:
-        check("Provenance", "manifest is readable", False, f"{type(exc).__name__}: {exc}")
+        check("Provenance", "manifest is readable", False, f"{type(exc).__name__}: {exc}", kind="environment")
 
     # Separate try blocks: these two were sharing one, so a missing image directory
     # also failed the checkpoint check, which had nothing to do with it.
@@ -218,7 +231,7 @@ def main() -> int:
         check("Provenance", "manifest image hashes match the files on disk",
               bool(imgs_rec) and not drift,
               f"{len(imgs_rec)} hashed at {img_root}" if not drift
-              else f"{len(drift)} drifted")
+              else f"{len(drift)} drifted", kind="environment")
     except Exception as exc:
         check("Provenance", "manifest image hashes match the files on disk", False,
               f"{type(exc).__name__}: {exc} (pass --stimulus-root)")
@@ -286,20 +299,32 @@ def main() -> int:
            else "confirmed by the operator")
 
     # ------------------------------------------------------------- report
-    width = max(len(n) for _, n, _, _ in ITEMS)
+    width = max(len(n) for _, n, _, _, _ in ITEMS)
     section = None
-    for sec_name, name, ok, detail in ITEMS:
+    for sec_name, name, ok, detail, _kind in ITEMS:
         if sec_name != section:
             print(f"\n{sec_name}")
             section = sec_name
         print(f"  [{'x' if ok else ' '}] {name:<{width}}" + (f"  {detail}" if detail else ""))
 
-    failed = [(s, n) for s, n, ok, _ in ITEMS if not ok]
+    failed = [(sec, n, k) for sec, n, ok, _, k in ITEMS if not ok]
     print(f"\n{len(ITEMS) - len(failed)}/{len(ITEMS)} checklist items satisfied")
     if failed:
-        print("\nNO-GO — outstanding:")
-        for s, n in failed:
-            print(f"  - [{s}] {n}")
+        by_kind: dict[str, list[str]] = {}
+        for sec, n, k in failed:
+            by_kind.setdefault(k, []).append(f"[{sec}] {n}")
+        label = {
+            "design": "DESIGN FAILURE — the frozen experiment is wrong. STOP.",
+            "environment": "ENVIRONMENT/INPUT FAILURE — fix the inputs here, the design is fine.",
+            "checker": "CHECKER DEFECT — this script is wrong, the design is untouched.",
+            "local-only": "LOCAL-ONLY ARTEFACT — intentionally absent here, not a prerequisite.",
+        }
+        print("\nNO-GO — outstanding, by kind:")
+        for k in ("design", "environment", "checker", "local-only"):
+            if k in by_kind:
+                print(f"\n  {label[k]}")
+                for n in by_kind[k]:
+                    print(f"    - {n}")
         return 1
     print("\nGPU GO.")
     return 0
