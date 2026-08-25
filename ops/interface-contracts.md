@@ -413,9 +413,13 @@ def peri_event_timecourse(
     """PRIMARY readout. Rows resolved by TIME, never by arithmetic on an index.
     Raises IndexError if any requested time has no row within 0.5 s."""
 
-def peak_lag_trs(timecourse: np.ndarray, pre_trs: int = 2) -> int:
-    """Measured peak lag of the group-average evoked response. Report this
-    instead of assuming a lag. Expected 0 on TRIBE's already-aligned output."""
+def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
+    """Measured peak lag of the POOLED (grand-average) evoked response.
+    Takes the time courses of ALL categories and pools them internally; requires
+    >= 2 so that selecting the peak on the target category alone is not
+    expressible (C5, 2026-08-23). Selecting the lag on the same category you then
+    test at inflates type-I error to 0.0417 against a nominal 0.025.
+    Expected 0 on TRIBE's already-aligned output."""
 
 def event_locked_response(
     preds, verts, onset_times_s, row_times_s, lag_trs: int = 0
@@ -429,6 +433,12 @@ def event_locked_response(
 
 def event_locked_contrast(target_responses, other_responses) -> float:
     """Target minus the mean of the other CATEGORY MEANS (not pooled exemplars).
+    RAISES on a 2-D target or 2-D other-category (S6, 2026-08-23):
+    peri_event_timecourse returns (n_events, n_lags) and is always in scope beside
+    event_locked_response's (n_events,); the old code averaged both axes and
+    returned a silently attenuated contrast. Also RAISES on an empty category
+    rather than dropping it, since dropping changes the baseline denominator.
+    Raises on non-finite input (M3).
     Per arXiv 2605.04326: "subtracting the average responses at t=5 for the
     other categories"."""
 ```
@@ -441,13 +451,33 @@ def roi_minus_reference(preds, verts, ref_verts) -> float
     """Raises ValueError if ROI and reference overlap — the reference must be
     pre-registered and off-target, or it is an undeclared normaliser."""
 def glm_contrast_z(preds_a, preds_b, verts) -> float
-    """Per-vertex effect/SE across observations, averaged over the ROI.
-    ⚠ OPEN: MASTER-PLAN §3.1 describes Meta's Fig 4 GLM z as effect/SE across
-    TIME per vertex. This implements across-OBSERVATIONS. Under audit."""
+    """Per-vertex WELCH two-sample contrast across observations, averaged over the ROI.
+    ✅ RESOLVED 2026-08-23 (M4/D030), formerly ⚠ OPEN. This is NOT the paper's
+    estimator and must not be attributed to it. arXiv 2605.04326 §5.9 describes the
+    VISUAL contrasts as the plain t=+5 s subtraction — the predicted response at
+    t=+5 s minus the mean of the other categories at t=+5 s — with NO GLM. The Fig 4
+    caption separately describes a GLM fit on the predicted TIME-SERIES. This
+    function implements neither: it is a two-sample contrast across OBSERVATIONS,
+    chosen by us because it is non-compositional. A recorded deviation, not a
+    replication. Use event_locked_contrast for the paper's own protocol.
+    Welch (unequal-variance) SE since 2026-08-23: pooled is not level-alpha at the
+    unequal n S2 plans (measured 1.9x anticonservative at 10v40). Welch == pooled at
+    equal n, so the 15v15 floor table is unchanged.
+    ⚠ Not on the z scale — a mean of per-vertex t statistics. Never threshold at
+    1.96; always permute.
+    Raises on non-finite input (M3)."""
 def define_froi(loc_a, loc_b, parcel_verts, top_n: int = 100) -> np.ndarray
-    """Top-N most A-selective vertices in a parcel. loc_a/loc_b MUST come from an
-    independent localizer — selecting and testing on the same data is double
-    dipping. Warn-only; the caller is responsible for the split."""
+    """Top-N most A-selective vertices in a parcel, as a STRICT subset.
+    RAISES if top_n >= parcel size (M1, 2026-08-23): returning the whole parcel is
+    not selection. The old behaviour capped k = min(top_n, size), so the default
+    top_n=100 on the 58-vertex right-FFC parcel silently returned the unfixed
+    anatomical parcel while the caller believed it had defined a functional ROI.
+    Raises on a non-finite localizer contrast (M3): argsort sorts NaN last
+    ascending and [::-1] promotes it to FIRST, ranking a dead vertex as maximally
+    selective.
+    loc_a/loc_b MUST come from an independent localizer — selecting and testing on
+    the same data is double dipping. Still warn-only on independence; the caller
+    is responsible for the split."""
 def detection_floor(
     n_per_group: int, noise_sd: float, alpha: float = 0.025, power: float = 0.80,
     n_sim: int = 200, n_perm: int = 400, seed: int = 0, tol: float = 1e-3,

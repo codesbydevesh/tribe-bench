@@ -74,9 +74,14 @@ def spatial_z(preds: np.ndarray, verts: np.ndarray) -> float:
     Returns:
         (mean over ROI - mean over cortex) / std over cortex, on the clip-mean map.
     """
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds)
+    g = _as_vertex_map(preds, "spatial_z preds")
+    verts = _as_vertex_indices(verts, "spatial_z ROI", g.shape[-1])
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set")
+    # Guard the WHOLE map, not just the ROI: unlike raw_roi_mean and glm_contrast_z,
+    # which read only their selected region, this statistic divides by the brain-wide
+    # mean and sd. A non-finite value at any vertex silently returned nan (F4).
+    g = _require_finite(g, "spatial_z map")
     sd = g.std()
     if sd == 0:
         return 0.0
@@ -88,9 +93,19 @@ def u_statistic(face_vals, scene_vals) -> float:
 
     Ranges 0 .. len(face)*len(scene). Max = perfect face>scene separation.
     """
+    # A NaN compares False against everything, so it silently scored as a loss
+    # with no tie credit -- a FINITE WRONG U, which is worse than an error.
+    # I3: materialise once, then validate and compute on THAT copy. Iterating the
+    # original arguments after the guard consumed them returned U=0.0 -- finite,
+    # wrong, and maximally anti-selective (F6).
+    # S6: the rank check belongs here too. A (n_events, n_lags) time course passed
+    # where a (n_events,) per-event vector is wanted is the confusion this module
+    # documents as its own failure class, and it produced a finite wrong statistic.
+    face_list = _as_event_vector(_materialise(face_vals), "u_statistic face_vals")
+    scene_list = _as_event_vector(_materialise(scene_vals), "u_statistic scene_vals")
     u = 0.0
-    for f in face_vals:
-        for s in scene_vals:
+    for f in face_list:
+        for s in scene_list:
             if f > s:
                 u += 1.0
             elif f == s:
@@ -117,9 +132,15 @@ def exact_perm_p(face_vals, scene_vals) -> float:
     gives p=1/70≈0.014 and U>=15 gives p=2/70≈0.029 — the numbers Gate 0's
     GO rule is pre-registered against.
     """
-    vals = list(face_vals) + list(scene_vals)
-    n_total, n_face = len(vals), len(face_vals)
-    u_obs = u_statistic(face_vals, scene_vals)
+    # I3: materialise ONCE at the boundary. This previously consumed its arguments
+    # three times -- guard, re-materialise, then len() and u_statistic() -- so a
+    # single-pass iterable silently became an empty sample (F6, same class).
+    face_arr = _as_event_vector(_materialise(face_vals), "exact_perm_p face_vals")
+    scene_arr = _as_event_vector(_materialise(scene_vals), "exact_perm_p scene_vals")
+    n_face = int(face_arr.size)
+    vals = np.concatenate([face_arr, scene_arr]).tolist()
+    n_total = len(vals)
+    u_obs = u_statistic(vals[:n_face], vals[n_face:])
     ge = total = 0
     for combo in _labelings(n_total, n_face):
         sel = set(combo)
@@ -139,8 +160,13 @@ def perm_null_deltas(face_vals, scene_vals) -> np.ndarray:
     per-ROI null tied to the same exchangeability assumption as the direction
     test, so no arbitrary shared magnitude constant is needed.
     """
-    vals = np.array(list(face_vals) + list(scene_vals), dtype=float)
-    n_total, n_face = len(vals), len(face_vals)
+    # I3: n_face came from len(face_vals) AFTER the argument had been consumed
+    # above, which raises on a generator. Measure the materialised copy.
+    face_arr = _as_event_vector(_materialise(face_vals), "perm_null_deltas face_vals")
+    scene_arr = _as_event_vector(_materialise(scene_vals), "perm_null_deltas scene_vals")
+    n_face = int(face_arr.size)
+    vals = np.concatenate([face_arr, scene_arr])
+    n_total = len(vals)
     out = []
     for combo in _labelings(n_total, n_face):
         sel = list(combo)
@@ -164,8 +190,20 @@ def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> floa
     times. Uses the (perm >= observed) + 1 over (n_perm + 1) estimator so the
     p-value is never zero and stays valid. Seeded for reproducibility.
     """
-    vals = np.array(list(face_vals) + list(other_vals), dtype=float)
-    n, N = len(face_vals), len(vals)
+    # I3: `n` came from len(face_vals), re-reading an argument already consumed
+    # above -- which raises on a generator instead of working.
+    if isinstance(n_perm, bool) or int(n_perm) != n_perm or int(n_perm) < 1:
+        raise ValueError(
+            f"n_perm must be a positive whole number, got {n_perm!r}. The estimator is "
+            "(ge + 1) / (n_perm + 1), so n_perm <= -1 returns a NEGATIVE p-value, which "
+            "iut_pass then reads as a pass."
+        )
+    n_perm = int(n_perm)
+    face_arr = _as_event_vector(_materialise(face_vals), "mc_perm_p face_vals")
+    other_arr = _as_event_vector(_materialise(other_vals), "mc_perm_p other_vals")
+    n = int(face_arr.size)
+    vals = np.concatenate([face_arr, other_arr])
+    N = len(vals)
     u_obs = _u_fast(vals[:n], vals[n:])
     rng = np.random.default_rng(seed)
     ge = 0
@@ -178,10 +216,14 @@ def mc_perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> floa
 
 def perm_p(face_vals, other_vals, n_perm: int = 10000, seed: int = 0) -> float:
     """One-sided permutation p for U: exact when small enough to enumerate, else Monte-Carlo."""
-    N, n = len(face_vals) + len(other_vals), len(face_vals)
+    # I3: materialise before measuring, so a single-pass iterable is not consumed
+    # by the size check and then handed on empty to the estimator.
+    face_list = _as_event_vector(_materialise(face_vals), "perm_p face_vals")
+    other_list = _as_event_vector(_materialise(other_vals), "perm_p other_vals")
+    N, n = int(face_list.size + other_list.size), int(face_list.size)
     if comb(N, n) <= 20000:
-        return exact_perm_p(face_vals, other_vals)
-    return mc_perm_p(face_vals, other_vals, n_perm=n_perm, seed=seed)
+        return exact_perm_p(face_list, other_list)
+    return mc_perm_p(face_list, other_list, n_perm=n_perm, seed=seed)
 
 
 def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool:
@@ -203,6 +245,165 @@ def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool:
 # ---------------------------------------------------------------------------
 
 
+def _require_finite(a, what: str) -> np.ndarray:
+    """Reject NaN and +/-inf. ONE policy, used at every entry point (M3).
+
+    Non-finite values do not merely propagate here — they can be ranked as
+    *maximally selective* (``np.argsort`` sorts NaN last ascending, and
+    ``[::-1]`` then promotes it to first), or be silently absorbed into a
+    plausible finite number. Both produce a confident wrong answer with no
+    warning, which is the failure class this module exists to prevent.
+    """
+    arr = np.asarray(a, dtype=float)
+    bad = ~np.isfinite(arr)
+    if bad.any():
+        idx = np.flatnonzero(bad.ravel())[:5].tolist()
+        raise ValueError(
+            f"{what} contains {int(bad.sum())} non-finite value(s) (NaN or +/-inf); "
+            f"first flat indices {idx}. Refusing to continue: a non-finite value here "
+            "can be ranked as maximally selective or absorbed into a finite-looking "
+            "result. Clean the input or exclude those vertices explicitly."
+        )
+    return arr
+
+
+def _as_vertex_map(preds, what: str) -> np.ndarray:
+    """Collapse ``(n_trs, n_vertices)`` or ``(n_vertices,)`` to one per-vertex map.
+
+    The accepted RANK is a precondition, checked before ``n_vertices`` is derived
+    from the shape. Without it a 3-D array was silently accepted: ``n_vertices``
+    came from ``shape[-1]`` while ``g[verts]`` indexed axis 0, so the range and
+    ambiguity checks validated against an axis the selector never touched and the
+    result was a finite, plausible, wrong number.
+    """
+    arr = np.asarray(preds, dtype=float)
+    if arr.ndim not in (1, 2):
+        raise ValueError(
+            f"{what} must be (n_trs, n_vertices) or (n_vertices,), got shape {arr.shape}. "
+            "A higher-rank array indexes the wrong axis and returns a plausible wrong number."
+        )
+    return arr.mean(axis=0) if arr.ndim == 2 else arr
+
+
+def _as_vertex_indices(v, what: str = "vertex selector", n_vertices: int | None = None) -> np.ndarray:
+    """Normalise and VALIDATE a vertex selector. The single entry point for every
+    function in this module that accepts one (C7, A0, A8, F4).
+
+    A boolean mask and an integer index array select the same vertices but do not
+    compare correctly against each other: ``np.intersect1d`` compares the boolean
+    *values* (0/1) against the integers, so a total overlap goes undetected. That
+    was the reported instance. The MECHANISM is wider, and all of it is handled
+    here rather than at the call sites (M008):
+
+    * **boolean mask** -> converted to indices.
+    * **0/1 integer or float mask** -> **REJECTED as ambiguous**, not guessed. A
+      length-N array of 0s and 1s is indistinguishable from the index list
+      ``[0, 1]``, and guessing "indices" made ``raw_roi_mean(g, mask.astype(int8))``
+      return 0.15 where the bool mask gives 11.0, AND made the overlap guard fire
+      falsely against a genuinely disjoint reference. Both were silent.
+    * **negative indices** -> **REJECTED**. ``ROI[-1]`` IS vertex ``n-1``, but
+      ``np.intersect1d([-1], [n-1])`` is empty, so negatives defeated the overlap
+      guard entirely.
+    * **duplicate indices** -> **REJECTED**. A repeated index double-weights that
+      vertex in every ROI mean, and a "subset" implies uniqueness.
+    * **out-of-range indices** -> **REJECTED** when ``n_vertices`` is known.
+    * **non-integer floats** -> rejected.
+    * **multi-dimensional selectors** -> **REJECTED**, checked on the raw input so
+      the rule binds masks and index arrays alike. A ``(30, 2)`` mask over 60
+      vertices was read in flat C order, selected every other vertex, and let the
+      overlap guard pass on an ROI compared against itself.
+    * **object/string dtypes** -> **REJECTED** with a ValueError naming the dtype,
+      rather than a TypeError raised from inside ``np.isfinite``.
+
+    Returns indices in **ascending order** in every case. Uniqueness is enforced
+    below, so sorting is lossless, and it makes the mask and index representations
+    of one vertex set genuinely interchangeable.
+
+    Args:
+        v: boolean mask or integer index array.
+        what: name used in error messages.
+        n_vertices: total vertex count, when the caller knows it. Enables the
+            range check and the ambiguity check.
+    """
+    if isinstance(v, np.ma.MaskedArray):
+        raise ValueError(
+            f"{what} is a masked array. np.asarray drops the mask, so the masked entries would "
+            "silently rejoin the selection and two encodings of one vertex set would disagree. "
+            "Pass the compressed values explicitly."
+        )
+    arr = np.asarray(v)
+    if arr.ndim == 0:
+        raise ValueError(
+            f"{what} is a scalar ({arr.tolist()!r}). A single vertex is still a SET of one: "
+            f"pass [{arr.tolist()!r}]. Accepting a bare scalar would make `verts=5` ambiguous "
+            "between 'vertex 5' and 'the first 5 vertices'."
+        )
+    if arr.ndim != 1:
+        raise ValueError(
+            f"{what} must be 1-D, got shape {arr.shape}. A multi-dimensional selector was "
+            "previously read in flat C order, which silently selected a DIFFERENT vertex set "
+            "(np.column_stack([lh_mask, rh_mask]) selected every other vertex) and let the "
+            "overlap guard pass on an ROI compared against itself. This rule is checked on the "
+            "raw input so it applies to masks and index arrays alike."
+        )
+    if not (arr.dtype == bool or np.issubdtype(arr.dtype, np.integer)
+            or np.issubdtype(arr.dtype, np.floating)):
+        raise ValueError(
+            f"{what} has dtype {arr.dtype}; expected a boolean mask or integer vertex indices. "
+            "Object and string arrays previously reached np.isfinite, which raises TypeError "
+            "rather than reporting the real problem."
+        )
+    if arr.dtype == bool:
+        if n_vertices is not None and arr.size != n_vertices:
+            raise ValueError(
+                f"{what}: boolean mask has length {arr.size} but there are "
+                f"{n_vertices} vertices"
+            )
+        return np.flatnonzero(arr)
+    if arr.size == 0:
+        return arr.astype(int, copy=False)
+    if not np.issubdtype(arr.dtype, np.integer):
+        if not np.all(np.isfinite(arr)):
+            raise ValueError(f"{what} contains non-finite values; expected indices or a mask")
+        if not np.all(np.equal(np.mod(arr, 1), 0)):
+            raise ValueError(f"{what} must be integer vertex indices or a boolean mask")
+    idx = arr.astype(int)
+    # Ambiguity: a full-length 0/1 array could be a mask OR the indices [0, 1].
+    # Refuse to guess -- guessing is what produced a silent wrong ROI.
+    if (n_vertices is not None and idx.size == n_vertices and n_vertices > 2
+            and np.all((idx == 0) | (idx == 1))):
+        raise ValueError(
+            f"{what} is ambiguous: a length-{n_vertices} array of only 0s and 1s could be a "
+            "boolean mask or the index list [0, 1]. Pass `selector.astype(bool)` for a mask, "
+            "or `np.flatnonzero(selector)` for indices. Guessing here previously returned a "
+            "silently wrong ROI."
+        )
+    if (idx < 0).any():
+        raise ValueError(
+            f"{what} contains negative indices {idx[idx < 0][:5].tolist()}. Negative indices "
+            "alias positive vertices (ROI[-1] IS vertex n-1) but compare as distinct, which "
+            "defeats the overlap guard. Pass non-negative indices."
+        )
+    if n_vertices is not None and (idx >= n_vertices).any():
+        raise ValueError(
+            f"{what} contains indices >= n_vertices={n_vertices}: "
+            f"{idx[idx >= n_vertices][:5].tolist()}"
+        )
+    if np.unique(idx).size != idx.size:
+        # np.unique returns the values that repeat. The previous expression built
+        # the repeat mask from np.sort(idx) and then applied it to the UNSORTED
+        # idx, so it named whichever value happened to sit at that position.
+        vals, counts = np.unique(idx, return_counts=True)
+        dup = [int(x) for x in vals[counts > 1]][:5]
+        raise ValueError(
+            f"{what} contains duplicate indices (e.g. {dup}). A repeated index double-weights "
+            "that vertex in every ROI mean; pass a unique set."
+        )
+    # Ordering contract: ALWAYS sorted. A bool mask yields sorted indices via
+    # np.flatnonzero while an index array preserved caller order, so the two
+    # representations of one vertex set could produce different fROIs under ties.
+    return np.sort(idx)
+
 def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
     """The ROI's predicted response, unnormalised. The simplest honest readout.
 
@@ -214,9 +415,11 @@ def raw_roi_mean(preds: np.ndarray, verts: np.ndarray) -> float:
         preds: (n_trs, n_vertices) or (n_vertices,).
         verts: 1D array of vertex indices for the ROI.
     """
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    g = _as_vertex_map(preds, "raw_roi_mean preds")
+    verts = _as_vertex_indices(verts, "raw_roi_mean ROI", g.shape[-1])
     if len(verts) == 0:
         raise ValueError("empty ROI vertex set")
+    _require_finite(g[verts], "raw_roi_mean ROI values")
     return float(g[verts].mean())
 
 
@@ -237,6 +440,16 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
         verts: ROI vertex indices.
         ref_verts: reference-region vertex indices. Must be disjoint from verts.
     """
+    # Normalise BOTH selectors to integer indices before comparing them: a
+    # boolean mask vs an int array defeats np.intersect1d entirely (C7).
+    # Collapse FIRST, through the same helper as every other entry point. Reading
+    # preds.shape directly was the one site left deriving n_vertices from a raw
+    # attribute: it skipped the rank precondition and raised a bare AttributeError
+    # on a list where the other three statistics accept one.
+    g = _as_vertex_map(preds, "roi_minus_reference preds")
+    _n = g.shape[-1]
+    verts = _as_vertex_indices(verts, "roi_minus_reference ROI", _n)
+    ref_verts = _as_vertex_indices(ref_verts, "roi_minus_reference reference", _n)
     if len(verts) == 0 or len(ref_verts) == 0:
         raise ValueError("empty ROI or reference vertex set")
     if np.intersect1d(verts, ref_verts).size:
@@ -244,7 +457,8 @@ def roi_minus_reference(preds: np.ndarray, verts: np.ndarray, ref_verts: np.ndar
             "ROI and reference overlap — the reference must be off-target and "
             "pre-registered, or this is an undeclared normaliser"
         )
-    g = preds.mean(axis=0) if preds.ndim == 2 else np.asarray(preds, dtype=float)
+    _require_finite(g[verts], "roi_minus_reference ROI values")
+    _require_finite(g[ref_verts], "roi_minus_reference reference values")
     return float(g[verts].mean() - g[ref_verts].mean())
 
 
@@ -271,7 +485,13 @@ def row_times_from_segments(segments) -> np.ndarray:
     Returns:
         (n_rows,) float array of absolute segment start times, in seconds.
     """
-    if segments is None or len(segments) == 0:
+    # I3: materialise ONCE before measuring. len() on a single-pass iterable
+    # raised TypeError, so this boundary did not honour the module's stated
+    # "any iterable, consumed exactly once" contract.
+    if segments is None:
+        raise ValueError("no segments given — pass predict()'s all_segments")
+    segments = list(segments)
+    if len(segments) == 0:
         raise ValueError("no segments given — pass predict()'s all_segments")
     try:
         times = np.array([float(s.start) for s in segments], dtype=float)
@@ -282,6 +502,8 @@ def row_times_from_segments(segments) -> np.ndarray:
             "Do not work around this by indexing rows arithmetically — that is the bug this "
             "function exists to prevent."
         ) from exc
+    # NaN also defeats `diff <= 0`, so a NaN start passed the monotonicity guard.
+    _require_finite(times, "row_times_from_segments segment start times")
     if np.any(np.diff(times) <= 0):
         raise ValueError(
             "segment start times are not strictly increasing — this list spans multiple "
@@ -293,8 +515,11 @@ def row_times_from_segments(segments) -> np.ndarray:
 
 def _resolve_rows(row_times_s: np.ndarray, want_s, tol: float = 0.5) -> np.ndarray:
     """Map absolute times to prediction rows, or raise. Never silently approximate."""
-    rt = np.asarray(row_times_s, dtype=float)
-    want = np.asarray(want_s, dtype=float)
+    # NaN defeats `err > tol` (NaN > x is False), so a NaN onset silently
+    # resolved to a row instead of raising -- the exact drift this guards (A1).
+    # I3: np.asarray(generator) yields a 0-d object array, not the values.
+    rt = _require_finite(np.array(list(row_times_s), dtype=float), "_resolve_rows row times")
+    want = _require_finite(np.asarray(want_s, dtype=float), "_resolve_rows requested times")
     idx = np.searchsorted(rt, want)
     idx = np.clip(idx, 1, len(rt) - 1)
     left, right = rt[idx - 1], rt[np.minimum(idx, len(rt) - 1)]
@@ -349,21 +574,27 @@ def peri_event_timecourse(
     p = np.asarray(preds, dtype=float)
     if p.ndim != 2:
         raise ValueError("peri_event_timecourse needs (n_rows, n_vertices)")
+    verts = _as_vertex_indices(verts, "peri_event_timecourse ROI", p.shape[1])
     if len(verts) == 0:
-        raise ValueError("empty ROI vertex set")
-    rt = np.asarray(row_times_s, dtype=float)
+        raise ValueError("empty ROI vertex set (selector selected no vertices)")
+    # I3: materialise once -- np.asarray(generator) does not iterate it.
+    rt = _require_finite(np.array(list(row_times_s), dtype=float), "peri_event_timecourse row_times_s")
     if len(rt) != p.shape[0]:
         raise ValueError(
             f"row_times_s has {len(rt)} entries but preds has {p.shape[0]} rows — "
             "these must correspond 1:1 (Meta asserts this at demo_utils.py:382)"
         )
-    onsets = np.asarray(list(onset_times_s), dtype=float)
+    onsets = _require_finite(np.asarray(list(onset_times_s), dtype=float),
+                             "peri_event_timecourse onset_times_s")
     if onsets.size == 0:
         raise ValueError("no event onsets given")
-    if pre_trs < 0 or post_trs < 0:
-        raise ValueError("pre_trs and post_trs must be >= 0")
+    # Integrality, not just sign: pre_trs=2.5 silently produced a 13-lag grid
+    # instead of 12, shifting every reported lag by one.
+    pre_trs = _as_tr_count(pre_trs, "peri_event_timecourse pre_trs")
+    post_trs = _as_tr_count(post_trs, "peri_event_timecourse post_trs")
 
     lags = np.arange(-pre_trs, post_trs + 1, dtype=float)
+    _require_finite(p[:, verts], "peri_event_timecourse ROI values")
     roi = p[:, verts].mean(axis=1)
     out = np.empty((onsets.size, lags.size), dtype=float)
     for j, lag in enumerate(lags):
@@ -371,17 +602,166 @@ def peri_event_timecourse(
     return out
 
 
-def peak_lag_trs(timecourse: np.ndarray, pre_trs: int = 2) -> int:
-    """Measured peak lag (in TRs relative to onset) of the group-average response.
+def peak_lag_trs(category_timecourses, pre_trs: int = 2) -> int:
+    """Measured peak lag (TRs relative to onset) of the POOLED evoked response.
 
     Report this instead of assuming a lag. On a movie-trained encoder whose outputs
     are already hemodynamically aligned, the expected answer is **0**, not 5 — but
     measuring costs nothing and settles it (D-3: no verdict without evidence).
+
+    .. important:: **The peak MUST be selected from the pooled (grand-average)
+       response across ALL categories, never from the target category alone.**
+       Selecting the lag on the same category you then test at is selection on the
+       test statistic — double dipping along the time axis. Measured type-I error
+       with a true effect of zero at a nominal one-sided alpha of 0.025:
+       fixed lag 0.0050 · peak from the **pooled** course 0.0100 ·
+       peak from the **target's** course **0.0417** (C5).
+
+       This function therefore takes the per-category time courses and pools them
+       itself, requires **two or more**, and rejects the degenerate configurations
+       that satisfy that rule while still pooling to the target alone (identical
+       courses, flat courses, empty courses).
+
+       .. warning:: **These guards are heuristics, not a proof.** The API cannot
+          verify provenance: ``[tc[:k], tc[k:]]`` splits ONE category into two and
+          is undetectable, and because ``pooled`` is the unweighted mean of category
+          means, a target that responds more strongly than the others -- the normal
+          case in a selectivity study -- makes the pooled peak simply BE the
+          target's peak. **The only sound protection is to re-select the lag inside
+          every permutation, or to use a fixed lag.** Treat this function's output
+          as a diagnostic to REPORT, not as a lag to test at.
+          The degeneracy check is value-based, so it can also false-positive on
+          synthetic data where genuinely different categories happen to produce
+          proportional means. It is expressed on the **pooled course** -- the only
+          quantity this function derives -- so one rule covers the same course
+          passed twice, with duplicated rows, rescaled or offset; a second category
+          whose *mean course* is flat even though its event matrix is not; and
+          three or more categories that cancel to leave one. Inputs with fewer than
+          three lags are refused outright rather than given a weaker guard.
+
+          **What it deliberately does NOT reject:** a category whose mean course is
+          weak but non-zero. "Flat" means zero to floating point at the data's own
+          scale, not statistically small -- a condition that genuinely shows no
+          time-locked response is a real result, not a malformed input. Such a
+          category still dilutes the pool, which is the dominance limit above.
+
+    Args:
+        category_timecourses: sequence of >= 2 arrays, each (n_events_k, n_lags),
+            one per stimulus category — as returned by
+            :func:`peri_event_timecourse`. All must share n_lags.
+        pre_trs: how many TRs before onset the courses begin (column ``pre_trs``
+            is the onset itself).
+
+    Returns:
+        The lag, in TRs relative to onset, at which the pooled grand average peaks.
     """
-    tc = np.asarray(timecourse, dtype=float)
-    if tc.ndim != 2 or tc.shape[1] == 0:
-        raise ValueError("timecourse must be (n_events, n_lags)")
-    return int(np.argmax(tc.mean(axis=0))) - int(pre_trs)
+    # A bare 2-D array iterates as its ROWS, which would otherwise produce a
+    # confusing per-row shape error instead of naming the real mistake.
+    if isinstance(category_timecourses, np.ndarray) and category_timecourses.ndim == 2:
+        raise ValueError(
+            "peak_lag_trs received a SINGLE (n_events, n_lags) array. It requires the "
+            "time courses of every category, as a sequence, so it can pool them. "
+            "Selecting the peak lag from one category and then testing at that lag "
+            "inflates type-I error to ~0.042 against a nominal 0.025 (C5). "
+            "Pass e.g. [faces_tc, objects_tc, places_tc]."
+        )
+    courses = [np.asarray(c, dtype=float) for c in category_timecourses]
+    if len(courses) < 2:
+        raise ValueError(
+            f"peak_lag_trs needs the time courses of >= 2 categories so it can pool "
+            f"them, got {len(courses)}. Selecting the peak from one category and then "
+            "testing at that lag inflates type-I error to ~0.042 against a nominal "
+            "0.025 (C5). Pass every category's course."
+        )
+    for i, c in enumerate(courses):
+        if c.ndim != 2 or c.shape[1] == 0:
+            raise ValueError(f"category_timecourses[{i}] must be (n_events, n_lags), got {c.shape}")
+        if c.shape[1] != courses[0].shape[1]:
+            raise ValueError(
+                f"category_timecourses[{i}] has {c.shape[1]} lags but [0] has "
+                f"{courses[0].shape[1]}; all categories must share the lag grid"
+            )
+        _require_finite(c, f"peak_lag_trs category_timecourses[{i}]")
+    # ">= 2 categories" alone is a FORMALITY: [tc, tc], [tc, tc.copy()],
+    # [tc[:k], tc[k:]] and [tc, zeros_like(tc)] all satisfy it while restoring
+    # target-only selection (measured type-I 0.2032 vs a nominal 0.025). Reject
+    # the degenerate configurations explicitly (F6/M008).
+    for i, c in enumerate(courses):
+        if c.shape[0] == 0:
+            raise ValueError(
+                f"category_timecourses[{i}] has 0 events. Its mean is all-NaN and argmax then "
+                "returns 0, fabricating a lag. Drop the empty category deliberately."
+            )
+    n_lags = courses[0].shape[1]
+    # pre_trs is the offset that turns a grid index into a lag, so an out-of-range
+    # or non-integer value fabricates a lag just as surely as a degenerate course
+    # does -- pre_trs=100 on a 12-lag grid returned -94. Every TR-count scalar in
+    # this module now goes through _as_tr_count: this comment previously claimed
+    # "peri_event_timecourse validates its own pre_trs", which was true of the
+    # sign and false of integrality -- the guard written for one function and
+    # assumed of its neighbour.
+    # The returned lag is argmax(pooled) - pre_trs, so an out-of-range or
+    # fractional offset reports a lag that does not exist on this grid.
+    pre_trs = _as_tr_count(pre_trs, "peak_lag_trs pre_trs", hi=n_lags)
+    if n_lags < 3:
+        raise ValueError(
+            f"peak_lag_trs needs at least 3 lags, got {n_lags}. With two lags every pair of "
+            "mean-centred courses is [a, -a] and [b, -b], so every degeneracy test below is "
+            "either vacuous or rejects all legitimate data. Refusing is honest; a weaker guard "
+            "below three lags was a silent hole."
+        )
+
+    # I4. The degeneracy is a property of the POOLED course -- the only thing this
+    # function derives -- not of pairs of raw event matrices. The previous version
+    # tested pairwise collinearity of category means, which missed every
+    # configuration where no PAIR is collinear but the pool still collapses:
+    # a category whose mean course is flat (its raw matrix is not constant, so the
+    # old flat check keyed on `c.std(axis=0)` never fired, and the pairwise check
+    # `continue`d past it on zero norm), and mutually cancelling categories.
+    means = [c.mean(axis=0) for c in courses]
+    centred = [m - m.mean() for m in means]
+    norms = [float(np.linalg.norm(c)) for c in centred]
+    # "Zero" means zero to floating point at the data's own scale -- NOT a
+    # statistical smallness threshold. A category with a weak but real mean
+    # response is accepted: refusing to compute because one condition showed no
+    # time-locked response would reject a legitimate empirical result. That case
+    # falls under the dominance limit in the warning above, which no input check
+    # can fix.
+    def _is_zero(nrm: float, m: np.ndarray) -> bool:
+        return nrm <= 1e-12 * max(1.0, float(np.abs(m).max()))
+
+    for i, (nrm, m) in enumerate(zip(norms, means)):
+        if _is_zero(nrm, m):
+            raise ValueError(
+                f"category_timecourses[{i}] has a flat mean course (no structure across lags). "
+                "It contributes nothing to the pooled peak and its only effect is to dilute the "
+                "others -- which restores target-only selection. Note this is a property of the "
+                "MEAN course: events that disagree in sign average to flat while the raw event "
+                "matrix looks perfectly structured."
+            )
+
+    # Grand average = mean of the per-category means, so a category with more
+    # events does not dominate the pooled course.
+    pooled = np.mean(means, axis=0)
+    pc = pooled - pooled.mean()
+    pn = float(np.linalg.norm(pc))
+    if _is_zero(pn, pooled):
+        raise ValueError(
+            "the pooled course is flat: the categories cancel exactly, so argmax returns 0 and "
+            "fabricates a lag. Pass categories that do not sum to a constant."
+        )
+    for i, (c, nrm) in enumerate(zip(centred, norms)):
+        if np.isclose(float(pc @ c) / (pn * nrm), 1.0):
+            raise ValueError(
+                f"the pooled course is argmax-identical to category_timecourses[{i}] alone (it "
+                "is that category's mean course up to a positive scale and a constant offset), "
+                "so pooling carries no information that one category did not already carry. "
+                "This is the '>= 2 categories' formality -- measured type-I 0.2032 against a "
+                "nominal 0.025. It covers the same course passed twice, with duplicated rows, "
+                "rescaled or offset; a second category whose mean course is flat; and three or "
+                "more categories that cancel to leave one. Pass genuinely different categories."
+            )
+    return int(np.argmax(pooled)) - int(pre_trs)
 
 
 def event_locked_response(
@@ -431,12 +811,85 @@ def event_locked_response(
     Returns:
         (n_events,) array of ROI-mean responses.
     """
-    if lag_trs < 0:
-        raise ValueError("lag_trs must be >= 0")
+    # lag_trs is the most safety-critical scalar in this module (M006): it selects
+    # WHICH column of the peri-event grid becomes the response. 3.9 silently read
+    # lag 3 and True silently read lag 1.
+    lag_trs = _as_tr_count(lag_trs, "event_locked_response lag_trs")
     tc = peri_event_timecourse(
         preds, verts, onset_times_s, row_times_s, pre_trs=0, post_trs=int(lag_trs)
     )
     return tc[:, int(lag_trs)]
+
+
+def _as_tr_count(x, name: str, *, lo: int = 0, hi: int | None = None) -> int:
+    """Validate a TR count / offset. ONE rule for every such scalar.
+
+    Scalars are the only parameter class with no coverage harness, so their guards
+    must be shared rather than written per function. A fractional value silently
+    changed the lag grid (pre_trs=2.5 gave 13 lags, not 12) and ``lag_trs=True``
+    silently read lag 1 -- the bool case this module explicitly rejects elsewhere.
+    """
+    if isinstance(x, bool) or int(x) != x:
+        raise ValueError(f"{name} must be a whole number of TRs, got {x!r}")
+    v = int(x)
+    if v < lo or (hi is not None and v >= hi):
+        raise ValueError(
+            f"{name}={v} is outside the valid range [{lo}, {'inf' if hi is None else hi})"
+        )
+    return v
+
+
+def _materialise(a):
+    """Consume a possibly single-pass iterable EXACTLY once (I3).
+
+    Returns non-iterables unchanged so that ``_as_event_vector`` can report the
+    contract violation itself: ``list(1.0)`` raises TypeError before any guard
+    runs, which is the bare-TypeError failure this module refuses elsewhere.
+    """
+    if isinstance(a, (str, bytes, bytearray, dict, set, frozenset)):
+        raise ValueError(
+            f"expected a sequence of per-event numbers, got {type(a).__name__}. "
+            "These are iterable but are not samples: a str yields characters, a dict "
+            "yields keys, and a set has no order, so each would silently become data."
+        )
+    if isinstance(a, np.ndarray) or not hasattr(a, "__iter__"):
+        return a
+    return list(a)
+
+
+def _as_event_vector(a, what: str) -> np.ndarray:
+    """Validate a per-event response vector. Used for EVERY such argument (F3, S6).
+
+    Enforced at every public entry point that takes one: ``event_locked_contrast``
+    (both arguments) and all four permutation statistics. The claim "used for
+    EVERY such argument" was previously true of one function out of five, while
+    ``mc_perm_p`` broadcast a 2-D input to a finite wrong p-value.
+
+    The reported instance was a 2-D ``target_responses``. The mechanism is that
+    ``peri_event_timecourse`` returns ``(n_events, n_lags)`` and is always in
+    scope beside ``event_locked_response``'s ``(n_events,)``, so the wrong one
+    can be passed to ANY of these arguments -- and the original fix guarded only
+    the first of two (M008). 0-d input is also handled here, so it raises a
+    ValueError about the contract rather than a TypeError from ``list()``.
+    """
+    arr = np.asarray(a, dtype=float)
+    if arr.ndim == 0:
+        raise ValueError(
+            f"{what} must be a 1-D (n_events,) vector, got a scalar. "
+            "A single event is [x], not x."
+        )
+    if arr.ndim != 1:
+        raise ValueError(
+            f"{what} must be 1-D (n_events,), got shape {arr.shape}. If this came from "
+            "peri_event_timecourse (n_events, n_lags), select a lag column first -- e.g. "
+            "via event_locked_response."
+        )
+    if arr.size == 0:
+        raise ValueError(
+            f"{what} is empty. An empty category silently changes the number of categories "
+            "averaged into the baseline; pass only categories that have events, deliberately."
+        )
+    return _require_finite(arr, what)
 
 
 def event_locked_contrast(target_responses, other_responses) -> float:
@@ -461,26 +914,57 @@ def event_locked_contrast(target_responses, other_responses) -> float:
     Returns:
         mean(target) - mean over categories of mean(category).
     """
-    tgt = np.asarray(list(target_responses), dtype=float)
-    if tgt.size == 0:
-        raise ValueError("no target responses")
-    others = [np.asarray(list(o), dtype=float) for o in other_responses]
-    others = [o for o in others if o.size]
+    # A bare 2-D array passed AS other_responses iterates into rows, and each row
+    # becomes a "category" -- the same 2-D hazard through the other argument (F3).
+    if isinstance(other_responses, np.ndarray) and other_responses.ndim >= 2:
+        raise ValueError(
+            f"other_responses must be a SEQUENCE of 1-D per-category vectors, but received a "
+            f"single {other_responses.ndim}-D array of shape {other_responses.shape}. Iterating "
+            "it would turn each row into a separate 'category' and silently average both axes. "
+            "Pass e.g. [objects_resp, places_resp]."
+        )
+    # Every array-valued argument goes through the SAME validator (M008): the
+    # original fix guarded target_responses only, and the identical 2-D hazard
+    # reaches the arithmetic through other_responses.
+    tgt = _as_event_vector(_materialise(target_responses),
+                           "event_locked_contrast target_responses")
+    others = [_as_event_vector(_materialise(o), f"event_locked_contrast other_responses[{i}]")
+              for i, o in enumerate(other_responses)]
     if not others:
         raise ValueError("event_locked_contrast needs at least one other category")
     return float(tgt.mean() - np.mean([o.mean() for o in others]))
 
 
 def glm_contrast_z(preds_a, preds_b, verts: np.ndarray) -> float:
-    """Per-vertex effect / standard error across observations, averaged over the ROI.
+    """Per-vertex Welch two-sample contrast, averaged over the ROI. Non-compositional.
 
-    What Meta's Fig 4 actually reports, and non-compositional. Each vertex gets
-    its own two-sample z (difference of condition means over the pooled standard
-    error across observations); the ROI value is the mean of those. Because the
-    scaling is per-vertex noise — not a brain-wide sd — a condition difference
-    elsewhere in the brain cannot move this number (contrast with spatial_z, G020).
+    Each vertex gets a two-sample statistic — difference of condition means over
+    the **Welch** (unequal-variance) standard error across observations — and the
+    ROI value is the mean of those. Because the scaling is per-vertex noise, not a
+    brain-wide sd, a condition difference elsewhere in the brain cannot move this
+    number (contrast with :func:`spatial_z`, G020).
 
-    Vertices with zero pooled variance contribute 0 rather than inf.
+    .. note:: **This is NOT the estimator from the TRIBE v2 paper (M4, D030).**
+       An earlier version of this docstring claimed it was "what Meta's Fig 4
+       actually reports". That is false under both readings of the paper: the
+       Fig 4 caption describes a GLM fit on the predicted **time-series**, and
+       §5.9 describes the visual contrasts as a plain **t = +5 s subtraction with
+       no GLM at all**. What is implemented here is a two-sample contrast across
+       **observations**, chosen by us because it is non-compositional. It is an
+       explicit, recorded deviation — see `ops/interface-contracts.md` and D027.
+       For the paper's own protocol use :func:`event_locked_contrast`.
+
+    .. warning:: **Not on the z scale.** This is a mean of per-vertex t-like
+       statistics; its null SD depends on the within-ROI correlation and is not 1.
+       Never threshold at 1.96 and never compare it numerically to a per-vertex
+       z-map — always permute.
+
+    **Welch, not pooled (M2).** The pooled (equal-variance) SE is not level-alpha
+    when the group sizes differ, which is the design S2 plans (faces vs the pooled
+    other categories, ~1:4). Measured at 10v40 with a 6:1 sd ratio, pooled gives
+    z=10.74 where Welch gives 5.59 — 1.9x anticonservative, i.e. a false-positive
+    risk on the headline claim. Welch and pooled are algebraically identical at
+    equal n, so results computed at equal n are unchanged.
 
     Args:
         preds_a: (n_obs_a, n_vertices) — one row per clip/event for condition A.
@@ -496,16 +980,22 @@ def glm_contrast_z(preds_a, preds_b, verts: np.ndarray) -> float:
         raise ValueError("glm_contrast_z needs (n_obs, n_vertices) for both conditions")
     if a.shape[1] != b.shape[1]:
         raise ValueError("condition arrays disagree on vertex count")
-    if len(verts) == 0:
-        raise ValueError("empty ROI vertex set")
     na, nb = a.shape[0], b.shape[0]
     if na < 2 or nb < 2:
         raise ValueError("need >= 2 observations per condition for a standard error")
+    # Normalise BEFORE the empty check: an all-False boolean mask has
+    # len == n_vertices, so checking first let it through and returned nan (A2).
+    verts = _as_vertex_indices(verts, "glm_contrast_z ROI", a.shape[1])
+    if len(verts) == 0:
+        raise ValueError("empty ROI vertex set (selector selected no vertices)")
     av, bv = a[:, verts], b[:, verts]
+    # Raise rather than renormalise: a silently shrinking ROI is itself a result
+    # the operator must see (M3).
+    _require_finite(av, "glm_contrast_z condition A over the ROI")
+    _require_finite(bv, "glm_contrast_z condition B over the ROI")
     diff = av.mean(axis=0) - bv.mean(axis=0)
-    # pooled SE of the difference of means
-    var = ((na - 1) * av.var(axis=0, ddof=1) + (nb - 1) * bv.var(axis=0, ddof=1)) / (na + nb - 2)
-    se = np.sqrt(var * (1.0 / na + 1.0 / nb))
+    # Welch (unequal-variance) SE of the difference of means -- see the note above.
+    se = np.sqrt(av.var(axis=0, ddof=1) / na + bv.var(axis=0, ddof=1) / nb)
     z = np.zeros_like(diff)
     ok = se > 0
     z[ok] = diff[ok] / se[ok]
@@ -535,25 +1025,61 @@ def define_froi(
         loc_a: (n_vertices,) or (n_obs, n_vertices) localizer response, condition A.
         loc_b: same shape, condition B.
         parcel_verts: candidate vertex indices (the anatomical parcel to search in).
-        top_n: how many vertices to keep. Capped at the parcel size.
+        top_n: how many vertices to keep. Must be STRICTLY LESS than the parcel
+            size — see the no-op note below.
 
     Returns:
-        Sorted array of the selected vertex indices (a subset of parcel_verts).
+        Sorted array of the selected vertex indices (a strict subset of parcel_verts).
+
+    Raises:
+        ValueError: if ``top_n >= len(parcel_verts)``. Selecting the whole parcel
+            is not selection (M1). The previous behaviour silently capped
+            ``k = min(top_n, parcel_size)``, so the DEFAULT ``top_n=100`` applied
+            to the project's own 58-vertex right-FFC parcel returned the entire
+            parcel — the unfixed anatomical ROI — with no warning, while the
+            caller believed it had defined a functional ROI.
+        ValueError: if the localizer contrast contains non-finite values (M3).
+            ``np.argsort`` sorts NaN last ascending and ``[::-1]`` then promotes
+            it to FIRST, so a dead vertex would be ranked maximally selective.
     """
-    a = np.asarray(loc_a, dtype=float)
-    b = np.asarray(loc_b, dtype=float)
-    a = a.mean(axis=0) if a.ndim == 2 else a
-    b = b.mean(axis=0) if b.ndim == 2 else b
+    # Compare RANK before collapsing: after _as_vertex_map both are 1-D, so a
+    # (5, 60) vs (60,) mismatch -- one condition averaged over trials, the other
+    # not -- became invisible to a post-collapse shape check.
+    ra, rb = np.ndim(loc_a), np.ndim(loc_b)
+    if ra != rb:
+        raise ValueError(
+            f"localizer conditions disagree on rank: loc_a is {ra}-D and loc_b is {rb}-D. "
+            "One has been averaged over trials and the other has not."
+        )
+    a = _as_vertex_map(loc_a, "define_froi loc_a")
+    b = _as_vertex_map(loc_b, "define_froi loc_b")
     if a.shape != b.shape:
         raise ValueError("localizer conditions disagree on shape")
-    pv = np.asarray(parcel_verts, dtype=int)
+    # define_froi was the ONLY selector entry point that never called the
+    # normaliser -- and it is the function M1 was about (A0).
+    pv = _as_vertex_indices(parcel_verts, "define_froi parcel", a.shape[-1])
     if pv.size == 0:
         raise ValueError("empty parcel")
     if top_n < 1:
         raise ValueError("top_n must be >= 1")
-    k = min(int(top_n), pv.size)
+    k = int(top_n)
+    if k >= pv.size:
+        raise ValueError(
+            f"top_n={k} >= parcel size {pv.size}: this would return the whole parcel "
+            "and perform no functional selection at all. The right-FFC parcel is 58 "
+            "vertices, so the old default of 100 was a silent no-op on it. Either "
+            "widen the candidate region beyond the parcel, or pass a top_n well "
+            "below the parcel size (e.g. 30) and record the choice."
+        )
     sel = a[pv] - b[pv]
-    keep = pv[np.argsort(sel)[::-1][:k]]
+    _require_finite(sel, "define_froi localizer contrast over the parcel")
+    # Tie-break contract (I1/F7), stated rather than inherited from numpy:
+    # rank by DESCENDING contrast, and among equal contrasts prefer the LOWEST
+    # vertex index. `pv` is ascending by the selector contract and the sort is
+    # stable, so argsort(-sel) delivers exactly that. The previous
+    # argsort(sel)[::-1] was unstable AND reversed the tie order, so two
+    # representations of one parcel could return different fROIs.
+    keep = pv[np.argsort(-sel, kind="stable")[:k]]
     return np.sort(keep)
 
 

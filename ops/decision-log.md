@@ -1122,3 +1122,90 @@ by evidence, not by where the grid stopped.
 **Revisit if:** the simulation is ever replaced by measurements from a real prediction cache, which
 would make the whole synthetic-brain parameterisation moot. Until then, every figure it produces is
 conditional on `build_brain`'s hand-set constants and must be reported as such.
+
+---
+
+### D031: Phase B — seven audited defects corrected; the Fig 4 attribution was false (2026-08-23)
+
+**Decision:** apply the seven must-fix items from `data/audit_s1_SYNTHESIS.md` and
+`data/audit_s1_CRITIC.md`, each with a regression test built from the finding's own failing input.
+
+| id | defect | fix |
+|---|---|---|
+| **M1** | `define_froi(top_n=100)` on the 58-vertex right-FFC parcel returned the WHOLE parcel — `k = min(100, 58) = 58` — so the "fROI" was the unfixed anatomical ROI and S2 would have reported it while believing the ROI was fixed. **No lane filed this; the synthesis found it.** | raise when `top_n >= parcel size`. Selecting everything is not selection. |
+| **M2** | pooled (equal-variance) SE in `glm_contrast_z` is not level-alpha at unequal n — the design S2 plans. Measured 10v40, 6:1 sd ratio: pooled z=10.74 vs Welch 5.59, **1.9x anticonservative** on the headline face claim. | Welch SE. Verified against `scipy.stats.ttest_ind` exactly, and identical to pooled at equal n — so the published 15v15 floor table is unchanged. |
+| **M3** | non-finite values absorbed silently in five places. `np.argsort` sorts NaN LAST ascending and `[::-1]` promotes it to FIRST, so a dead vertex was ranked **maximally selective** and displaced a real one. | one shared `_require_finite` policy (NaN and both infinities) at every entry point — not five subtly different rules. Hardening: no NaN source is demonstrated in this pipeline. |
+| **M4** | the docstring claimed the statistic is *"what Meta's Fig 4 actually reports"*. **False under both readings.** §5.9 describes the visual contrasts as the plain t=+5 s subtraction with **no GLM**; the Fig 4 caption separately describes a GLM on the predicted **time-series**. The shipped code is a two-sample contrast across **observations**. | state what it actually is — a recorded deviation, not a replication. `interface-contracts.md`'s ⚠ OPEN is **resolved**, and the stale restatement in MASTER-PLAN is annotated. |
+| **S6** | `event_locked_contrast` accepted a 2-D target and averaged both axes, returning an attenuated contrast (0.0404 for a true 0.0941). `peri_event_timecourse`'s output is always in scope beside it. | reject non-1-D at the contract boundary; raise on an empty category rather than dropping it. |
+| **C7** | the overlap guard was defeated by dtype: `np.intersect1d` compares a boolean mask's VALUES (0/1) against integer indices, so total overlap went undetected — the module's only defence against an undeclared normaliser. | normalise both selectors to integer indices before comparing. |
+| **C5** | `peak_lag_trs` selected the peak from whatever course it was handed. Choosing the lag on the target category and testing at it is selection on the test statistic: measured type-I **0.0417** against a nominal 0.025. | the function now takes ALL categories' courses and pools them itself, requiring >= 2 — single-category selection is **not expressible** through the API. |
+
+**Also closed (S1):** `glm_contrast_z` had zero value coverage — `return 0.0` *and* a sign flip both
+passed the entire suite. Sign, antisymmetry and a magnitude floor are now pinned.
+
+**Two API changes, both deliberate:**
+- `define_froi` raises where it previously capped. `test_define_froi_caps_at_parcel_size` asserted
+  the no-op was correct and was **rewritten in the same commit** — it had been blessing the bug.
+- `peak_lag_trs(timecourse)` becomes `peak_lag_trs(category_timecourses)`. Enforcing the pooling in
+  the signature rather than the docstring is the point: a docstring cannot prevent the error.
+
+**Method:** every defect was reproduced against the pre-fix tree first, so each regression test is
+built from the finding's own failing input rather than from a description of it.
+
+**Revisit if:** a real NaN source is demonstrated in the prediction pipeline (M3 would move from
+hardening to a live defect), or if the paper's §5.9 wording is ever read in full — two independent
+fetches truncated before its body, so its exact GLM specification remains **unverified** and is
+recorded as a gap, not a fact.
+
+---
+
+## D032 — Phase B closed under a stated stopping rule (2026-08-24)
+
+**Decision.** Stop the adversarial review loop. Do not run a fifth independent reviewer to search
+for further theoretical test gaps.
+
+**Stopping rule, pre-committed and now met:**
+
+> no demonstrated live wrong-number defect + independent numerical cross-checks pass + known
+> residuals explicitly recorded → stop auditing, move to replication and paper work.
+
+**The claim being made — deliberately narrow:**
+
+> The latest independent audit found no remaining demonstrated wrong-number defect in the
+> decision-critical paths; remaining issues are documented test/coverage or defensive-hardening
+> gaps.
+
+**Not** "the statistics module is proven correct". Four independent reviews each found something
+the previous reviewer and the author had missed. A fifth would probably find something too. What
+changed is the *kind* of finding, not the supply.
+
+**Why stop here.** Marginal value of another reviewer is now below the marginal value of running
+S2, checking whether the decision-critical analysis replicates, and writing the paper. Five days
+remain. Round 4 found zero live wrong-number defects; its yield was two correct-but-unasserted
+mechanisms, three operator-error guards, and one regression the author had introduced while fixing
+round 3.
+
+**Evidence.** `data/phase_b_closure.md` (live correctness vs residuals, the four C verdicts, the
+independent numerical cross-checks), `data/phase_b_invariants.md` (I1-I5 + S6),
+`data/phase_b_mutation_ledger.md` (69 mutations; eleven that proved nothing, recorded as such).
+86 tests in `test_roi_stats.py`, 124 repo-wide, 69/69 mutations detected against a verified-green
+baseline.
+
+**Re-open criterion.** A concrete new correctness concern arising from S2 or from paper
+generation — not another audit of this module.
+
+---
+
+## D033 — G024 resolved: Gate 0 loaded TRIBE v2 (2026-08-24)
+
+`tribe_tools/model.py` has hardcoded `TribeModel.from_pretrained("facebook/tribev2")` in **every
+commit since the initial commit f03833a (2026-06-09)**, seven weeks before the 2026-07-31 Gate 0
+run. `notebooks/03_gate0_v2_validation.ipynb` contains **zero** `from_pretrained` calls and loads
+the model only via `from tribe_tools.model import load_model`, so there is no independent load path
+that could have reached a different checkpoint.
+
+**Caveat, recorded rather than glossed:** this is a code-path argument over full git history, not a
+runtime artifact. The 07-31 results JSON records the tribev2 commit
+(`af58661791a351a448a489042a28f6c37e1c14b7`) but no tribe-bench SHA — the known provenance gap. The
+conclusion is therefore strong but indirect. **The in-silico FFA/PPA/EBA/VWFA claim we are
+replicating exists only for v2, and that claim is safe to rely on.**

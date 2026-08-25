@@ -248,6 +248,49 @@ language for **in-silico neuroscience**" — already reports recovering FFA, PPA
 clips and a compositional spatial z-score, differing on every axis, and spent ~4 GPU-hours plus ten
 days reaching an uninterpretable null. None of this was in our record until 2026-08-04. See G022.
 
+> **M007 is intentionally absent from this file.** It is an operational rule about the shared
+> development machine and it is kept local-only in `.notes/BRIEF_ME.md`, because this repo is public
+> (D016) and the rule carries the employer's infrastructure details. The numbering gap is deliberate.
+
+### M008: Fix the CLASS, not the reported instance — then check the neighbours
+**Rule:** when an audit reports a defect, fix every place that shares its mechanism, not the one
+example that was filed. Before declaring a fix done, ask: (a) does the same pattern exist in a
+sibling function? (b) can the bad behaviour be reached by a different representation of the same
+input? (c) does the guard sit on every argument, or only the one that was reported? Then write the
+test against the CLASS, not the example.
+**Why:** on 2026-08-23 all seven Phase B fixes passed their own regression tests and were confirmed
+by two independent mutant batteries — and **four of them were still incomplete**, each in exactly
+this way:
+- `_as_vertex_indices` was written to fix the boolean/int overlap bug and then **not applied to
+  `define_froi`**, the one selector entry point that most needed it (a bool-mask parcel returns ten
+  copies of vertex 0). It also handles only `dtype == bool`, so an `int8` mask now returns a WRONG
+  ROI value — worse than the bug it replaced, which only defeated a guard.
+- The 2-D rejection in `event_locked_contrast` was placed on `target_responses` and not on
+  `other_responses`, where the same array shape does the same damage.
+- `peak_lag_trs` was given a `>= 2 categories` rule to prevent selecting on the target's own
+  timecourse. `[tc, tc]` satisfies it. Type-I 0.2032 against a nominal 0.025. The restriction was
+  syntactic; the statistical dependence survived untouched.
+- `_require_finite` was added at five entry points under a docstring claiming "ONE policy, used at
+  every entry point". Seven other public paths still absorb non-finite input, and `u_statistic`
+  returns a FINITE WRONG answer for a NaN.
+**How to apply:** after fixing, grep the module for the same construct (`argsort`, a bare `>`/`<=`
+on possibly-NaN data, `np.asarray(..., dtype=int)`, an unguarded argument) and list every hit before
+closing the finding. If a docstring says "everywhere", a test must prove "everywhere" or the
+docstring must be narrowed.
+
+### M009: A green suite is not a safety net until you have tried to break it
+**Rule:** for any decision-critical function, run mutation testing before trusting its tests.
+Replace the body with a constant, flip a sign, change a `ddof`, swap an axis, delete a guard — and
+see what survives.
+**Why:** on 2026-08-23, **55 of 66 one-line mutations survived a 79-test suite**. Three functions
+had direction-only coverage with zero value coverage, so `raw_roi_mean`'s `g[verts].mean()` could be
+replaced by `g.mean()` — **ignoring the ROI entirely** — and every test still passed. This is the
+same gap that was already recorded for `glm_contrast_z` (`return 0.0` and a sign flip both passed);
+it had simply never been checked for the neighbouring functions.
+**How to apply:** the cheap version is a handful of hand-written mutants per critical function. The
+standard: if reverting the implementation while keeping the test does not fail the test, the test
+proves nothing.
+
 ## Positioning / prior art (HIGH — decides what may be claimed)
 
 ### G022: What has already been published on TRIBE v2, and by whom?
@@ -277,4 +320,35 @@ tribe-bench clone FAILED that session and no tribe-bench SHA was recorded.
 **Priority:** HIGH — cheap to close, and it gates the interpretation of every result so far.
 **How to close:** check the checkpoint identifier and `from_pretrained` argument in the notebook and
 in `tribe_tools/model.py:load_model`; confirm against the HF model card.
+**Status:** OPEN.
+
+---
+
+## M010 — `glm_contrast_z` scores a noiseless vertex as zero evidence
+
+**Found:** 2026-08-24, by the second independent review of the Phase B mechanism corrections.
+Out of scope for Phase B (pre-existing, not introduced by the audited diff) and recorded rather
+than fixed under the freeze discipline.
+
+`glm_contrast_z` sets `z = 0` at any vertex whose Welch SE is zero. The intent is to avoid a
+division by zero, but a zero SE at a vertex carrying a real effect means *perfect evidence*, and
+scoring it as **no** evidence is the wrong direction:
+
+```
+vertex 0 (true +1 effect, zero noise) alone :  0.0000
+vertex 1 (same effect, with noise)    alone : 18.6615
+both vertices together                      :  9.3308
+```
+
+A real effect silently reads as none, and adding a noiseless vertex to an ROI *halves* the
+statistic. On real TRIBE output a vertex is unlikely to have exactly zero variance across
+observations — but `low_rank_head: 2048` makes the 20,484-vertex output rank ≤ 2048, so exact
+linear dependence between vertices is structural, and near-zero SEs are not exotic.
+
+**Priority:** MEDIUM — it cannot manufacture a false positive (it only ever loses evidence), so it
+does not threaten a published claim in the direction that matters. It can lose a true one.
+**How to close:** decide the intended semantics for a zero-SE vertex (exclude it from the ROI mean
+with a recorded count, or treat it as maximal evidence with a documented cap) rather than silently
+scoring it 0. Needs a decision, not just a patch. Revisit in Phase C when S2 supplies real
+predictions to check the empirical frequency of near-zero SEs.
 **Status:** OPEN.

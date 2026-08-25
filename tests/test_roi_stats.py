@@ -378,7 +378,10 @@ def test_peak_lag_is_measured_and_lands_at_zero_for_prealigned_output():
     keep = onsets[(onsets - 2 >= 0) & (onsets + 9 < dur)]
     tc = peri_event_timecourse(preds, np.arange(8), keep, times, pre_trs=2, post_trs=9)
     assert tc.shape == (len(keep), 12)
-    assert peak_lag_trs(tc, pre_trs=2) == 0
+    # peak_lag_trs pools across categories by construction (C5), so split the
+    # events into two pseudo-categories rather than handing it one course.
+    half = len(keep) // 2
+    assert peak_lag_trs([tc[:half], tc[half:]], pre_trs=2) == 0
 
 
 def test_event_locked_contrast_averages_categories_not_exemplars():
@@ -417,9 +420,164 @@ def test_define_froi_picks_the_selective_vertices():
     assert froi.tolist() == list(range(150, 160))
 
 
-def test_define_froi_caps_at_parcel_size():
-    parcel = np.arange(0, 5)
-    assert define_froi(np.zeros(10), np.zeros(10), parcel, top_n=100).size == 5
+def test_define_froi_refuses_to_return_the_whole_parcel():
+    """M1 REGRESSION. This test previously asserted the OPPOSITE — that
+    define_froi(..., top_n=100) on a 5-vertex parcel returns all 5. That blessed
+    a silent no-op: with the project's own 58-vertex right-FFC parcel and the
+    old default top_n=100, k = min(100, 58) = 58, so the "fROI" was bit-identical
+    to the unfixed anatomical parcel and S2 would have reported that while
+    believing it had fixed the ROI.
+
+    Boundary is tested on all three sides.
+    """
+    parcel = np.arange(100, 158)          # 58 vertices, the real FFC parcel size
+    a, b = np.zeros(200), np.zeros(200)
+    a[np.arange(120, 140)] = 1.0
+
+    # k < parcel size -> valid, and a STRICT subset
+    froi = define_froi(a, b, parcel, top_n=30)
+    assert froi.size == 30
+    assert set(froi.tolist()) < set(parcel.tolist())
+
+    # k == parcel size -> raises (no selection occurred)
+    with pytest.raises(ValueError, match="no functional selection"):
+        define_froi(a, b, parcel, top_n=58)
+
+    # k > parcel size -> same contract, including the old default
+    with pytest.raises(ValueError, match="no functional selection"):
+        define_froi(a, b, parcel, top_n=100)
+
+    # and the largest legal request still works
+    assert define_froi(a, b, parcel, top_n=57).size == 57
+
+
+def test_define_froi_rejects_non_finite_localizer():
+    """M3. np.argsort sorts NaN LAST ascending; [::-1] promotes it to FIRST, so a
+    dead vertex was ranked maximally selective and displaced a real one."""
+    parcel = np.arange(100, 158)
+    a, b = np.zeros(200), np.zeros(200)
+    a[np.arange(120, 140)] = 1.0
+    for bad in (np.nan, np.inf, -np.inf):
+        a_bad = a.copy(); a_bad[123] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            define_froi(a_bad, b, parcel, top_n=10)
+
+
+def test_glm_contrast_z_uses_welch_not_pooled_se():
+    """M2. Pooled SE is anticonservative at unequal n — the design S2 plans.
+    Checked against scipy as an independent oracle, and the equal-n invariant
+    (Welch == pooled) is pinned so the floor table cannot silently move."""
+    from scipy.stats import ttest_ind
+    rng = np.random.default_rng(0)
+    v = np.arange(40)
+
+    # unequal n, heterogeneous variance -> must equal Welch, NOT pooled
+    A = rng.normal(0.5, 0.30, (10, 40)); B = rng.normal(0.0, 0.05, (40, 40))
+    mine = glm_contrast_z(A, B, v)
+    welch = float(np.mean([ttest_ind(A[:, i], B[:, i], equal_var=False).statistic for i in v]))
+    pooled = float(np.mean([ttest_ind(A[:, i], B[:, i], equal_var=True).statistic for i in v]))
+    assert mine == pytest.approx(welch, abs=1e-9), "not Welch"
+    assert abs(mine - pooled) > 1.0, "indistinguishable from the pooled SE it replaced"
+    assert abs(pooled) > abs(mine), "pooled should be the anticonservative one here"
+
+    # equal n -> algebraically identical to pooled; this is what keeps the
+    # published 15v15 floor table valid after the change
+    C = rng.normal(0.4, 0.3, (12, 40)); D = rng.normal(0.0, 0.1, (12, 40))
+    pooled_eq = float(np.mean([ttest_ind(C[:, i], D[:, i], equal_var=True).statistic for i in v]))
+    assert glm_contrast_z(C, D, v) == pytest.approx(pooled_eq, abs=1e-9)
+
+
+def test_glm_contrast_z_has_direction_semantics():
+    """S1. `return 0.0` AND a sign flip both passed the previous suite. Pin the
+    sign, the antisymmetry, and a magnitude floor so neither mutant survives."""
+    rng = np.random.default_rng(5)
+    roi = np.arange(20)
+    a = rng.normal(0.5, 0.1, (12, 50)); b = rng.normal(0.0, 0.1, (12, 50))
+    fwd, rev = glm_contrast_z(a, b, roi), glm_contrast_z(b, a, roi)
+    assert fwd > 0, "A > B must give a positive contrast"          # kills return 0.0
+    assert rev < 0, "swapping conditions must flip the sign"        # kills the sign flip
+    assert fwd == pytest.approx(-rev, rel=1e-9), "must be antisymmetric"
+    assert abs(fwd) > 1.0, "a real separation must produce a substantial statistic"
+
+
+def test_glm_contrast_z_rejects_non_finite():
+    rng = np.random.default_rng(6)
+    a = rng.normal(0.5, 0.1, (8, 30)); b = rng.normal(0.0, 0.1, (8, 30))
+    for bad in (np.nan, np.inf):
+        a_bad = a.copy(); a_bad[3, 5] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            glm_contrast_z(a_bad, b, np.arange(10))
+
+
+def test_event_locked_contrast_rejects_2d_target():
+    """S6. peri_event_timecourse's (n_events, n_lags) is always in scope beside
+    event_locked_response's (n_events,); passing the wrong one silently averaged
+    both axes and returned an attenuated contrast."""
+    with pytest.raises(ValueError, match="must be 1-D"):
+        event_locked_contrast(np.ones((2, 3)), [np.array([1.0, 2.0])])
+    with pytest.raises(ValueError, match="must be 1-D"):
+        event_locked_contrast(np.array([1.0, 2.0]), [np.ones((2, 3))])
+    # the valid 1-D path is untouched
+    assert event_locked_contrast([10.0, 10.0], [[0.0] * 100, [4.0, 4.0]]) == pytest.approx(8.0)
+
+
+def test_event_locked_contrast_raises_on_an_empty_category():
+    """Dropping an empty category silently changes the baseline's denominator."""
+    with pytest.raises(ValueError, match="empty"):
+        event_locked_contrast([1.0, 2.0], [[3.0, 4.0], []])
+
+
+def test_roi_minus_reference_overlap_guard_survives_a_dtype_mismatch():
+    """C7. np.intersect1d compares a boolean mask's VALUES (0/1) against integer
+    indices, so a total overlap went undetected and the guard silently passed —
+    the module's only defence against an undeclared normaliser."""
+    g = np.arange(20.0)[None, :]
+    mask = np.zeros(20, dtype=bool); mask[[10, 11, 12]] = True
+    with pytest.raises(ValueError, match="overlap"):
+        roi_minus_reference(g, mask, np.array([10, 11]))
+    # non-overlapping bool mask still works, and agrees with the integer form
+    mask2 = np.zeros(20, dtype=bool); mask2[[1, 2, 3]] = True
+    assert roi_minus_reference(g, mask2, np.array([10, 11])) == pytest.approx(
+        roi_minus_reference(g, np.array([1, 2, 3]), np.array([10, 11])))
+
+
+def test_peak_lag_must_pool_across_categories():
+    """C5. Selecting the peak lag on the target category and then testing at that
+    lag is selection on the test statistic — measured type-I 0.0417 against a
+    nominal 0.025. The API now makes single-category selection inexpressible."""
+    tc_a = np.zeros((5, 12)); tc_a[:, 6] = 1.0            # target peaks late
+    tc_b = np.zeros((5, 12)); tc_b[:, 3] = 1.0
+    tc_c = np.zeros((5, 12)); tc_c[:, 3] = 0.9            # agrees on lag 3, NOT identical
+    tc_c[:, 8] = 0.1                                       # (identical courses are rejected)
+
+    # a bare 2-D array (the old signature) is refused, by name
+    with pytest.raises(ValueError, match="SINGLE"):
+        peak_lag_trs(tc_a, pre_trs=2)
+    # so is a single-element sequence
+    with pytest.raises(ValueError, match=">= 2 categories"):
+        peak_lag_trs([tc_a], pre_trs=2)
+
+    # pooling gives the majority peak (3 -> lag 1), NOT the target's (6 -> lag 4)
+    assert peak_lag_trs([tc_a, tc_b, tc_c], pre_trs=2) == 1
+
+    # mismatched lag grids are caught
+    with pytest.raises(ValueError, match="lag grid"):
+        peak_lag_trs([tc_a, np.zeros((5, 8))], pre_trs=2)
+
+
+def test_non_finite_policy_is_consistent_across_entry_points():
+    """M3. One policy, not five subtly different ones — NaN and both infinities
+    are rejected everywhere, with the same error wording."""
+    g = np.ones((3, 50))
+    roi, ref = np.arange(10), np.arange(20, 30)
+    for bad in (np.nan, np.inf, -np.inf):
+        dirty = g.copy(); dirty[0, 5] = bad
+        with pytest.raises(ValueError, match="non-finite"):
+            raw_roi_mean(dirty, roi)
+        with pytest.raises(ValueError, match="non-finite"):
+            roi_minus_reference(dirty, roi, ref)
+        with pytest.raises(ValueError, match="non-finite"):
+            perm_p([1.0, 2.0, bad], [0.0, 0.1, 0.2], n_perm=50)
 
 
 def test_detection_floor_scales_the_right_way():
@@ -430,3 +588,1188 @@ def test_detection_floor_scales_the_right_way():
     # and it must scale with the noise
     louder = detection_floor(6, noise_sd=2.0, n_sim=60, n_perm=200, seed=0, tol=0.02)
     assert louder > small_n
+
+
+# ==========================================================================
+# MECHANISM TESTS (M008)
+#
+# Phase B's first pass fixed each finding at the example level and four fixes
+# still did not close the class. These tests ENUMERATE the entry points by
+# introspection rather than naming a fixed list, so a NEW function that accepts
+# a selector or array data is covered the moment it is added — and an
+# unguarded one fails here rather than in S2.
+# ==========================================================================
+
+import inspect as _inspect
+import itertools as _itertools
+
+from tribe_tools import roi_stats as _R
+
+N_V = 60
+
+
+_SELECTOR_ARGS = ("verts", "ref_verts", "parcel_verts")
+
+
+def _selector_entry_points():
+    """Every public function taking a vertex selector, found by introspection."""
+    out = []
+    # Enumerate via _public_functions (module membership, imports declared by
+    # name) rather than vars() + a __module__ filter. The filter dropped every
+    # public callable that is not a plain `def`, so a module-level partial with a
+    # parameter named `verts` was never discovered here either (I5/F2).
+    for name, fn in _public_functions().items():
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        for arg in _SELECTOR_ARGS:
+            if arg in params:
+                out.append((name, fn, arg))   # one entry PER selector argument
+    return out
+
+
+def _call_with_selector(name, fn, selector, which="verts"):
+    """Invoke each selector-taking function with valid data and a given selector."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    times = np.arange(4.0)
+    if name in ("spatial_z", "raw_roi_mean"):
+        return fn(preds, selector)
+    if name == "roi_minus_reference":
+        # exercise BOTH selector arguments — guarding one of two is the exact
+        # mistake this suite exists to catch
+        if which == "ref_verts":
+            # fixed ROI must be DISJOINT from the selectors under test (10..12),
+            # or the overlap guard fires and masks what we are checking
+            return fn(preds, np.array([30, 31, 32]), selector)
+        return fn(preds, selector, np.array([50, 51]))
+    if name == "glm_contrast_z":
+        return fn(preds + np.arange(4)[:, None], preds, selector)
+    if name == "peri_event_timecourse":
+        return fn(preds, selector, [1.0], times, pre_trs=0, post_trs=0)
+    if name == "event_locked_response":
+        return fn(preds, selector, [1.0], times, lag_trs=0)
+    if name == "define_froi":
+        # selector IS the parcel here, so top_n must be < its size (M1's guard)
+        a = np.zeros(N_V); a[10:13] = [3.0, 2.0, 1.0]
+        return fn(a, np.zeros(N_V), selector, top_n=2)
+    raise AssertionError(f"unhandled selector entry point {name!r} — extend this helper")
+
+
+def test_every_selector_entry_point_rejects_the_whole_bad_selector_CLASS():
+    """MECHANISM TEST for C7/A0/A8/F4.
+
+    The reported instance was a boolean mask vs integer indices defeating the
+    overlap guard in ONE function. The class is: any selector representation that
+    aliases or duplicates vertices, at ANY entry point. `define_froi` was the one
+    function the original fix never reached — and it is the function M1 was about.
+    """
+    eps = _selector_entry_points()
+    assert len(eps) >= 6, f"expected >=6 selector entry points, introspection found {len(eps)}"
+    good = np.array([10, 11, 12])
+    mask = np.zeros(N_V, bool); mask[[10, 11, 12]] = True
+    # Each case pins the SPECIFIC reason. A generic pytest.raises(ValueError) is
+    # not enough: with the ambiguity check removed, an int8 mask trips the
+    # *duplicate* check instead, so a generic assertion passes while the fix is
+    # gone. Mutation testing caught exactly that in an earlier draft of this test.
+    bad_cases = {
+        "int8 0/1 mask (ambiguous)":  (mask.astype(np.int8),   "ambiguous"),
+        "float 0/1 mask (ambiguous)": (mask.astype(np.float64), "ambiguous"),
+        "negative index":             (np.array([10, -1]),      "negative"),
+        "duplicate index":            (np.array([10, 10, 11]),  "duplicate"),
+        "out of range":               (np.array([10, N_V + 5]), ">= n_vertices"),
+        "non-integer float":          (np.array([10.5, 11.0]),  "integer vertex indices"),
+        # --- shape and dtype rules the docstring advertised with no coverage (F8).
+        # A 2-D BOOLEAN mask whose size equals n_vertices was accepted and read in
+        # flat C order, silently selecting a different vertex set (F1).
+        "2-D bool mask, size == n":   (np.column_stack([mask[:N_V // 2], mask[N_V // 2:]]),
+                                       "must be 1-D"),
+        "2-D integer selector":       (np.array([[10, 11], [12, 13]]), "must be 1-D"),
+        "3-D bool mask, size == n":   (mask.reshape(2, 3, 10), "must be 1-D"),
+        "mask of wrong length":       (np.zeros(N_V - 1, dtype=bool), "boolean mask has length"),
+        "python scalar":              (5, "scalar"),
+        "numpy scalar":               (np.int64(5), "scalar"),
+        "object dtype":               (np.array([10, 11], dtype=object), "dtype"),
+        "string dtype":               (np.array(["10", "11"]), "dtype"),
+    }
+    for name, fn, _arg in eps:
+        # the good selector must still work in this argument position
+        _call_with_selector(name, fn, good, _arg)
+        # and a genuine boolean mask must be accepted and mean the same thing
+        _call_with_selector(name, fn, mask, _arg)
+        for label, (bad, why) in bad_cases.items():
+            with pytest.raises(ValueError, match=why):
+                _call_with_selector(name, fn, bad, _arg)
+
+
+def _equivalent_selector_representations(verts=(10, 11, 12)):
+    """Every accepted encoding of ONE vertex set, including a SHUFFLED index array.
+
+    The predecessor of this harness compared a mask against np.flatnonzero(mask),
+    which is already ascending — so it could not detect that integer arrays
+    preserved caller order while masks did not (I1/F7).
+    """
+    mask = np.zeros(N_V, bool); mask[list(verts)] = True
+    return {
+        "bool mask":        mask,
+        "ascending idx":    np.array(verts),
+        "shuffled idx":     np.array(list(verts)[::-1]),
+        "python list":      list(verts),
+        "python tuple":     tuple(verts),
+        "int8 indices":     np.array(verts, dtype=np.int8),
+        "whole-valued float": np.array(verts, dtype=float),
+        "non-contiguous":   np.array([v for v in verts for _ in (0, 1)])[::2],
+    }
+
+
+def test_selector_canonicalises_identically_across_every_representation():
+    """I1. A selector denotes a SET, so every encoding of one set must canonicalise
+    to one array — 1-D, ascending, unique, integer."""
+    canon = {k: _R._as_vertex_indices(v, n_vertices=N_V)
+             for k, v in _equivalent_selector_representations().items()}
+    expect = np.array([10, 11, 12])
+    for label, got in canon.items():
+        assert np.array_equal(got, expect), f"{label} canonicalised to {got}, expected {expect}"
+        assert got.dtype.kind == "i", f"{label} produced dtype {got.dtype}"
+
+
+def test_every_entry_point_agrees_across_every_selector_representation():
+    """I1, applied per (function, selector argument). Representation must never
+    change the answer, because order carries no meaning in a vertex set."""
+    reps = _equivalent_selector_representations()
+    for name, fn, arg in _selector_entry_points():
+        results = {label: np.asarray(_call_with_selector(name, fn, sel, arg), dtype=float)
+                   for label, sel in reps.items()}
+        ref_label, ref = next(iter(results.items()))
+        for label, got in results.items():
+            assert np.allclose(got, ref), (
+                f"{name}({arg}) gave {got} for '{label}' but {ref} for '{ref_label}' — "
+                "two encodings of the same vertex set disagree"
+            )
+
+
+def test_froi_is_deterministic_under_ties_across_representations():
+    """I1/F7. With a tied localizer contrast an unstable argsort returned different
+    fROIs for two encodings of one parcel. The contract: rank by descending
+    contrast, break ties by LOWEST vertex index."""
+    tied = np.zeros(N_V)
+    parcel = (0, 1, 2)
+    outs = {label: define_froi(tied, tied, sel, top_n=2)
+            for label, sel in _equivalent_selector_representations(parcel).items()}
+    first = next(iter(outs.values()))
+    for label, got in outs.items():
+        assert np.array_equal(got, first), f"{label} gave {got}, another encoding gave {first}"
+    assert np.array_equal(first, [0, 1]), (
+        f"tie-break must prefer the lowest vertex index, got {first}"
+    )
+
+
+def test_higher_rank_preds_are_rejected_before_n_vertices_is_derived():
+    """I1 plumbing. A 3-D array was accepted: n_vertices came from shape[-1] while
+    g[verts] indexed axis 0, so the range and ambiguity checks validated against an
+    axis the selector never touched and the answer was finite, plausible, wrong."""
+    p3 = np.arange(2 * 4 * N_V, dtype=float).reshape(2, 4, N_V)
+    for label, call in (
+        ("spatial_z",           lambda: spatial_z(p3, np.array([0, 1]))),
+        ("raw_roi_mean",        lambda: raw_roi_mean(p3, np.array([0, 1]))),
+        ("roi_minus_reference", lambda: roi_minus_reference(p3, np.array([0, 1]), np.array([2, 3]))),
+        ("define_froi",         lambda: define_froi(p3, np.zeros((2, 4, N_V)), np.arange(20, 50), top_n=5)),
+    ):
+        with pytest.raises(ValueError, match="n_vertices"):
+            call()
+    # the documented ranks still work
+    flat = np.arange(N_V, dtype=float)
+    assert np.isfinite(raw_roi_mean(flat, np.array([0, 1])))
+    assert np.isfinite(raw_roi_mean(np.tile(flat, (4, 1)), np.array([0, 1])))
+
+
+def _event_vector_entry_points():
+    """Every (function, argument) that takes a per-event vector, by introspection."""
+    out = []
+    for name, fn in _public_functions().items():
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        for arg in _EVENT_VECTOR_ARGS:
+            if arg in params:
+                out.append((name, fn, arg))
+    return out
+
+
+def _call_with_event_vector(name, fn, bad, which):
+    """Invoke each event-vector function with valid data except at `which`."""
+    ok = [0.1, 0.2, 0.3, 0.4]
+    kw = {"n_perm": 20} if name in ("mc_perm_p", "perm_p") else {}
+    if name == "event_locked_contrast":
+        return fn(bad, [ok]) if which == "target_responses" else fn(ok, [bad])
+    first = ("face_vals", "target_responses")
+    second = ("scene_vals", "other_vals", "other_responses")
+    if which in first:
+        return fn(bad, ok, **kw)
+    if which in second:
+        return fn(ok, bad, **kw)
+    # An unrecognised event-vector argument must fail LOUDLY here rather than
+    # silently poisoning whichever position the name-based routing guessed.
+    raise AssertionError(
+        f"unhandled event-vector argument {name}({which}); add it to this dispatcher "
+        "so the rank rules are actually exercised at its own position"
+    )
+
+
+def test_every_event_vector_argument_enforces_the_rank_contract():
+    """MECHANISM TEST for S6. A (n_events, n_lags) time course passed where a
+    (n_events,) per-event vector is wanted is the confusion this module names in
+    its own source. _as_event_vector was written to close it and guarded ONE
+    function out of five: mc_perm_p broadcast a 2-D input to a finite wrong
+    p-value, turning p=0.567 into p=0.0005. Coverage is keyed on the (function,
+    argument) PAIR and derived from the signatures, so a new one fails by default."""
+    eps = _event_vector_entry_points()
+    assert len(eps) >= 10, f"discovery found only {len(eps)} event-vector arguments"
+    bad_cases = {
+        "(n_events, n_lags) time course": (np.zeros((4, 3)),  "must be 1-D"),
+        "(n, 1) column vector":           (np.zeros((4, 1)),  "must be 1-D"),
+        "a bare scalar":                  (1.0,               "scalar"),
+        "an empty sample":                ([],                "empty"),
+    }
+    for name, fn, arg in eps:
+        _call_with_event_vector(name, fn, [0.5, 0.6, 0.7, 0.8], arg)   # valid still works
+        for label, (bad, why) in bad_cases.items():
+            with pytest.raises(ValueError, match=why):
+                _call_with_event_vector(name, fn, bad, arg)
+
+
+def test_every_tr_count_scalar_rejects_fractional_and_bool_values():
+    """One rule for every TR count. The guard was written for peak_lag_trs and its
+    comment ASSUMED peri_event_timecourse covered its own — true of the sign, false
+    of integrality. lag_trs is the most safety-critical scalar here (M006): it picks
+    which column of the peri-event grid becomes the response, and 3.9 read lag 3."""
+    preds = np.tile(np.arange(N_V, dtype=float), (30, 1))
+    v, t, on = np.array([10, 11]), np.arange(30.0), [10.0]
+    for label, call in (
+        ("peri_event pre_trs",  lambda x: peri_event_timecourse(preds, v, on, t, x, 9)),
+        ("peri_event post_trs", lambda x: peri_event_timecourse(preds, v, on, t, 2, x)),
+        ("event_locked lag_trs", lambda x: event_locked_response(preds, v, on, t, x)),
+    ):
+        for bad in (2.5, True, -1):
+            with pytest.raises(ValueError):
+                call(bad)
+        call(2)                                   # the integer case still works
+    with pytest.raises(ValueError, match="pre_trs"):
+        peak_lag_trs([np.eye(4, 12), np.eye(4, 12)[:, ::-1]], pre_trs=99)
+
+
+def test_n_perm_must_be_a_positive_count():
+    """(ge + 1) / (n_perm + 1) with n_perm <= -1 is NEGATIVE, and iut_pass reads a
+    negative p as a pass. n_perm reaches this from CLI/config in three scripts."""
+    f, o = [3.0, 4.0, 7.0, 9.0], [1.0, 2.0, 5.0, 6.0]
+    for bad in (-5, 0, 2.5, True):
+        with pytest.raises(ValueError, match="n_perm"):
+            mc_perm_p(f, o, n_perm=bad)
+    assert 0.0 < mc_perm_p(f, o, n_perm=50) <= 1.0
+
+
+def test_iterables_that_are_not_samples_are_rejected():
+    """str/bytes/dict/set are iterable but are not per-event data: a str yields
+    characters, a dict yields keys, a set has no order. Each produced a finite U."""
+    ok = [1.0, 2.0, 3.0]
+    for bad in ("123", b"123", {"a": 1.0}, {1.0, 2.0}):
+        with pytest.raises(ValueError):
+            u_statistic(bad, ok)
+        with pytest.raises(ValueError):
+            u_statistic(ok, bad)
+
+
+def test_event_locked_contrast_accepts_single_pass_iterables_on_both_arguments():
+    """I3 regression guard. Routing this function through the rank validator dropped
+    _materialise on the one boundary of six that had it, so the module's primary
+    published statistic stopped accepting a generator — the bare TypeError that
+    _materialise exists to prevent."""
+    tgt, oth = [1.0, 2.0, 3.0], [0.1, 0.2, 0.3, 0.4]
+    ref = event_locked_contrast(tgt, [oth])
+    assert event_locked_contrast((x for x in tgt), [oth]) == pytest.approx(ref)
+    assert event_locked_contrast(tgt, [(x for x in oth)]) == pytest.approx(ref)
+    assert event_locked_contrast(iter(tgt), [iter(oth)]) == pytest.approx(ref)
+
+
+def test_permutation_statistics_are_correct_at_UNEQUAL_n():
+    """MECHANISM TEST. Every permutation fixture in this suite is 4v4, 3v3, 8v8 or
+    15v15, so the split index between the two arms is unobservable: swapping it
+    changes nothing at equal n. The planned design is unequal — glm_contrast_z's
+    own docstring says faces vs pooled others is ~1:4 — and the Welch note exists
+    for exactly that reason. Checked against brute-force enumeration."""
+    from itertools import combinations as _combos
+
+    def brute_force_p(f, s):
+        vals = list(f) + list(s)
+        n, N = len(f), len(vals)
+        u_obs = u_statistic(vals[:n], vals[n:])
+        ge = tot = 0
+        for combo in _combos(range(N), n):
+            sel = set(combo)
+            ge += u_statistic([vals[i] for i in sel],
+                              [vals[i] for i in range(N) if i not in sel]) >= u_obs - 1e-9
+            tot += 1
+        return ge / tot
+
+    cases = [([1., 2., 3.], [9., 8., 7., 6., 5.]),
+             ([9., 8., 7.], [6., 5., 4., 3., 2.]),
+             ([5., 5., 4., 4.], [4., 3.]),
+             ([1.], [2., 3., 4., 5.])]
+    for f, s in cases:
+        assert exact_perm_p(f, s) == pytest.approx(brute_force_p(f, s)), f"{f} vs {s}"
+    # the split index must be the FACE arm's size, and at unequal n that is visible
+    assert exact_perm_p([1., 2., 3.], [9., 8., 7., 6., 5.]) == pytest.approx(1.0)
+    assert exact_perm_p([9., 8., 7., 6., 5.], [1., 2., 3.]) == pytest.approx(1 / 56)
+    # perm_null_deltas must split the same way
+    d = perm_null_deltas([1., 2., 3.], [9., 8., 7., 6., 5.])
+    assert len(d) == 56, f"expected C(8,3)=56 labelings, got {len(d)}"
+    assert d[0] == pytest.approx(np.mean([1., 2., 3.]) - np.mean([9., 8., 7., 6., 5.]))
+    # and mc_perm_p must agree with the exact answer at unequal n. Use a case where
+    # the WRONG split is far away (1.0 vs 0.714), not one where both land inside the
+    # Monte-Carlo tolerance -- otherwise the assertion cannot see the split at all.
+    assert mc_perm_p([1., 2., 3.], [9., 8., 7., 6., 5.], n_perm=5000, seed=0) == \
+        pytest.approx(1.0, abs=0.005)
+    assert mc_perm_p([9., 8., 7.], [6., 5., 4., 3., 2.], n_perm=20000, seed=0) == \
+        pytest.approx(exact_perm_p([9., 8., 7.], [6., 5., 4., 3., 2.]), abs=0.01)
+
+
+def test_u_fast_matches_u_statistic_including_the_tie_term():
+    """_u_fast is the vectorised twin used by EVERY Monte-Carlo p-value and by
+    detection_floor, and nothing asserted the two agree. The tie credit is
+    load-bearing: on the tied integer covariates the Gate 0 curation scripts pass
+    (scene_cuts is a count), dropping it moves a curation p-value across the gate."""
+    rng = np.random.default_rng(11)
+    for _ in range(50):
+        na, nb = int(rng.integers(2, 8)), int(rng.integers(2, 8))
+        a = rng.integers(0, 3, na).astype(float)      # heavy ties by construction
+        b = rng.integers(0, 3, nb).astype(float)
+        assert _R._u_fast(a, b) == pytest.approx(u_statistic(a, b)), f"{a} vs {b}"
+    # ties must be worth exactly half, in the vectorised path too
+    assert _R._u_fast(np.array([1.0, 1.0]), np.array([1.0])) == pytest.approx(1.0)
+    assert _R._u_fast(np.array([2.0, 2.0]), np.array([1.0])) == pytest.approx(2.0)
+    assert _R._u_fast(np.array([0.0, 0.0]), np.array([1.0])) == pytest.approx(0.0)
+
+
+def test_a_time_course_cannot_masquerade_as_a_sample_and_change_the_verdict():
+    """The concrete stakes, pinned. This exact call returned 0.0005 where the
+    correct one returns 0.567 — a null read as a headline result."""
+    rng = np.random.default_rng(3)
+    a = rng.normal(0, 1, (15, 12)); b = rng.normal(0, 1, (15, 12))
+    a[:, 1:] += 6.0                      # no effect at lag 0, large effect after
+    assert perm_p(a[:, 0], b[:, 0], n_perm=2000, seed=0) == pytest.approx(0.567216, abs=1e-6)
+    with pytest.raises(ValueError, match="must be 1-D"):
+        perm_p(a, b, n_perm=2000, seed=0)
+
+
+def test_the_rank_collapse_actually_averages_rows():
+    """_as_vertex_map's only arithmetic. EVERY 2-D preds fixture in this suite has
+    identical rows — np.tile(...), np.ones(...), g[None, :] — so `mean over rows`
+    and `row 0` were indistinguishable everywhere and the collapse was asserted by
+    nothing. Four public statistics depend on this one line."""
+    # rows deliberately DISTINCT, and the column mean differs from every single row
+    p = np.zeros((3, N_V))
+    p[0, 10] = 9.0
+    p[1, 10] = 3.0
+    p[2, 10] = 0.0                       # column mean 4.0; no row equals it
+    assert _R._as_vertex_map(p, "x")[10] == pytest.approx(4.0)
+    assert raw_roi_mean(p, [10]) == pytest.approx(4.0)
+    # and it must equal the explicitly collapsed input, at every entry point
+    flat = p.mean(axis=0)
+    for name, call in (
+        ("raw_roi_mean",        lambda q: raw_roi_mean(q, [10])),
+        ("spatial_z",           lambda q: spatial_z(q, [10])),
+        ("roi_minus_reference", lambda q: roi_minus_reference(q, [10], [50, 51])),
+    ):
+        assert call(p) == pytest.approx(call(flat)), f"{name} disagrees with its own collapse"
+    a = np.zeros((2, N_V)); a[0, 22] = 6.0          # column mean 3.0 at vertex 22
+    assert define_froi(a, np.zeros((2, N_V)), np.arange(20, 50), top_n=1).tolist() == [22]
+    assert a.mean(axis=0)[22] == pytest.approx(3.0)
+
+
+def test_localizer_conditions_must_agree_on_rank_not_only_on_collapsed_shape():
+    """Both arguments are collapsed to 1-D, so a post-collapse shape check cannot
+    see that one condition was averaged over trials and the other was not."""
+    with pytest.raises(ValueError, match="rank"):
+        define_froi(np.ones((5, N_V)), np.zeros(N_V), np.arange(20, 50), top_n=3)
+    with pytest.raises(ValueError, match="rank"):
+        define_froi(np.zeros(N_V), np.ones((5, N_V)), np.arange(20, 50), top_n=3)
+    # matching ranks still work, in both accepted forms
+    assert define_froi(np.arange(N_V, dtype=float), np.zeros(N_V), np.arange(20, 50), top_n=3).size == 3
+    assert define_froi(np.ones((5, N_V)), np.zeros((5, N_V)), np.arange(20, 50), top_n=3).size == 3
+
+
+def test_preds_representations_agree_at_every_entry_point():
+    """I1, for the DATA argument rather than the selector. roi_minus_reference was
+    the one site deriving n_vertices from a raw .shape, so it raised AttributeError
+    on a list where the other statistics accepted one."""
+    flat = list(np.arange(N_V, dtype=float))
+    reps = {"list": flat, "tuple": tuple(flat), "ndarray": np.asarray(flat),
+            "2-D single row": np.asarray(flat)[None, :]}
+    for name, call in (
+        ("raw_roi_mean",        lambda q: raw_roi_mean(q, [0, 1])),
+        ("spatial_z",           lambda q: spatial_z(q, [0, 1])),
+        ("roi_minus_reference", lambda q: roi_minus_reference(q, [0, 1], [50, 51])),
+    ):
+        vals = {k: call(v) for k, v in reps.items()}
+        assert len(set(np.round(list(vals.values()), 12))) == 1, f"{name}: {vals}"
+
+
+def test_row_time_pairing_is_enforced_not_assumed():
+    """row_times_from_segments exists because row index is NOT TR index. The 1:1
+    check is the only thing enforcing that, and removing it returned a number."""
+    preds = np.arange(24.0).reshape(6, 4)
+    with pytest.raises(ValueError):
+        peri_event_timecourse(preds, [0, 1], [1.0], np.arange(3.0), 0, 0)
+    assert np.isfinite(peri_event_timecourse(preds, [0, 1], [1.0], np.arange(6.0), 0, 0)).all()
+
+
+def test_peak_lag_validates_its_offset():
+    """pre_trs converts a grid index into a lag, so an out-of-range value fabricates
+    a lag exactly as a degenerate course does. Scalars have no coverage harness."""
+    tc = np.zeros((4, 12)); tc[:, 6] = 1.0
+    other = np.zeros((4, 12)); other[:, 3] = 1.0
+    for bad in (100, -5, 12):
+        with pytest.raises(ValueError, match="pre_trs"):
+            peak_lag_trs([tc, other], pre_trs=bad)
+    with pytest.raises(ValueError, match="pre_trs"):
+        peak_lag_trs([tc, other], pre_trs=2.9)
+    assert peak_lag_trs([tc, other], pre_trs=2) == 1
+
+
+def test_masked_selectors_are_rejected_rather_than_silently_unmasked():
+    """I1. np.asarray drops the mask, so the masked entries rejoin the selection and
+    two encodings of one vertex set disagree. Reject rather than guess."""
+    m = np.ma.masked_array([10, 11, 12], mask=[0, 1, 0])
+    with pytest.raises(ValueError, match="masked array"):
+        _R._as_vertex_indices(m, "sel", N_V)
+
+
+def test_duplicate_error_names_the_value_that_actually_repeats():
+    """The repeat mask was built from np.sort(idx) and applied to the unsorted idx,
+    so the message named whichever value sat at that position."""
+    with pytest.raises(ValueError, match=r"e\.g\. \[5\]"):
+        _R._as_vertex_indices(np.array([5, 5, 3]), "sel", N_V)
+
+
+def test_single_pass_iterables_work_at_the_segment_and_row_time_boundaries():
+    """I3 claimed 'any iterable accepted at a public boundary'. These two boundaries
+    called len() / np.asarray on the argument and raised TypeError on a generator."""
+    class _S:
+        def __init__(self, t): self.start = t
+    got = row_times_from_segments(_S(t) for t in (0.0, 1.0, 2.0))
+    assert np.allclose(got, [0.0, 1.0, 2.0])
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    a = peri_event_timecourse(preds, np.array([10, 11]), [1.0], (x for x in [0., 1., 2., 3.]), 0, 0)
+    b = peri_event_timecourse(preds, np.array([10, 11]), [1.0], [0., 1., 2., 3.], 0, 0)
+    assert np.allclose(a, b)
+
+
+def test_froi_is_returned_in_canonical_ascending_order():
+    """define_froi returns a SELECTOR, so it must satisfy the selector contract it
+    will be fed back into. Ranking is by contrast; the returned set is ascending."""
+    # Contrast RANK must be the reverse of vertex order, or "sorted output" and
+    # "selection order" coincide and the assertion proves nothing.
+    loc_a = np.zeros(N_V); loc_a[[22, 31, 40]] = [3.0, 5.0, 9.0]
+    out = define_froi(loc_a, np.zeros(N_V), np.arange(20, 50), top_n=3)
+    assert np.array_equal(out, np.sort(out)), f"fROI not ascending: {out}"
+    assert set(out.tolist()) == {22, 31, 40}
+    # and it round-trips as a selector without further normalisation
+    assert np.array_equal(_R._as_vertex_indices(out, n_vertices=N_V), out)
+
+
+def test_permutation_p_can_never_be_exactly_zero():
+    """The (ge + 1) / (n_perm + 1) estimator keeps the p-value valid. Reporting
+    p = 0 from a finite permutation set is a claim the data cannot support."""
+    face, other = [10.0] * 8, [0.0] * 8          # perfect separation
+    p = mc_perm_p(face, other, n_perm=200, seed=0)
+    assert p > 0.0, "Monte-Carlo p reached exactly zero"
+    assert p == pytest.approx(1 / 201), f"estimator floor should be 1/(n_perm+1), got {p}"
+    assert 0.0 < exact_perm_p(face, other) <= 1.0
+
+
+def test_contrast_without_a_comparison_category_raises_not_returns_a_bare_mean():
+    """An 'contrast' computed against nothing is just the target mean wearing the
+    name of a contrast — the most misleading thing this module could return."""
+    with pytest.raises(ValueError, match="at least one other category"):
+        event_locked_contrast([1.0, 2.0, 3.0], [])
+
+
+# Declared READ EXTENT per function: does the statistic read the whole vertex map,
+# or only the region its selector picks out? This is I2's "per-function declaration
+# rather than a default", made checkable. Getting it wrong in either direction is a
+# defect: too narrow returns a silent nan, too wide rejects data it never reads.
+_WHOLE_MAP_CONSUMERS = {"spatial_z"}          # divides by brain-wide mean and sd
+_REGION_LOCAL_CONSUMERS = {                   # read only the selected vertices
+    "raw_roi_mean", "roi_minus_reference", "glm_contrast_z",
+    "peri_event_timecourse", "event_locked_response", "define_froi",
+}
+
+
+def _read_extent_required():
+    """Functions that MUST declare a read extent, derived from the signatures.
+
+    Any public function taking both a vertex selector and array data reads some
+    region of a vertex map, so whether its guard covers the whole map or only the
+    selected region is a question that has an answer and must be recorded.
+    """
+    out = set()
+    for name, fn in _public_functions().items():
+        if name in _NO_ARRAY_INPUT:
+            continue
+        try:
+            params = set(_inspect.signature(fn).parameters)
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        if params & set(_SELECTOR_ARGS) and params & _ARRAY_DATA_PARAMS:
+            out.add(name)
+    return out
+
+
+def _read_extent_undeclared():
+    """Functions required to declare a read extent that have not declared one.
+
+    Shared by the completeness test and its planted-violation self-test, so a
+    weakening here fails BOTH. When the derivation lived inline in the
+    completeness test, the self-test called it separately and nothing noticed
+    when the completeness test stopped using it.
+    """
+    return _read_extent_required() - (_WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS)
+
+
+def test_read_extent_declaration_catches_a_planted_undeclared_function(monkeypatch):
+    """Self-test for the derivation. A new function that divides by a whole-map
+    statistic while guarding only its ROI — F4 verbatim — must be REQUIRED to
+    declare an extent, rather than being invisible to a hand-written list."""
+    def roi_share(preds, verts):
+        g = _R._as_vertex_map(preds, "roi_share preds")
+        verts = _R._as_vertex_indices(verts, "roi_share ROI", g.shape[-1])
+        _R._require_finite(g[verts], "roi_share ROI values")   # region-only guard
+        return float(g[verts].mean() / g.mean())               # whole-map divisor
+
+    monkeypatch.setattr(_R, "roi_share", roi_share, raising=False)
+    assert "roi_share" in _read_extent_undeclared(), (
+        "a new selector+array function was not required to declare its read extent, "
+        "so F4 could be reintroduced in it with a green suite"
+    )
+
+
+def _poison_outside_the_region_cases():
+    """One call per function with a non-finite value placed OUTSIDE the region its
+    selector picks out — the placement every existing fixture avoids."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    dirty = preds.copy(); dirty[0, 30] = np.nan     # vertex 30 is in no ROI below
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    times = np.arange(4.0)
+    far = np.where(np.arange(N_V) == 5, np.nan, 0.0)   # vertex 5 is outside the parcel
+    return {
+        "spatial_z":             lambda: _R.spatial_z(dirty, roi),
+        "raw_roi_mean":          lambda: _R.raw_roi_mean(dirty, roi),
+        "roi_minus_reference":   lambda: _R.roi_minus_reference(dirty, roi, ref),
+        "glm_contrast_z":        lambda: _R.glm_contrast_z(dirty, preds, roi),
+        "peri_event_timecourse": lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
+        "event_locked_response": lambda: _R.event_locked_response(dirty, roi, [1.0], times, 0),
+        "define_froi":           lambda: _R.define_froi(far, np.zeros(N_V), np.arange(20, 50), top_n=5),
+    }
+
+
+def test_each_guard_covers_exactly_the_data_its_statistic_reads():
+    """MECHANISM TEST for I2/F4. Every non-finite fixture in this suite places the
+    poison INSIDE the selected region, which is the one placement where a guard
+    that is too narrow still looks correct. spatial_z divides by the whole-map mean
+    and sd, so for it the outside case is the entire point — and it returned a
+    silent nan. Here the read EXTENT is the assertion."""
+    cases = _poison_outside_the_region_cases()
+    declared = _WHOLE_MAP_CONSUMERS | _REGION_LOCAL_CONSUMERS
+    # DERIVE the requirement from the signatures, exactly as _nonfinite_coverage
+    # does. Comparing two hand-written lists made a function in NEITHER invisible,
+    # so F4 stayed reintroducible in a new function with a green suite: the one
+    # completeness check in this suite that did not introspect.
+    undeclared = _read_extent_undeclared()
+    assert not undeclared, (
+        "these functions read vertex data through a selector but declare no read extent, "
+        "so nothing checks whether their guard covers what they compute: "
+        f"{sorted(undeclared)}. Add each to _WHOLE_MAP_CONSUMERS or "
+        "_REGION_LOCAL_CONSUMERS and give it a case in _poison_outside_the_region_cases."
+    )
+    assert declared <= set(cases), (
+        f"declared but never exercised outside its region: {sorted(declared - set(cases))}"
+    )
+    assert set(cases) <= declared, (
+        f"exercised but undeclared: {sorted(set(cases) - declared)}"
+    )
+    for name, call in cases.items():
+        if name in _WHOLE_MAP_CONSUMERS:
+            with pytest.raises(ValueError, match="non-finite"):
+                call()
+        else:
+            # too WIDE is also a defect: this data is never read, so rejecting it
+            # would refuse a perfectly usable input
+            out = np.asarray(call(), dtype=float)
+            assert np.all(np.isfinite(out)), (
+                f"{name} reads only its selected region, so a non-finite value outside it "
+                f"must not affect the result — got {out}"
+            )
+
+
+def test_the_declared_read_extent_matches_what_the_code_actually_reads():
+    """The declaration above is only worth something if it is checked against the
+    implementation. A whole-map consumer is exactly one that divides by a statistic
+    of the full map."""
+    import inspect as _i
+    for name in _WHOLE_MAP_CONSUMERS:
+        src = _i.getsource(getattr(_R, name))
+        assert "g.std()" in src or "g.mean()" in src, (
+            f"{name} is declared a whole-map consumer but does not compute a whole-map statistic"
+        )
+    for name in _REGION_LOCAL_CONSUMERS:
+        src = _i.getsource(getattr(_R, name))
+        assert "g.std()" not in src and "g.mean()" not in src, (
+            f"{name} is declared region-local but computes a whole-map statistic; its guard "
+            "extent declaration is wrong"
+        )
+
+
+def test_reference_region_is_guarded_as_well_as_the_roi():
+    """I2, per REGION. roi_minus_reference reads two disjoint regions and must
+    guard both: poisoning only the reference left the ROI-side guard satisfied."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    for label, bad_vertex in (("inside the ROI", 10), ("inside the reference", 50)):
+        dirty = preds.copy(); dirty[0, bad_vertex] = np.nan
+        with pytest.raises(ValueError, match="non-finite"):
+            roi_minus_reference(dirty, roi, ref)
+    # a non-finite value in NEITHER region is genuinely irrelevant to this
+    # statistic, so rejecting it would be stricter than the mechanism requires
+    elsewhere = preds.copy(); elsewhere[0, 30] = np.nan
+    assert np.isfinite(roi_minus_reference(elsewhere, roi, ref))
+
+
+def test_iterable_representations_of_one_sample_agree():
+    """I3. Any iterable accepted at a public boundary is materialised exactly once.
+    Validating one copy and then computing on the original argument exhausted
+    single-pass iterables and returned U=0.0 — finite, wrong, and maximally
+    anti-selective (F6). 'It did not crash' is not the assertion; the VALUE is."""
+    f, s = [3.0, 4.0, 7.0, 9.0], [1.0, 2.0, 5.0, 6.0]
+    cases = {
+        "list":      (lambda: list(f), lambda: list(s)),
+        "tuple":     (lambda: tuple(f), lambda: tuple(s)),
+        "ndarray":   (lambda: np.array(f), lambda: np.array(s)),
+        "generator": (lambda: (x for x in f), lambda: (x for x in s)),
+        "iterator":  (lambda: iter(list(f)), lambda: iter(list(s))),
+    }
+    for fname, fn in (("u_statistic", u_statistic),
+                      ("exact_perm_p", exact_perm_p),
+                      ("perm_p", perm_p),
+                      ("perm_null_deltas", perm_null_deltas)):
+        vals = {label: np.asarray(fn(mk_f(), mk_s()), dtype=float)
+                for label, (mk_f, mk_s) in cases.items()}
+        ref = vals["list"]
+        for label, got in vals.items():
+            assert np.allclose(got, ref), f"{fname}: {label} gave {got}, list gave {ref}"
+    # the specific regression: the generator case must be the real statistic, and
+    # emphatically not 0.0, which is what discarding the validated copy produced
+    assert u_statistic((x for x in f), (x for x in s)) == u_statistic(f, s) == 12.0
+    a = mc_perm_p((x for x in f), (x for x in s), n_perm=200)
+    assert a == mc_perm_p(f, s, n_perm=200)
+
+
+def test_empty_selection_raises_at_every_entry_point_not_just_two():
+    """MECHANISM TEST for A2. An all-False mask has len == n_vertices, so an
+    empty-check placed BEFORE normalisation let it through and returned nan.
+    Two functions checked first and two checked after — the policy must be one."""
+    empty_mask = np.zeros(N_V, bool)
+    for name, fn, _arg in _selector_entry_points():
+        with pytest.raises(ValueError, match="empty"):
+            _call_with_selector(name, fn, empty_mask, _arg)
+
+
+def _nonfinite_entry_points():
+    """Every public function that consumes array data, with a NaN-poisoned call."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    dirty = preds.copy(); dirty[0, 10] = np.nan
+    roi, ref = np.array([10, 11, 12]), np.array([50, 51])
+    times = np.arange(4.0)
+    tc = np.zeros((3, 5)); tc[:, 2] = 1.0
+    tc_bad = tc.copy(); tc_bad[0, 0] = np.nan
+    tc_b = np.zeros((3, 5)); tc_b[:, 1] = 1.0
+    nanvals = [1.0, 2.0, np.nan, 3.0]
+    ok = [0.1, 0.2, 0.3, 0.4]
+    parcel = np.arange(20, 50)
+    nan_in_parcel = np.where(np.arange(N_V) == 25, np.nan, 0.0)
+    # Keys are "function:parameter". Coverage is keyed on the PAIR, not on the
+    # function name: keying on the name let one poisoned argument satisfy
+    # completeness for a function with several, which is the exact
+    # roi_minus_reference-two-selectors precedent recurring inside the mechanism
+    # written to close it (I5/F3).
+    return {
+        "spatial_z:preds":            lambda: _R.spatial_z(dirty, roi),
+        "raw_roi_mean:preds":         lambda: _R.raw_roi_mean(dirty, roi),
+        "roi_minus_reference:preds":  lambda: _R.roi_minus_reference(dirty, roi, ref),
+        "glm_contrast_z:preds_a":     lambda: _R.glm_contrast_z(dirty, preds, roi),
+        "glm_contrast_z:preds_b":     lambda: _R.glm_contrast_z(preds, dirty, roi),
+        "peri_event_timecourse:preds":         lambda: _R.peri_event_timecourse(dirty, roi, [1.0], times, 0, 0),
+        "peri_event_timecourse:onset_times_s": lambda: _R.peri_event_timecourse(preds, roi, [np.nan], times, 0, 0),
+        "peri_event_timecourse:row_times_s":   lambda: _R.peri_event_timecourse(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0, 0),
+        "event_locked_response:preds":         lambda: _R.event_locked_response(dirty, roi, [1.0], times, 0),
+        "event_locked_response:onset_times_s": lambda: _R.event_locked_response(preds, roi, [np.nan], times, 0),
+        "event_locked_response:row_times_s":   lambda: _R.event_locked_response(preds, roi, [1.0], [0.0, 1.0, np.nan, 3.0], 0),
+        "event_locked_contrast:target_responses": lambda: _R.event_locked_contrast(nanvals, [ok]),
+        "event_locked_contrast:other_responses":  lambda: _R.event_locked_contrast(ok, [nanvals]),
+        # NaN INSIDE the parcel: outside it cannot affect the selection, so
+        # rejecting that would be stricter than the mechanism requires.
+        "define_froi:loc_a":    lambda: _R.define_froi(nan_in_parcel, np.zeros(N_V), parcel, top_n=5),
+        "define_froi:loc_b":    lambda: _R.define_froi(np.zeros(N_V), nan_in_parcel, parcel, top_n=5),
+        "peak_lag_trs:category_timecourses": lambda: _R.peak_lag_trs([tc_bad, tc_b], pre_trs=2),
+        "u_statistic:face_vals":        lambda: _R.u_statistic(nanvals, ok),
+        "u_statistic:scene_vals":       lambda: _R.u_statistic(ok, nanvals),
+        "exact_perm_p:face_vals":       lambda: _R.exact_perm_p(nanvals, ok),
+        "exact_perm_p:scene_vals":      lambda: _R.exact_perm_p(ok, nanvals),
+        "mc_perm_p:face_vals":          lambda: _R.mc_perm_p(nanvals + ok, ok + ok, n_perm=20),
+        "mc_perm_p:other_vals":         lambda: _R.mc_perm_p(ok + ok, nanvals + ok, n_perm=20),
+        "perm_null_deltas:face_vals":   lambda: _R.perm_null_deltas(nanvals, ok),
+        "perm_null_deltas:scene_vals":  lambda: _R.perm_null_deltas(ok, nanvals),
+        "row_times_from_segments:segments": lambda: _R.row_times_from_segments(
+            [_Seg(0.0), _Seg(np.nan), _Seg(2.0)]),
+    }
+
+
+def test_non_finite_is_rejected_at_EVERY_entry_point_the_docstring_claims():
+    """MECHANISM TEST for M3.
+
+    The original test checked 3 of ~10 call sites while its docstring claimed
+    "rejected everywhere", and its perm_p call never even reached mc_perm_p.
+    A test that claims universal coverage and does not prove it is worse than no
+    test, because it retires the question. This enumerates every path.
+    """
+    unguarded = []
+    for label, call in _nonfinite_entry_points().items():
+        try:
+            call()
+            unguarded.append(label)
+        except ValueError:
+            pass                      # correct: rejected
+        except Exception as exc:      # wrong error type is also a finding
+            unguarded.append(f"{label} (raised {type(exc).__name__}, want ValueError)")
+    assert not unguarded, "non-finite input NOT rejected at: " + "; ".join(unguarded)
+
+
+def test_inf_is_treated_exactly_like_nan_everywhere():
+    """+/-inf must not be a second, weaker policy."""
+    preds = np.tile(np.arange(N_V, dtype=float), (4, 1))
+    roi = np.array([10, 11, 12])
+    for bad in (np.inf, -np.inf):
+        dirty = preds.copy(); dirty[0, 10] = bad
+        for fn in (_R.spatial_z, _R.raw_roi_mean):
+            with pytest.raises(ValueError, match="non-finite"):
+                fn(dirty, roi)
+        with pytest.raises(ValueError, match="non-finite"):
+            _R.u_statistic([1.0, bad], [0.0, 0.5])
+
+
+def test_event_locked_contrast_rejects_bad_shapes_on_BOTH_arguments():
+    """MECHANISM TEST for S6/F3. The original fix guarded target_responses only;
+    the identical hazard reaches the arithmetic through other_responses."""
+    good = np.array([1.0, 2.0])
+    tc = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+    with pytest.raises(ValueError, match="1-D"):                 # target 2-D
+        event_locked_contrast(tc, [good])
+    with pytest.raises(ValueError, match="1-D"):                 # one other 2-D
+        event_locked_contrast(good, [tc])
+    with pytest.raises(ValueError, match="SEQUENCE"):             # bare 2-D AS other_responses
+        event_locked_contrast(good, tc)
+    with pytest.raises(ValueError, match="scalar"):               # 0-d, was a TypeError
+        event_locked_contrast(np.array(3.0), [good])
+    with pytest.raises(ValueError, match="scalar"):
+        event_locked_contrast(good, [np.array(3.0)])
+    for empty in ([], np.array([])):                              # empty either side
+        with pytest.raises(ValueError, match="empty"):
+            event_locked_contrast(good, [empty])
+    assert event_locked_contrast([10.0, 10.0], [[0.0] * 100, [4.0, 4.0]]) == pytest.approx(8.0)
+
+
+def test_peak_lag_rejects_every_degenerate_configuration_that_satisfies_the_count():
+    """MECHANISM TEST for C5/F6. ">= 2 categories" is a formality: each of these
+    satisfies it while pooling to exactly the target's own course (measured
+    type-I 0.2032 vs a nominal 0.025)."""
+    # Events DIFFER within each category, so a guard that inspects only the first
+    # event rather than the mean course cannot pass this fixture.
+    rng = np.random.default_rng(7)
+    tc = rng.normal(0.0, 0.05, (6, 12)); tc[:, 6] += 1.0 + rng.normal(0, 0.01, 6)
+    other = rng.normal(0.0, 0.05, (6, 12)); other[:, 3] += 1.0 + rng.normal(0, 0.01, 6)
+    r = rng.normal(0.0, 1.0, (1, 12))
+    a = np.zeros((4, 12)); a[:, 3] = 1.0
+    b = np.zeros((4, 12)); b[:, 3] = -1.0
+    for label, courses, why in [
+        ("same object twice",     [tc, tc],                       "argmax-identical"),
+        ("a copy",                [tc, tc.copy()],                "argmax-identical"),
+        # I4/F5: the degeneracy is a property of the POOLED course, the only
+        # quantity this function derives. Every one of these passed the earlier
+        # syntactic check on raw event matrices.
+        ("rows duplicated",       [tc, np.vstack([tc, tc])],      "argmax-identical"),
+        ("rescaled",              [tc, tc * 2.0],                 "argmax-identical"),
+        ("constant offset",       [tc, tc + 1.0],                 "argmax-identical"),
+        ("rescaled and offset",   [tc, tc * 3.0 + 7.0],           "argmax-identical"),
+        ("rows duplicated 3x, rescaled",
+                                  [tc, np.vstack([tc, tc, tc]) * 0.5], "argmax-identical"),
+        # A category whose MEAN course is flat although its event matrix is not.
+        # The predecessor keyed flatness on c.std(axis=0) over the raw matrix, so
+        # it never fired here, and the pairwise check `continue`d past it.
+        ("flat mean, structured events",   [tc, np.vstack([r, -r])],         "flat mean course"),
+        ("flat mean at a constant offset", [tc, np.vstack([r + 5, -r + 5])], "flat mean course"),
+        ("all-zero filler",       [tc, np.zeros_like(tc)],        "flat mean course"),
+        ("constant filler",       [tc, np.full_like(tc, 7.0)],    "flat mean course"),
+        # Three categories where NO PAIR is collinear, yet two cancel and the pool
+        # reduces to the target alone.
+        ("a cancelling pair",     [tc, a, b],                     "argmax-identical"),
+        # Everything cancels: argmax would return 0 and fabricate a lag.
+        ("total cancellation",    [tc, -tc],                      "pooled course is flat"),
+        ("an empty category",     [tc, np.zeros((0, 12))],        "0 events"),
+    ]:
+        # match= pins WHICH rule fired: a bare pytest.raises(ValueError) let a
+        # reverted guard survive because a different guard raised instead.
+        with pytest.raises(ValueError, match=why):
+            peak_lag_trs(courses, pre_trs=2)
+    # Fewer than three lags is refused outright rather than given a weaker guard,
+    # because at two lags every mean-centred course is [a, -a] and the degeneracy
+    # tests are either vacuous or reject everything.
+    with pytest.raises(ValueError, match="at least 3 lags"):
+        peak_lag_trs([np.zeros((4, 2)), np.ones((4, 2))], pre_trs=0)
+    # NOT rejected: a category whose mean response is weak but real. Refusing this
+    # would reject a legitimate empirical result — a condition that simply shows no
+    # time-locked response. "Flat" means zero to floating point, not small.
+    weak = rng.normal(0.0, 0.05, (6, 12)); weak[:3, 4] += 1.0; weak[3:, 4] -= 1.0
+    assert isinstance(peak_lag_trs([tc, weak], pre_trs=2), int)
+    # Genuinely different categories still work, and the expected value is pinned
+    # EXACTLY. This previously asserted `in (1, 4)`, where 4 is the target-only
+    # answer -- the C5 defect the function exists to prevent -- so the assertion
+    # could not distinguish correct pooling from the bug (F9). A third category
+    # agreeing with `other` breaks the two-category argmax tie, so the pooled peak
+    # is unambiguous.
+    third = rng.normal(0.0, 0.05, (6, 12)); third[:, 3] += 1.0 + rng.normal(0, 0.01, 6)
+    assert peak_lag_trs([tc, other, third], pre_trs=2) == 1
+    # The pooled course must come from the per-category MEAN, not from a single
+    # event standing in for its category. `atypical` has one outlier event peaking
+    # at lag 9 and five peaking at 3, so a guard or a pooling step that inspects
+    # only the first event gets a different answer than the mean does.
+    atypical = rng.normal(0.0, 0.02, (6, 12))
+    atypical[0, 9] += 3.0     # 3/6 = 0.50 at lag 9 in the mean ...
+    atypical[1:, 3] += 1.0    # ... vs 5/6 = 0.83 at lag 3, an unambiguous margin
+    assert int(np.argmax(atypical[0])) == 9 and int(np.argmax(atypical.mean(axis=0))) == 3
+    assert peak_lag_trs([tc, atypical, third], pre_trs=2) == 1
+
+
+def test_resolve_rows_rejects_non_finite_directly_not_only_via_its_callers():
+    """MECHANISM TEST for A1, isolated.
+
+    `peri_event_timecourse` guards its onsets before `_resolve_rows` ever sees
+    them, so testing only through the caller masks whether `_resolve_rows` itself
+    is safe — mutation testing showed a revert of its guard surviving. The
+    function's own docstring promises "or raise. Never silently approximate",
+    and `err > tol` is False for NaN, so a NaN silently resolved to a row.
+    """
+    from tribe_tools.roi_stats import _resolve_rows
+    rt = np.arange(10.0)
+    assert _resolve_rows(rt, [3.0]).tolist() == [3]          # the valid path still works
+    for bad in (np.nan, np.inf, -np.inf):
+        with pytest.raises(ValueError, match="non-finite"):
+            _resolve_rows(rt, [bad])
+        with pytest.raises(ValueError, match="non-finite"):
+            _resolve_rows(np.array([0.0, 1.0, bad, 3.0]), [1.0])
+
+
+def test_row_times_from_segments_rejects_non_finite_directly():
+    """A NaN start also defeats `np.diff(t) <= 0`, so the strictly-increasing
+    guard passed and rows then resolved to the wrong times."""
+    with pytest.raises(ValueError, match="non-finite"):
+        row_times_from_segments([_Seg(0.0), _Seg(np.nan), _Seg(2.0)])
+
+
+# ==========================================================================
+# THE DISCOVERY CONTRACT — what these tests do and do not find automatically
+#
+# CLAIM (precise): every module-level, public, non-imported function in
+# tribe_tools.roi_stats whose signature contains a parameter named in
+# _SELECTOR_ARGS is automatically included in the selector tests; and every
+# such function consuming array data must appear in the hand-written
+# _nonfinite_entry_points map, which is CHECKED FOR COMPLETENESS below.
+#
+# TWO SEPARATE GUARANTEES, and the first does not imply the second:
+#   function coverage       — we found every function in the selector family;
+#   representation coverage — for each one we exercised every selector argument
+#                             position and every accepted encoding.
+# The previous version of this block asserted only the first while claiming both.
+#
+# Discovered:      every public callable that is a MEMBER of roi_stats, by dir(),
+#                  regardless of how it was constructed. Enumeration deliberately
+#                  does NOT filter on __module__: that dropped module-level
+#                  functools.partial / np.vectorize / callable instances, one of
+#                  which passed every safeguard with a parameter named `verts`.
+# NOT discovered:  names starting with "_" (private helpers) — tested explicitly
+#                  names declared in _IMPORTED_CALLABLES (imported, not defined here)
+# Fails loudly:    an unclassified parameter on any public callable — every name
+#                  must be declared a selector, array data, or a scalar, so a NEW
+#                  parameter is a failure by default rather than a silent miss.
+#                  A function whose selector argument goes unvalidated fails here
+#                  rather than in S2.
+# Genuine limit:   a public callable with NO inspectable signature is reported as
+#                  unclassified rather than skipped, but cannot be auto-exercised.
+# ==========================================================================
+
+# Public functions that legitimately take NO array data and NO selector.
+_NO_ARRAY_INPUT = {"iut_pass", "detection_floor", "perm_p"}
+# perm_p is a dispatcher: it forwards to exact_perm_p / mc_perm_p, both of which
+# ARE in the map. Recorded here rather than silently omitted.
+
+# Public callables that are imported into roi_stats rather than defined by it.
+# Declared BY NAME. Enumeration below walks module membership rather than
+# filtering on __module__, because __module__ filtering silently dropped every
+# callable that is not a plain `def` -- a module-level functools.partial,
+# np.vectorize wrapper, callable class instance, or any decorator that does not
+# preserve __module__. One of those with a parameter named `verts` passed all
+# three safeguards with a green suite (I5/F2).
+_IMPORTED_CALLABLES = {"comb", "combinations"}
+
+# Parameters that DO carry array data and therefore need non-finite coverage at
+# their own argument position (selectors are covered by the selector harness).
+# Array parameters, PARTITIONED by kind. The partition is asserted below, so a
+# new array parameter must be assigned a kind rather than defaulting into the
+# unguarded remainder. _EVENT_VECTOR_ARGS was previously a hand-written tuple with
+# no forcing function, so a new per-event argument under an unforeseen name was
+# exempt from the rank harness by default -- S6 reintroducible with a green suite.
+_EVENT_VECTOR_ARGS = ("face_vals", "scene_vals", "other_vals",
+                      "target_responses", "other_responses")
+_MAP_ARGS = ("preds", "preds_a", "preds_b", "loc_a", "loc_b")
+_TIME_ARGS = ("onset_times_s", "row_times_s", "segments")
+_GRID_ARGS = ("category_timecourses",)
+
+_ARRAY_DATA_PARAMS = set(_EVENT_VECTOR_ARGS) | set(_MAP_ARGS) | set(_TIME_ARGS) | set(_GRID_ARGS)
+
+# Parameters that carry no array data. Declared explicitly so that a NEW
+# parameter is a failure by default rather than a silent miss.
+_NON_ARRAY_PARAMS = {
+    "top_n", "lag_trs", "pre_trs", "post_trs", "n_perm", "seed", "alpha",
+    "power", "n_sim", "tol", "max_effect", "n_per_group", "noise_sd",
+    "p_a", "p_b",
+}
+
+
+def _public_callables():
+    """Every public callable that is a MEMBER of roi_stats, however it was made.
+
+    Deliberately does not filter on __module__ — see _IMPORTED_CALLABLES.
+    """
+    return {n: getattr(_R, n) for n in dir(_R)
+            if not n.startswith("_") and callable(getattr(_R, n))}
+
+
+def _public_functions():
+    """Public callables roi_stats itself defines (imports declared and excluded)."""
+    return {n: f for n, f in _public_callables().items()
+            if n not in _IMPORTED_CALLABLES}
+
+
+def test_discovery_finds_the_functions_it_claims_to():
+    """The discovery mechanism needs its own test, or the coverage claim rests on
+    an untested helper."""
+    pub = _public_functions()
+    assert len(pub) >= 15, f"discovery found only {len(pub)} public functions"
+    # no classes hiding methods that discovery would miss
+    assert not [n for n, f in pub.items() if _inspect.isclass(f)], "a class appeared; discovery only walks functions"
+    # every discovered selector function really does take a selector
+    for name, fn, arg in _selector_entry_points():
+        assert arg in _inspect.signature(fn).parameters
+    # and the reverse: no public function takes a selector arg without being discovered
+    found = {n for n, _, _ in _selector_entry_points()}
+    for name, fn in pub.items():
+        if set(_inspect.signature(fn).parameters) & set(_SELECTOR_ARGS):
+            assert name in found, f"{name} takes a selector but discovery missed it"
+
+
+def test_selector_arg_names_still_cover_every_selector_parameter():
+    """Known limit made loud: discovery keys on parameter NAME. If a new function
+    introduces a differently-named selector this fails, rather than silently
+    skipping it."""
+    # Inverted: EVERY parameter must be classified, so an unrecognised NEW name
+    # fails by default. The previous substring heuristic ("vert"/"parcel"/"roi")
+    # passed for any plausible alternative -- `mask`, `labels`, `nodes`,
+    # `region_a`, `selection` -- and `froi_a` only failed by the luck of
+    # containing "roi" (I5/F2).
+    known = set(_SELECTOR_ARGS) | _NON_ARRAY_PARAMS | _ARRAY_DATA_PARAMS
+    unclassified = set()
+    for name, fn in _public_functions().items():
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            unclassified.add(f"{name}(<no signature>)")
+            continue
+        for pname in params:
+            if pname not in known:
+                unclassified.add(f"{name}({pname})")
+    assert not unclassified, (
+        "these parameters are in no declared category, so the harness does not know "
+        "whether they are selectors, array data, or scalars. Add each to "
+        "_SELECTOR_ARGS, _ARRAY_DATA_PARAMS, or _NON_ARRAY_PARAMS: "
+        f"{sorted(unclassified)}"
+    )
+
+
+def _nonfinite_coverage():
+    """(covered, required) as (function, parameter) PAIRS.
+
+    Shared by the completeness test and by its planted-violation self-test, so
+    weakening the granularity here fails both rather than silently passing one.
+    Keying on the bare function name let one poisoned argument stand in for every
+    array argument of a multi-argument function — the roi_minus_reference
+    precedent (I5/F3).
+    """
+    covered = set(_nonfinite_entry_points())
+    required = set()
+    for name, fn in _public_functions().items():
+        if name in _NO_ARRAY_INPUT:
+            continue
+        try:
+            params = _inspect.signature(fn).parameters
+        except (TypeError, ValueError):  # pragma: no cover - defensive
+            continue
+        for pname in params:
+            if pname in _ARRAY_DATA_PARAMS:
+                required.add(f"{name}:{pname}")
+    return covered, required
+
+
+def test_completeness_is_measured_per_argument_not_per_function(monkeypatch):
+    """Self-test for the coverage granularity. A planted function with TWO array
+    arguments, only one of which is poisoned, must be reported as a gap. Under
+    function-name keying it is not — that is F3 exactly."""
+    def _two_arrays(preds, other_vals):
+        return float(np.asarray(preds).mean() + np.asarray(other_vals).mean())
+
+    monkeypatch.setattr(_R, "planted_two_array_fn", _two_arrays, raising=False)
+    monkeypatch.setitem(
+        _nonfinite_entry_points.__dict__, "_unused", None)  # keep the map callable
+    covered, required = _nonfinite_coverage()
+    assert "planted_two_array_fn:preds" in required
+    assert "planted_two_array_fn:other_vals" in required, (
+        "the second array argument was not required, so one poisoned argument "
+        "would satisfy completeness for the whole function"
+    )
+    # neither is in the hand-written map, so both must surface as gaps
+    assert {"planted_two_array_fn:preds", "planted_two_array_fn:other_vals"} <= (required - covered)
+
+
+def _array_param_kinds():
+    """The declared kinds, and the array params assigned to none of them.
+
+    Shared by the partition test and its planted-violation self-test. Computing
+    the union separately in each was how C31 slipped through two rounds ago: two
+    tests, one invariant, no shared code, so weakening one failed neither.
+    """
+    kinds = {"event vector": set(_EVENT_VECTOR_ARGS), "vertex map": set(_MAP_ARGS),
+             "time base": set(_TIME_ARGS), "lag grid": set(_GRID_ARGS)}
+    union = set().union(*kinds.values())
+    return kinds, union, _ARRAY_DATA_PARAMS - union, union - _ARRAY_DATA_PARAMS
+
+
+def test_every_array_parameter_is_assigned_exactly_one_kind():
+    """The partition is what makes the rank harness derived rather than hand-written.
+    Without it a new array parameter under an unforeseen name joined
+    _ARRAY_DATA_PARAMS, satisfied the non-finite harness, and was exempt from the
+    rank harness by default — S6 reintroducible with a green suite."""
+    kinds, _union, unassigned, orphaned = _array_param_kinds()
+    assert not unassigned, f"array params belonging to no declared kind: {sorted(unassigned)}"
+    assert not orphaned, f"assigned a kind but not an array param: {sorted(orphaned)}"
+    for a, b in _itertools.combinations(sorted(kinds), 2):
+        overlap = kinds[a] & kinds[b]
+        assert not overlap, f"{a} and {b} both claim {sorted(overlap)}"
+    # and the three parameter families must not overlap each other either
+    assert not (_ARRAY_DATA_PARAMS & _NON_ARRAY_PARAMS)
+    assert not (_ARRAY_DATA_PARAMS & set(_SELECTOR_ARGS))
+    assert not (_NON_ARRAY_PARAMS & set(_SELECTOR_ARGS))
+
+
+def test_partition_check_catches_a_planted_unassigned_parameter(monkeypatch):
+    """Self-test for the partition. Asserting `union == _ARRAY_DATA_PARAMS` is only
+    meaningful if union is BUILT from the kinds; comparing the set to itself passes
+    for free. Plant an array parameter with no kind and require it to surface."""
+    monkeypatch.setitem(globals(), "_ARRAY_DATA_PARAMS",
+                        _ARRAY_DATA_PARAMS | {"planted_unassigned_arg"})
+    _kinds, _union, unassigned, _orphaned = _array_param_kinds()
+    assert "planted_unassigned_arg" in unassigned, (
+        "an array parameter belonging to no declared kind was not surfaced, so a new "
+        "per-event argument would be exempt from the rank harness by default"
+    )
+
+
+def test_exemption_lists_cannot_silently_hide_a_function(monkeypatch):
+    """_IMPORTED_CALLABLES removes a name from ALL FOUR derived harnesses at once,
+    and the only existing check is that the name still exists. Anything in it must
+    genuinely not be defined by this module."""
+    for name in _IMPORTED_CALLABLES:
+        fn = getattr(_R, name)
+        mod = getattr(fn, "__module__", None)
+        assert mod != _R.__name__, (
+            f"{name} is exempted as an import but is defined by roi_stats itself, so it "
+            "is hidden from every coverage harness"
+        )
+    for name in _NO_ARRAY_INPUT:
+        params = set(_inspect.signature(getattr(_R, name)).parameters)
+        assert not (params & set(_MAP_ARGS) | params & set(_GRID_ARGS)), (
+            f"{name} is declared array-free but takes array data: {sorted(params)}"
+        )
+
+
+def test_discovery_machinery_catches_a_planted_partial(monkeypatch):
+    """The machinery needs a POSITIVE test, or 'it found everything' is unfalsifiable.
+
+    A module-level functools.partial with a parameter named `verts` carries no
+    __module__, so the previous __module__ filter dropped it from all three
+    safeguards while it sat in the public namespace, unvalidated (I5/F2)."""
+    import functools
+
+    def _leaky(preds, verts, scale=1.0):
+        return float(np.asarray(preds)[..., np.asarray(verts)].mean() * scale)
+
+    monkeypatch.setattr(_R, "roi_dice_fast", functools.partial(_leaky, scale=2.0),
+                        raising=False)
+    assert "roi_dice_fast" in _public_callables(), "enumeration missed a partial"
+    assert "roi_dice_fast" in _public_functions(), "a partial escaped classification"
+    # and it is picked up as a selector entry point, so the selector rules apply
+    assert "roi_dice_fast" in {n for n, _, _ in _selector_entry_points()}
+
+
+def test_discovery_machinery_catches_a_planted_unclassified_parameter(monkeypatch):
+    """A new selector under a name nobody predicted — `mask`, `labels`, `nodes`,
+    `region_a` — must fail by default. The previous substring heuristic passed
+    every one of these."""
+    def _leaky(preds, region_a):
+        return float(np.asarray(preds)[..., np.asarray(region_a)].mean())
+
+    monkeypatch.setattr(_R, "roi_dice", _leaky, raising=False)
+    known = set(_SELECTOR_ARGS) | _NON_ARRAY_PARAMS | _ARRAY_DATA_PARAMS
+    unclassified = {f"{n}({p})" for n, f in _public_functions().items()
+                    for p in _inspect.signature(f).parameters if p not in known}
+    assert "roi_dice(region_a)" in unclassified, (
+        "an unrecognised parameter name was silently skipped instead of failing"
+    )
+
+
+def test_the_nonfinite_map_is_complete_not_merely_long():
+    """The predecessor of this suite claimed 'rejected everywhere' while covering
+    3 of ~10 call sites. _nonfinite_entry_points is a HAND-WRITTEN map, so the
+    same overclaim is possible — this cross-checks it against introspection so an
+    unlisted public function fails here instead of going untested."""
+    covered, required = _nonfinite_coverage()
+    missing = sorted(required - covered)
+    assert not missing, (
+        "these (function, argument) pairs consume array data and are never poisoned. "
+        "Keying coverage on the function NAME let one poisoned argument stand in for "
+        f"all of them -- the roi_minus_reference precedent: {missing}"
+    )
+    # every key in the map must correspond to a live (function, parameter) pair,
+    # so a rename cannot leave a test silently pointing at nothing
+    stale = sorted(k for k in covered if k not in required)
+    assert not stale, f"map keys that are not live (function, parameter) pairs: {stale}"
+    # and the exemption list must stay honest — every name in it must still exist
+    assert not (_NO_ARRAY_INPUT - set(_public_functions())), "stale name in _NO_ARRAY_INPUT"
+    assert not (_IMPORTED_CALLABLES - set(_public_callables())), "stale name in _IMPORTED_CALLABLES"
