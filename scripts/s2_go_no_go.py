@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from neurocheck.s2_design import (  # noqa: E402
     ALL_PARCELS, PARCEL_LIST_MISALIGNMENT, RULES, S2, build_manifest, build_schedule,
+    environment_provenance,
     check_three_way_consistency, events_dataframe, gpu_cost_estimate,
     stop_eligible_parcels,
 )
@@ -149,6 +150,33 @@ def main() -> int:
           f"{est['estimated_gpu_h']} h for {est['n_events']} events")
     check("Compute", "runs / subjects / repetitions are stated",
           all(k in est for k in ("runs", "subjects", "repetitions")))
+
+    # ------------------------------- un-retrofittable provenance (review B)
+    check("Provenance", "model revision SHA is pinned", S2.model_revision is not None,
+          "fill S2Config.model_revision on the GPU box; from_pretrained does NOT pass "
+          "revision=, so Meta can update the repo and a re-run silently differs")
+    check("Provenance", "stimulus set identity is recorded",
+          S2.stimulus_set_version is not None,
+          "fLoc cannot be redistributed, so the manifest is the ONLY carrier of image "
+          "identity" if S2.stimulus_set_version is None else S2.stimulus_set_version)
+    check("Provenance", "image resolver is deterministic and hashes every file",
+          "sorted(" in Path("neurocheck/s2_design.py").read_text()
+          and "sha256" in Path("neurocheck/s2_design.py").read_text())
+    check("Provenance", "environment is capturable",
+          bool(environment_provenance().get("python")))
+    check("Provenance", "packing attenuation is stated before the answer is seen",
+          "not 'TRIBE" in RULES.packing_attenuation or "NOT 'TRIBE" in RULES.packing_attenuation)
+
+    # --------------------------------------------------- decision-rule integrity
+    named = {w for w in RULES.not_recovered_stop.replace(",", " ").split()
+             if w.strip(".") in {p.name for p in ALL_PARCELS}}
+    check("Decisions", "the rule text names the parcels the code actually gates on",
+          {p.name for p in stop_eligible_parcels()} <= named,
+          f"rule names {sorted(named)}")
+    check("Decisions", "peak tolerance is a number, not a word",
+          isinstance(S2.peak_tolerance_trs, int))
+    check("Decisions", "both lags are scored and reported separately",
+          S2.primary_lag_trs != S2.alternative_lag_trs)
 
     # ------------------------------------------------------------- manual
     manual("Review", "independent design review found no blocking ambiguity",

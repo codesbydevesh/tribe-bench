@@ -126,8 +126,14 @@ def test_a_secondary_parcel_cannot_be_made_stop_eligible_by_editing_one_field():
 
 # ------------------------------------------------------------------ decisions
 
-def _res(p, effect, floor):
-    return {"p": p, "effect": effect, "floor": floor}
+def _res(p, effect, floor, *, alt=None, peak=None):
+    """Build a lag-keyed result. `alt` defaults to the same numbers at the
+    alternative lag, so a test that does not care about the lag dimension reads
+    as before; pass `alt` explicitly to make the two lags disagree."""
+    prim = {"p": p, "effect": effect, "floor": floor}
+    other = prim if alt is None else {"p": alt[0], "effect": alt[1], "floor": alt[2]}
+    return {"by_lag": {S2.primary_lag_trs: prim, S2.alternative_lag_trs: other},
+            "peak_lag_trs": peak, "statistic": S2.primary_statistic}
 
 
 def test_stop_fires_only_when_every_stop_eligible_parcel_fails():
@@ -152,16 +158,57 @@ def test_recovery_requires_the_detection_floor_not_just_the_p_value():
     the minimum detectable effect is not a recovery."""
     below = _res(0.001, 0.01, 0.05)          # significant but under its own floor
     v = replication_verdict({"FFA": below, "EBA": below})
-    assert v["per_parcel"]["FFA"]["cleared_alpha"] is True
-    assert v["per_parcel"]["FFA"]["cleared_floor"] is False
+    prim = v["per_parcel"]["FFA"]["by_lag"][str(S2.primary_lag_trs)]
+    assert prim["cleared_alpha"] is True
+    assert prim["cleared_floor"] is False
     assert v["per_parcel"]["FFA"]["status"] == "not_recovered"
     assert v["stop"] is True
 
 
-def test_a_parcel_that_was_never_run_does_not_silently_count_as_recovered():
-    v = replication_verdict({"FFA": _res(0.001, 0.5, 0.05)})   # EBA missing
+def test_a_missing_parcel_blocks_the_stop_rule_even_when_the_other_one_failed():
+    """The interesting case, which the previous fixture avoided: the present parcel
+    FAILS and the other is missing. Stopping there would end GPU spend having
+    measured one of the two parcels the rule requires. Incomplete is not the same
+    outcome as not-recovered."""
+    v = replication_verdict({"FFA": _res(0.9, 0.01, 0.05)})    # EBA never ran
+    assert v["per_parcel"]["FFA"]["status"] == "not_recovered"
     assert v["per_parcel"]["EBA"]["status"] == "not_run"
-    assert v["stop"] is False, "a not-run parcel must not fire the stop rule"
+    assert v["incomplete"] == ["EBA"]
+    assert v["stop"] is False, "the study stopped on half the required evidence"
+    # and with the other one recovering, still no stop
+    assert replication_verdict({"FFA": _res(0.001, 0.5, 0.05)})["stop"] is False
+    # complete evidence, both failed -> the rule fires as designed
+    both = replication_verdict({"FFA": _res(0.9, 0.01, 0.05), "EBA": _res(0.9, 0.01, 0.05)})
+    assert both["incomplete"] == [] and both["stop"] is True
+
+
+def test_an_unusable_number_is_an_error_not_a_null_result():
+    """NaN compares False against everything, so a NaN p-value read as 'did not
+    clear alpha' — indistinguishable from a genuine null, and able to help fire the
+    stop rule on a measurement that never happened."""
+    nan = float("nan")
+    for label, bad in (("p", _res(nan, 0.5, 0.05)),
+                       ("effect", _res(0.001, nan, 0.05)),
+                       ("floor", _res(0.001, 0.5, nan))):
+        v = replication_verdict({"FFA": bad, "EBA": bad})
+        assert v["per_parcel"]["FFA"]["status"] == "invalid", label
+        reason = v["per_parcel"]["FFA"]["by_lag"][str(S2.primary_lag_trs)]["reason"]
+        assert label in reason, reason
+        assert v["incomplete"] == ["FFA", "EBA"], label
+        assert v["stop"] is False, f"a non-finite {label} fired the stop rule"
+
+
+def test_a_zero_or_negative_floor_is_rejected_rather_than_silently_disabling_D3():
+    """A floor of 0 makes `effect > floor` true for any positive effect, which
+    switches off the detection-floor doctrine while appearing to honour it."""
+    for floor in (0.0, -1.0):
+        v = replication_verdict({"FFA": _res(0.001, 0.5, floor)})
+        assert v["per_parcel"]["FFA"]["status"] == "invalid", floor
+        assert "not positive" in \
+            v["per_parcel"]["FFA"]["by_lag"][str(S2.primary_lag_trs)]["reason"]
+    # a genuine positive floor still works
+    assert replication_verdict(
+        {"FFA": _res(0.001, 0.5, 0.05)})["per_parcel"]["FFA"]["status"] == "recovered"
 
 
 def test_the_isi_baseline_is_secondary_by_construction():

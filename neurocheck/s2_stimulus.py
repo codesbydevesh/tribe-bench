@@ -40,12 +40,17 @@ class RenderResult:
 def _exemplar_frame(cfg: S2Config, ev: Event) -> np.ndarray:
     """A deterministic placeholder frame for one exemplar.
 
-    Real runs substitute fLoc images here. The placeholder is deterministic in the
-    stimulus id so a dry run is reproducible, and it is visibly NOT grey so that a
+    Real runs substitute fLoc images here, resolved through
+    ``s2_design.resolve_stimulus_images`` so every id maps to a hashed file. The
+    placeholder is deterministic in the stimulus id ACROSS PROCESSES (hashlib, not
+    the per-process-salted builtin ``hash``), and is visibly not grey so a
     frame-level check can tell presentation from ISI.
     """
     h, w = cfg.frame_size
-    seed = abs(hash(ev.stimulus_id)) % (2**32)
+    # hashlib, not hash(): Python randomises string hashing per process, so the
+    # docstring's reproducibility claim was false across runs.
+    import hashlib as _h
+    seed = int(_h.sha256(ev.stimulus_id.encode()).hexdigest()[:8], 16)
     rng = np.random.default_rng(seed)
     img = np.full((h, w, 3), cfg.grey_level, dtype=np.uint8)
     cat_idx = cfg.categories.index(ev.category)

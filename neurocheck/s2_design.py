@@ -161,11 +161,27 @@ must correspond to themselves. A5 is left-position 5 but right-position 4, so th
 is already present by position 5 -- the omission therefore lies among the first four, the
 visual regions. The tail is then consistent: STS->STSv, TPJ->PGi, MTG->TE1a.
 
-Consequences:
-  * FFA -> FFC and EBA -> V4t are SECURE. Moving the omission to position 1 or 2 would force
-    EBA->FFC or PPA->V4t, which the remaining assignments cannot absorb.
-  * PH is claimed by PPA (if VWFA is the omission) or by VWFA (if PPA is the omission).
-    UNRESOLVABLE from the paper. Both readings are carried; neither may gate.
+Consequences, with the two premises kept SEPARATE:
+
+  * FROM THE TEXT ALONE, four readings survive -- the omission may be at any of the four
+    visual positions -- and each is an internally consistent order-preserving zip:
+        omit FFA :  EBA->FFC   PPA->V4t   VWFA->PH
+        omit EBA :  FFA->FFC   PPA->V4t   VWFA->PH
+        omit PPA :  FFA->FFC   EBA->V4t   VWFA->PH
+        omit VWFA:  FFA->FFC   EBA->V4t   PPA->PH
+    So NO visual mapping is forced by the text. An earlier version of this note claimed the
+    remaining assignments "cannot absorb" an omission at position 1 or 2. That is FALSE --
+    they absorb it perfectly -- and the claim is withdrawn.
+
+  * ONE ADDITIONAL PREMISE, from the meaning of the Glasser labels rather than from the
+    paper: FFC is the Fusiform Face *Complex*, so EBA->FFC is untenable; and V4t is lateral
+    occipitotemporal while PPA is medial parahippocampal, so PPA->V4t is untenable. That
+    excludes the first two readings and leaves FFA->FFC and EBA->V4t in both survivors.
+    The conclusion is well supported; it is NOT text-only, and is labelled as such.
+
+  * PH remains contested between PPA and VWFA, so neither may gate. Note the asymmetry:
+    VWFA->PH holds in three of the four textual readings and PPA->PH in only one, which
+    mildly favours PPA being the omitted name. Not acted on -- recorded.
 
 Also: §2.5 orders the regions FFA, PPA, EBA, VWFA while §5.9 orders them FFA, EBA, PPA,
 VWFA. Zipping against the results text instead of the methods text silently swaps PPA and
@@ -219,7 +235,10 @@ class S2Config:
     lead_in_s: float = 25.0        # grey frames before the first onset
     tail_out_s: float = 25.0       # grey frames after the last offset
     fps: int = 8
-    frame_size: tuple[int, int] = (224, 224)
+    # 256, not 224: vjepa2-vitg-fpc64-256 wants 256x256, so authoring at 224 meant
+    # downsample -> lossy quantise -> upsample, eroding exactly the fine detail the
+    # characters/VWFA condition depends on.
+    frame_size: tuple[int, int] = (256, 256)
     grey_level: int = 128
 
     # --- randomisation ----------------------------------------------------
@@ -227,6 +246,16 @@ class S2Config:
 
     # --- analysis ---------------------------------------------------------
     model_id: str = "facebook/tribev2"
+    # BLOCKING before GPU: from_pretrained calls hf_hub_download WITHOUT a revision,
+    # so Meta can update the repo and a re-run silently gets different weights with
+    # no signal anywhere. Cannot be retrofitted after the run. Must be filled with
+    # the resolved commit SHA on the GPU box before inference.
+    model_revision: str | None = None
+    # fLoc images are licence-restricted and CANNOT ship beside the results, so the
+    # manifest is the only possible carrier of image identity.
+    stimulus_set: str = "fLoc"
+    stimulus_set_version: str | None = None
+    stimulus_set_doi: str = "10.1523/JNEUROSCI.0803-15.2015"
     # THE LAG CONFLICT, pre-registered rather than guessed. See LAG_CONFLICT.
     # Methods §5.9 reads the contrast at t=5 and calls that the peak. Our own
     # VERIFIED source-of-truth says TRIBE output is already offset by 5 s, so a
@@ -239,6 +268,9 @@ class S2Config:
     alternative_lag_trs: int = 0          # implied by FmriExtractor(offset=5)
     report_lags: tuple[int, ...] = (-2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9)
     peak_lag_policy: str = "measure_and_report_only"
+    # "the measured peak is ~0" needs a number, or the branch is adjudicated after
+    # the answer is seen. On noisy data a true peak at 0 often measures as 1.
+    peak_tolerance_trs: int = 1
     primary_statistic: str = "event_locked_contrast"
     secondary_statistics: tuple[str, ...] = ("glm_contrast_z", "roi_minus_reference", "spatial_z")
     n_perm: int = 10000
@@ -351,7 +383,114 @@ def grey_intervals(cfg: S2Config, events: list[Event]) -> list[tuple[float, floa
 # Manifest
 # ---------------------------------------------------------------------------
 
-def build_manifest(cfg: S2Config = S2, *, code_commit: str | None = None) -> dict:
+def resolve_stimulus_images(image_root, cfg: S2Config = S2) -> dict:
+    """Map every ``stimulus_id`` to a concrete file, deterministically, with a hash.
+
+    BLOCKING requirement. ``stimulus_id`` is ``f"{category}_{exemplar:03d}"`` -- a bare
+    index into an ordering that exists nowhere. If the loader ever reaches for
+    ``os.listdir`` or an unsorted glob, the SAME manifest maps to different pixels on
+    different machines and nothing detects it. fLoc is licence-restricted and cannot be
+    redistributed beside the results, so this mapping is the ONLY carrier of image
+    identity: without it the run is unreproducible in principle, not merely
+    inconveniently.
+
+    Ordering is ``sorted()`` over the resolved paths -- stated, not inherited from the
+    filesystem.
+
+    Args:
+        image_root: directory containing one subdirectory per category.
+
+    Returns:
+        {stimulus_id: {"path": str, "sha256": str, "bytes": int}}
+    """
+    from pathlib import Path as _P
+
+    root = _P(image_root)
+    if not root.is_dir():
+        raise FileNotFoundError(f"stimulus image root not found: {root}")
+    out: dict[str, dict] = {}
+    exts = (".jpg", ".jpeg", ".png", ".bmp")
+    for category in cfg.categories:
+        cdir = root / category
+        if not cdir.is_dir():
+            raise FileNotFoundError(
+                f"no directory for category '{category}' under {root}. Expected one "
+                f"subdirectory per category: {list(cfg.categories)}"
+            )
+        files = sorted(f for f in cdir.iterdir()
+                       if f.is_file() and f.suffix.lower() in exts)
+        if len(files) < cfg.exemplars_per_category:
+            raise ValueError(
+                f"category '{category}' has {len(files)} usable images but the design "
+                f"needs {cfg.exemplars_per_category}"
+            )
+        for i in range(cfg.exemplars_per_category):
+            f = files[i]
+            h = hashlib.sha256(f.read_bytes()).hexdigest()
+            out[f"{category}_{i:03d}"] = {
+                "path": str(f), "sha256": h, "bytes": f.stat().st_size}
+    expected = {e.stimulus_id for e in build_schedule(cfg)}
+    if set(out) != expected:
+        raise ValueError(
+            f"resolved {len(out)} images but the schedule needs {len(expected)}; "
+            f"missing={sorted(expected - set(out))[:5]}"
+        )
+    return out
+
+
+def environment_provenance() -> dict:
+    """Versions and hardware that silently change the answer if they change."""
+    import platform
+    import sys as _sys
+
+    def _v(mod):
+        try:
+            return __import__(mod).__version__
+        except Exception:
+            return None
+
+    env = {
+        "python": _sys.version.split()[0],
+        "platform": platform.platform(),
+        "numpy": _v("numpy"), "torch": _v("torch"),
+        "transformers": _v("transformers"), "cv2": _v("cv2"),
+        "mne": _v("mne"), "nilearn": _v("nilearn"), "pandas": _v("pandas"),
+    }
+    try:
+        import torch
+        env["cuda"] = torch.version.cuda
+        env["gpu"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else None
+    except Exception:
+        env["cuda"] = env["gpu"] = None
+    return env
+
+
+def window_packing(cfg: S2Config = S2) -> list[dict]:
+    """Per-event window index and within-window phase.
+
+    ``log_window_packing`` promised this diagnostic and nothing computed it. Onsets
+    sit at lead_in + 8k while windows tile at 0/100/200..., so within-window phase
+    cycles with period 200 s. An event at phase 97 s has 3 s of within-window
+    post-onset context; at phase 5 s it has 95 s. That is exchangeable nuisance
+    variance -- the permutation p-value handles it -- but it must be auditable
+    after the fact rather than balanced only in expectation.
+    """
+    out = []
+    for e in build_schedule(cfg):
+        widx = int(e.onset_s // cfg.model_window_s)
+        phase = e.onset_s - widx * cfg.model_window_s
+        out.append({"event_id": e.event_id, "category": e.category,
+                    "onset_s": e.onset_s, "window_index": widx,
+                    "phase_in_window_s": round(phase, 6),
+                    "post_onset_context_s": round(cfg.model_window_s - phase, 6)})
+    return out
+
+
+def build_manifest(cfg: S2Config = S2, *, code_commit: str | None = None,
+                   tree_dirty: bool | None = None, images: dict | None = None,
+                   video: dict | None = None, atlas: dict | None = None,
+                   features_to_use: list | None = None,
+                   environment: dict | None = None) -> dict:
     """The machine-readable record of exactly what was presented.
 
     Written BEFORE the GPU run and shipped beside the results, so the stimulus can
@@ -365,8 +504,28 @@ def build_manifest(cfg: S2Config = S2, *, code_commit: str | None = None) -> dic
         "config": asdict(cfg),
         "provenance": {
             "model_id": cfg.model_id,
+            # A commit hash that does not describe the tree is worse than none, because
+            # it reads as authoritative.
             "code_commit": code_commit,
+            "code_tree_dirty": tree_dirty,
+            "model_revision": cfg.model_revision,
+            "stimulus_set": cfg.stimulus_set,
+            "stimulus_set_version": cfg.stimulus_set_version,
+            "stimulus_set_doi": cfg.stimulus_set_doi,
+            # The only carrier of image identity: fLoc cannot be redistributed.
+            "images": images,
+            # Binds the manifest to the file actually fed to the GPU.
+            "video": video,
+            # HCP-MMP1 labels resolve through a version-sensitive downsampling from
+            # fsaverage to fsaverage5, and the ROI vertex sets are what the whole
+            # result is read from.
+            "atlas": atlas,
+            # The cost argument and the "audio/text are zeros" reading both depend on
+            # which extractors actually ran. Read it back, do not assume it.
+            "features_to_use": features_to_use,
+            "environment": environment,
             "roi_mapping_status": ROI_MAPPING_STATUS.strip(),
+            "packing_attenuation": RULES.packing_attenuation,
         },
         "timing": {
             "soa_s": cfg.soa_s,
@@ -381,6 +540,7 @@ def build_manifest(cfg: S2Config = S2, *, code_commit: str | None = None) -> dic
         "stop_eligible": [p.name for p in stop_eligible_parcels()],
         "events": [asdict(e) for e in events],
         "grey_intervals_s": greys,
+        "window_packing": window_packing(cfg) if cfg.log_window_packing else None,
         "compute": gpu_cost_estimate(cfg),
     }
 
@@ -459,6 +619,25 @@ def check_three_way_consistency(cfg: S2Config, manifest: dict, rendered_duration
     if gaps and gaps != {round(cfg.soa_s, 6)}:
         problems.append(f"onset spacing is not a constant SOA: {sorted(gaps)}")
 
+    # Every event must get the SAME number of frames. At the frozen numbers this is
+    # exact because 25.0/8.0/1.0 are all multiples of 1/fps, but that is a property
+    # of these values, not of the design: at another fps or a non-integer SOA some
+    # events get n and some n+1. The total-frame gate cannot see that, because the
+    # total stays right while individual events differ.
+    expected_frames = cfg.on_duration_s * rendered_fps
+    if abs(expected_frames - round(expected_frames)) > 1e-9:
+        problems.append(
+            f"on_duration {cfg.on_duration_s}s x {rendered_fps}fps = {expected_frames} "
+            "frames per event, which is not a whole number: events will differ in length"
+        )
+    for me in m_events:
+        first = me["onset_s"] * rendered_fps
+        if abs(first - round(first)) > 1e-9:
+            problems.append(
+                f"event {me['event_id']} onset {me['onset_s']}s does not land on a frame "
+                f"boundary at {rendered_fps} fps")
+            break
+
     # grey frames must tile every non-stimulus interval, with no gaps or overlaps
     covered = sorted(manifest["grey_intervals_s"] +
                      [(e["onset_s"], e["offset_s"]) for e in m_events])
@@ -536,20 +715,36 @@ class DecisionRules:
         "If this fails the pipeline is broken and NOTHING downstream is interpretable."
     )
     recovered: str = (
-        "A stop-eligible parcel is RECOVERED iff p_one_sided < alpha AND observed effect "
-        "exceeds its own detection floor. Controlled by: (p, effect, floor) for that parcel "
-        "under the PRIMARY statistic at the PRIMARY lag."
+        "A parcel is RECOVERED iff p_one_sided < alpha AND the observed effect exceeds its "
+        "OWN detection floor -- computed from that parcel's own noise and n, not a shared "
+        "constant. Controlled by: (p, effect, floor) at a NAMED lag. Every parcel is scored "
+        "at BOTH pre-specified lags; 'recovered' without qualification means at the PRIMARY "
+        "lag, and recovery only at the alternative is a distinct status."
     )
     not_recovered_stop: str = (
-        "Fires iff EVERY stop-eligible parcel fails `recovered`. Controlled by the "
-        "stop_eligible set ONLY -- currently FFA and PPA. EBA, VWFA and every secondary "
-        "parcel are structurally incapable of firing it (Parcel.stop_eligible=False, "
-        "asserted in _validate_parcels)."
+        "Fires iff EVERY stop-eligible parcel produced a USABLE result AND every one failed "
+        "`recovered`. Controlled by the stop_eligible set ONLY -- currently FFA and EBA, the "
+        "two parcels §5.9 maps unambiguously. PPA, VWFA and every secondary parcel are "
+        "structurally incapable of firing it (Parcel.stop_eligible=False, asserted in "
+        "_validate_parcels). A parcel that did not run, or that returned a non-finite p, "
+        "effect or floor, makes the evidence INCOMPLETE -- reported as such and blocking the "
+        "stop rule, because ending GPU spend requires having measured the thing."
     )
     secondary_reporting: str = (
         "Gate-0 unions, V1 control, the ISI-baseline read and all secondary statistics are "
         "REPORTED ALWAYS and DECIDE NOTHING. They may not be promoted to primary after the "
         "results are seen."
+    )
+    packing_attenuation: str = (
+        "The 100 s window is a full self-attention context, so each event's prediction mixes "
+        "in a window mean shared by every event in that window. That shared term CANCELS in "
+        "'category minus mean of others', so packing cannot bias the contrast or flip its "
+        "sign -- but it scales the MAGNITUDE by an unmeasured factor <= 1. The paper may have "
+        "fed each static image as its own clip, in which case its contrast is undiluted and "
+        "ours is not directly comparable in effect size. Because `recovered` requires "
+        "effect > floor, a false 'Not recovered' is therefore a live failure mode. A null "
+        "under this protocol means 'not recovered under continuous packing', NOT 'TRIBE "
+        "fails'. Written down before the answer is seen."
     )
     estimand_note: str = (
         "The primary estimand is the published contrast: category response minus the mean "
@@ -581,37 +776,137 @@ class DecisionRules:
 RULES = DecisionRules()
 
 
+def _score_one(r, cfg: S2Config) -> dict:
+    """Evaluate one (parcel, lag) result. Unusable numbers are ERRORS, not nulls."""
+    p_val, effect, floor = r["p"], r["effect"], r["floor"]
+    invalid = []
+    if not np.isfinite(p_val):
+        invalid.append(f"p={p_val}")
+    if not np.isfinite(effect):
+        invalid.append(f"effect={effect}")
+    if cfg.require_detection_floor:
+        if not np.isfinite(floor):
+            invalid.append(f"floor={floor}")
+        elif floor <= 0:
+            # A zero or negative floor is not a floor; accepting it would silently
+            # disable doctrine D-3 while appearing to honour it.
+            invalid.append(f"floor={floor} is not positive")
+    if invalid:
+        return {"status": "invalid", "reason": "; ".join(invalid),
+                "p": p_val, "effect": effect, "floor": floor}
+    floor_ok = (not cfg.require_detection_floor) or (effect > floor)
+    recovered = (p_val < cfg.alpha) and floor_ok
+    return {"status": "recovered" if recovered else "not_recovered",
+            "p": p_val, "effect": effect, "floor": floor,
+            "cleared_alpha": p_val < cfg.alpha, "cleared_floor": floor_ok}
+
+
 def replication_verdict(results: dict, cfg: S2Config = S2) -> dict:
     """Apply the pre-registered rules. Pure function of results + config.
 
     Args:
-        results: {parcel_name: {"p": float, "effect": float, "floor": float}}.
+        results: ``{parcel_name: {"by_lag": {lag: {"p", "effect", "floor"}},
+                   "peak_lag_trs": int | None, "statistic": str}}``.
+                 The LAG IS PART OF THE KEY. An earlier schema carried one result
+                 per parcel with no lag dimension, so a run at the primary lag and
+                 a run at the alternative produced structurally identical output --
+                 "replicated" and "not replicated at the published lag" were
+                 indistinguishable downstream, and feeding primary-lag results
+                 fired the stop rule on the outcome source-of-truth.md:51 predicts
+                 is most likely.
 
     Returns:
-        verdict dict; ``stop`` is True only when every stop-eligible parcel failed.
+        verdict dict. ``stop`` is True only when every stop-eligible parcel
+        produced usable results at BOTH pre-specified lags and failed at both.
     """
     eligible = stop_eligible_parcels()
-    per_parcel = {}
+    lags = (cfg.primary_lag_trs, cfg.alternative_lag_trs)
+    per_parcel, warnings = {}, []
+
+    known = {p.name for p in ALL_PARCELS}
+    for name in results:
+        if name not in known:
+            warnings.append(
+                f"result key '{name}' is not a declared parcel and was IGNORED. "
+                "Results must be keyed by functional name (FFA), not by HCP label (FFC)."
+            )
+
     for p in ALL_PARCELS:
         r = results.get(p.name)
         if r is None:
-            per_parcel[p.name] = {"status": "not_run", "stop_eligible": p.stop_eligible}
+            per_parcel[p.name] = {"status": "not_run", "stop_eligible": p.stop_eligible,
+                                  "provenance": p.provenance}
             continue
-        floor_ok = (not cfg.require_detection_floor) or (r["effect"] > r["floor"])
-        recovered = (r["p"] < cfg.alpha) and floor_ok
+        by_lag = r.get("by_lag", {})
+        scored = {}
+        for lag in lags:
+            if lag not in by_lag:
+                scored[lag] = {"status": "not_run"}
+            else:
+                scored[lag] = _score_one(by_lag[lag], cfg)
+        prim, alt = scored[cfg.primary_lag_trs], scored[cfg.alternative_lag_trs]
+        peak = r.get("peak_lag_trs")
+
+        # The adjudication table from DecisionRules.lag_adjudication, applied.
+        if prim["status"] == "recovered":
+            status = "recovered"
+            # Physically incoherent: passes at the published lag, fails at the
+            # alternative, yet the pooled response peaks AT the alternative. Not a
+            # demotion -- a pre-specified caveat on the success.
+            if alt.get("status") == "not_recovered" and peak is not None \
+                    and abs(peak - cfg.alternative_lag_trs) <= cfg.peak_tolerance_trs:
+                warnings.append(
+                    f"{p.name}: recovered at the published lag {cfg.primary_lag_trs} while "
+                    f"failing at {cfg.alternative_lag_trs}, yet the measured peak is {peak}. "
+                    "Report as a caveat: this pattern is not coherent for a real evoked "
+                    "response."
+                )
+        elif alt.get("status") == "recovered":
+            if peak is not None and abs(peak - cfg.alternative_lag_trs) <= cfg.peak_tolerance_trs:
+                status = "recovered_at_alternative_lag"
+            else:
+                # Pre-specified for the cells the "~0" clause would otherwise leave
+                # undefined -- adjudicating these after seeing the answer is exactly
+                # what the pre-registration exists to prevent.
+                status = "recovered_at_alternative_lag_peak_unsupported"
+        elif "invalid" in (prim["status"], alt.get("status")):
+            status = "invalid"
+        elif "not_run" in (prim["status"], alt.get("status")):
+            status = "not_run"
+        else:
+            status = "not_recovered"
+
         per_parcel[p.name] = {
-            "status": "recovered" if recovered else "not_recovered",
-            "p": r["p"], "effect": r["effect"], "floor": r["floor"],
-            "cleared_alpha": r["p"] < cfg.alpha, "cleared_floor": floor_ok,
+            "status": status,
+            "by_lag": {str(k): v for k, v in scored.items()},
+            "primary_lag_trs": cfg.primary_lag_trs,
+            "alternative_lag_trs": cfg.alternative_lag_trs,
+            "peak_lag_trs": peak,
+            "statistic": r.get("statistic", cfg.primary_statistic),
             "stop_eligible": p.stop_eligible, "provenance": p.provenance,
         }
-    eligible_states = [per_parcel[p.name]["status"] for p in eligible]
-    ran = [s for s in eligible_states if s != "not_run"]
-    stop = bool(ran) and all(s == "not_recovered" for s in ran)
+
+    if per_parcel.get("V1_control", {}).get("status", "").startswith("recovered"):
+        warnings.append(
+            "V1_control recovered. It is a non-specific control that should show no "
+            "category selectivity, so this indicates a pipeline artefact rather than a "
+            "finding. Decides nothing, but must not be reported as a success."
+        )
+
+    states = [per_parcel[p.name]["status"] for p in eligible]
+    # "Not recovered -> Stop" requires COMPLETE evidence at BOTH lags. A parcel that
+    # did not run, returned a non-finite number, or failed at only one of the two
+    # lags does not establish "not recovered" -- and ending GPU spend requires
+    # having actually measured the thing.
+    incomplete = [p.name for p, s in zip(eligible, states) if s in ("not_run", "invalid")]
+    stop = bool(states) and not incomplete and all(s == "not_recovered" for s in states)
     return {
         "per_parcel": per_parcel,
         "stop_eligible": [p.name for p in eligible],
-        "any_record_recovered": any(s == "recovered" for s in ran),
+        "lags_evaluated": list(lags),
+        "any_record_recovered": any(s.startswith("recovered") for s in states),
+        "incomplete": incomplete,
+        "warnings": warnings,
         "stop": stop,
         "rule": RULES.not_recovered_stop,
     }

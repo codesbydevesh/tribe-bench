@@ -156,8 +156,13 @@ def main() -> int:
 
     # ----------------------------------------------------------- decision path
     print("\n[7] decision rules")
-    win = {"p": 0.001, "effect": 0.5, "floor": 0.05}
-    fail = {"p": 0.9, "effect": 0.01, "floor": 0.05}
+    def _r(p_val, effect, floor, peak=None):
+        """Lag-keyed result: the verdict scores BOTH pre-specified lags."""
+        one = {"p": p_val, "effect": effect, "floor": floor}
+        return {"by_lag": {S2.primary_lag_trs: one, S2.alternative_lag_trs: one},
+                "peak_lag_trs": peak, "statistic": S2.primary_statistic}
+
+    win, fail = _r(0.001, 0.5, 0.05), _r(0.9, 0.01, 0.05)
     gate("stop fires when all stop-eligible parcels fail",
          replication_verdict({"FFA": fail, "EBA": fail}, S2)["stop"] is True)
     gate("stop does NOT fire when one record parcel recovers",
@@ -167,8 +172,25 @@ def main() -> int:
                              "V1_control": fail}, S2)
     gate("secondary parcels cannot fire the stop rule", v["stop"] is False)
     gate("a below-floor 'significant' result is NOT a recovery",
-         replication_verdict({"FFA": {"p": 0.001, "effect": 0.01, "floor": 0.05}},
+         replication_verdict({"FFA": _r(0.001, 0.01, 0.05)},
                              S2)["per_parcel"]["FFA"]["status"] == "not_recovered")
+    # the lag dimension itself
+    only_alt = {"by_lag": {S2.primary_lag_trs: {"p": 0.9, "effect": 0.01, "floor": 0.05},
+                           S2.alternative_lag_trs: {"p": 0.001, "effect": 0.5, "floor": 0.05}},
+                "peak_lag_trs": 0, "statistic": S2.primary_statistic}
+    v_alt = replication_verdict({"FFA": only_alt, "EBA": only_alt}, S2)
+    gate("recovery only at the alternative lag is a DISTINCT status",
+         v_alt["per_parcel"]["FFA"]["status"] == "recovered_at_alternative_lag",
+         v_alt["per_parcel"]["FFA"]["status"])
+    gate("that outcome does NOT fire the stop rule", v_alt["stop"] is False)
+    gate("a missing parcel blocks the stop rule",
+         replication_verdict({"FFA": fail}, S2)["stop"] is False)
+    nan = float("nan")
+    gate("a non-finite number is invalid, not a null",
+         replication_verdict({"FFA": _r(nan, 0.5, 0.05), "EBA": _r(nan, 0.5, 0.05)},
+                             S2)["stop"] is False)
+    gate("results keyed by HCP label instead of functional name are flagged",
+         bool(replication_verdict({"FFC": fail}, S2)["warnings"]))
     gate("only the securely mapped parcels are stop-eligible",
          {p.name for p in stop_eligible_parcels()} == {"FFA", "EBA"},
          "PPA/VWFA share the contested PH parcel and cannot gate")
@@ -190,7 +212,12 @@ def main() -> int:
         report = {
             "design_fingerprint": tiny.fingerprint(),
             "provenance": manifest["provenance"],
-            "results": {"FFA": {"p": float(p), "effect": float(eff), "floor": 0.05}},
+            "results": {"FFA": {
+                "by_lag": {S2.primary_lag_trs: {"p": float(p), "effect": float(eff),
+                                                "floor": 0.05},
+                           S2.alternative_lag_trs: {"p": float(p), "effect": float(eff),
+                                                    "floor": 0.05}},
+                "peak_lag_trs": None, "statistic": S2.primary_statistic}},
         }
         report["verdict"] = replication_verdict(report["results"], S2)
         rpath = out / "s2_report_tiny.json"
