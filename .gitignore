@@ -69,3 +69,8 @@ data/floc/
 
 # Kaggle upload bundle — derived from gitignored fLoc images, never commit
 s2_inputs.zip
+
+.venv-kaggle/
+
+# local scratch, not for the public repo
+DISCUSSIONS.md
