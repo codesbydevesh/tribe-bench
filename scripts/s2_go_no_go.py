@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from neurocheck.s2_design import (  # noqa: E402
     ALL_PARCELS, PARCEL_LIST_MISALIGNMENT, RULES, S2, build_manifest, build_schedule,
-    environment_provenance,
+    environment_provenance, resolve_stimulus_images,
     check_three_way_consistency, events_dataframe, gpu_cost_estimate,
     stop_eligible_parcels,
 )
@@ -42,6 +42,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--review-clean", action="store_true",
                     help="the independent design review found no blocking ambiguity")
+    ap.add_argument("--neuralset-timestamp", action="store_true",
+                    help="confirmed on the GPU box that V-JEPA frame selection is "
+                         "timestamp-based, so 8 fps is safe")
     ap.add_argument("--dry-run-dir", default="data/s2_dry_run")
     args = ap.parse_args()
     dry = Path(args.dry_run_dir)
@@ -159,6 +162,30 @@ def main() -> int:
           S2.stimulus_set_version is not None,
           "fLoc cannot be redistributed, so the manifest is the ONLY carrier of image "
           "identity" if S2.stimulus_set_version is None else S2.stimulus_set_version)
+    # The recorded hashes must still match the files on disk, or the manifest
+    # describes a stimulus set that is no longer there.
+    man_path = Path("data/s2_manifest.json")
+    try:
+        rec = json.loads(man_path.read_text())["provenance"]
+        imgs_rec = (rec.get("images") or {}).get("files") or {}
+        live = resolve_stimulus_images("data/floc", S2) if imgs_rec else {}
+        drift = [k for k in imgs_rec
+                 if k not in live or live[k]["sha256"] != imgs_rec[k]["sha256"]]
+        check("Provenance", "manifest image hashes match the files on disk",
+              bool(imgs_rec) and not drift,
+              f"{len(imgs_rec)} hashed" if not drift else f"{len(drift)} drifted")
+        check("Provenance", "checkpoint revision + hash recorded in the manifest",
+              bool(rec.get("checkpoint", {}).get("sha256")) and bool(rec.get("model_revision")),
+              str(rec.get("model_revision", ""))[:12])
+    except Exception as exc:
+        check("Provenance", "manifest image hashes match the files on disk", False,
+              f"{type(exc).__name__}: {exc}")
+        check("Provenance", "checkpoint revision + hash recorded in the manifest", False, "")
+    check("Provenance", "load_model pins the revision rather than the floating branch",
+          "fetch_pinned_checkpoint" in Path("tribe_tools/model.py").read_text()
+          and "revision=revision" in Path("tribe_tools/model.py").read_text())
+    check("Provenance", "stimulus images are gitignored (fLoc states no licence)",
+          subprocess.run(["git", "check-ignore", "-q", "data/floc/faces"]).returncode == 0)
     check("Provenance", "image resolver is deterministic and hashes every file",
           "sorted(" in Path("neurocheck/s2_design.py").read_text()
           and "sha256" in Path("neurocheck/s2_design.py").read_text())
@@ -179,6 +206,24 @@ def main() -> int:
           S2.primary_lag_trs != S2.alternative_lag_trs)
 
     # ------------------------------------------------------------- manual
+    # The ONE check that genuinely cannot be run without the GPU environment.
+    # neuralset is not installable here, so whether V-JEPA selects its 64 frames by
+    # TIMESTAMP or by FRAME INDEX cannot be settled. At 8 fps an index-based loader
+    # would span 8 s of timeline instead of 4, halving each presentation's weight
+    # inside its tubelet and smearing it across neighbouring events at an 8 s SOA.
+    # Timestamp-based -> 8 fps is fine. Index-based -> BLOCKING, raise fps to 16.
+    try:
+        import importlib.util
+        have_neuralset = importlib.util.find_spec("neuralset") is not None
+    except Exception:
+        have_neuralset = False
+    manual("GPU-only", "neuralset samples V-JEPA frames by TIMESTAMP, not frame index",
+           args.neuralset_timestamp,
+           "neuralset not installed here; run scripts/s2_check_frame_sampling.py on the "
+           "GPU box and pass --neuralset-timestamp"
+           if not args.neuralset_timestamp else
+           f"confirmed by the operator (neuralset importable here: {have_neuralset})")
+
     manual("Review", "independent design review found no blocking ambiguity",
            args.review_clean,
            "pass --review-clean once the reviewer reports GO" if not args.review_clean

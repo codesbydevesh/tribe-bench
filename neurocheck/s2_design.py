@@ -250,11 +250,31 @@ class S2Config:
     # so Meta can update the repo and a re-run silently gets different weights with
     # no signal anywhere. Cannot be retrofitted after the run. Must be filled with
     # the resolved commit SHA on the GPU box before inference.
-    model_revision: str | None = None
+    # Resolved from the HuggingFace API 2026-08-24; repo lastModified
+    # 2026-03-27T09:07:48Z. tribe_tools.model pins this and verifies best.ckpt's
+    # sha256 (9c79ffff...) before loading, because from_pretrained accepts no
+    # revision argument and would otherwise take the floating branch.
+    model_revision: str | None = "f894e783020944dcd96e5568550afe2aa9743f9f"
     # fLoc images are licence-restricted and CANNOT ship beside the results, so the
     # manifest is the only possible carrier of image identity.
     stimulus_set: str = "fLoc"
-    stimulus_set_version: str | None = None
+    # fLoc ships TEN subcategories; the paper's five categories are the standard
+    # pairs. Frozen here so the grouping cannot drift, and so the manifest records
+    # WHICH subcategories fed each category.
+    stimulus_subcategories: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("faces", ("adult", "child")),
+        ("bodies", ("body", "limb")),
+        ("places", ("house", "corridor")),
+        ("objects", ("car", "instrument")),
+        ("characters", ("word", "number")),
+    )
+    # Round-robin across a category's subcategories, files sorted by name within
+    # each. Stated rather than inherited from the filesystem: an unsorted glob maps
+    # the SAME manifest to different pixels on different machines.
+    stimulus_selection_rule: str = "round_robin_over_subcategories_sorted_by_name"
+    # fLoc is not tagged, so the commit IS the version. Resolved from the GitHub
+    # API 2026-08-24; last pushed 2024-02-21T20:15:59Z.
+    stimulus_set_version: str | None = "de6a26cc269a2c7075461a4c839bfd628f225c95"
     stimulus_set_doi: str = "10.1523/JNEUROSCI.0803-15.2015"
     # THE LAG CONFLICT, pre-registered rather than guessed. See LAG_CONFLICT.
     # Methods §5.9 reads the contrast at t=5 and calls that the peak. Our own
