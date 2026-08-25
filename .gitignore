@@ -62,3 +62,7 @@ ops/principal-review-*
 
 # Algonauts submission artifacts (regenerable)
 /results/algonauts/
+
+# fLoc stimulus images — VPNL/fLoc states NO LICENCE. Usable, NEVER redistributable.
+# Identity travels in data/s2_manifest.json as per-image sha256, not as pixels.
+data/floc/
