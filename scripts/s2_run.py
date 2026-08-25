@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import json
 import subprocess
 import sys
@@ -40,10 +41,22 @@ from neurocheck.s2_design import (  # noqa: E402
 )
 from neurocheck.s2_stimulus import frame_plan, probe_video, render, verify_rendered_frames  # noqa: E402
 
-VIDEO = Path("data/s2_stimulus.mp4")
+# The manifest and the probe ship IN GIT, so they arrive with the repo clone and
+# stay repo-relative. The images and the video cannot ship (fLoc has no licence),
+# so on a GPU box they live wherever the dataset is mounted -- on Kaggle that is
+# /kaggle/input/<dataset-slug>, which is READ-ONLY. Hence one knob, resolved once,
+# rather than paths guessed inside the session.
+STIMULUS_ROOT = Path(os.environ.get("S2_STIMULUS_ROOT", "data"))
 PROBE = Path("data/s2_stimulus_probe.json")
-IMAGE_ROOT = Path("data/floc")
 MANIFEST = Path("data/s2_manifest.json")
+
+
+def video_path(root: Path = None) -> Path:
+    return (root or STIMULUS_ROOT) / "s2_stimulus.mp4"
+
+
+def image_root(root: Path = None) -> Path:
+    return (root or STIMULUS_ROOT) / "floc"
 
 
 def _sha256(path: Path) -> str:
@@ -73,11 +86,11 @@ def die(msg: str) -> None:
 def prepare(cfg: S2Config) -> dict:
     """CPU only: resolve images, render, verify against the spec, hash."""
     print(f"=== S2 prepare === design {cfg.fingerprint()}\n")
-    images = resolve_stimulus_images(IMAGE_ROOT, cfg)
-    print(f"  images     {len(images)} resolved and hashed from {IMAGE_ROOT}")
+    images = resolve_stimulus_images(image_root(), cfg)
+    print(f"  images     {len(images)} resolved and hashed from {image_root()}")
 
     events = build_schedule(cfg)
-    r = render(cfg, VIDEO, events=events, images=images)
+    r = render(cfg, video_path(), events=events, images=images)
     if r.placeholders:
         die("rendered with placeholder frames; a recorded run needs the real images")
 
@@ -95,15 +108,15 @@ def prepare(cfg: S2Config) -> dict:
         problems.append(f"frame count {r.n_frames} != spec")
     if len(set(per_event.tolist())) != 1:
         problems.append("events differ in frame count")
-    problems += verify_rendered_frames(cfg, VIDEO, events, sample=60)
+    problems += verify_rendered_frames(cfg, video_path(), events, sample=60)
     problems += check_three_way_consistency(cfg, build_manifest(cfg), r.duration_s,
                                             r.fps, events_dataframe(cfg))
     if problems:
         die("rendered stimulus does not match the frozen spec:\n  - " +
             "\n  - ".join(problems[:8]))
 
-    video = {"path": str(VIDEO), "sha256": _sha256(VIDEO),
-             "bytes": VIDEO.stat().st_size, "n_frames": r.n_frames, "fps": r.fps,
+    video = {"path": str(video_path()), "sha256": _sha256(video_path()),
+             "bytes": video_path().stat().st_size, "n_frames": r.n_frames, "fps": r.fps,
              "duration_s": r.duration_s, "width": r.width, "height": r.height,
              "stimulus_frames": r.stimulus_frames, "grey_frames": r.grey_frames,
              "placeholders": r.placeholders}
@@ -112,7 +125,7 @@ def prepare(cfg: S2Config) -> dict:
           f"{r.width}x{r.height}")
     print(f"             sha256 {video['sha256'][:32]}...")
 
-    idx = json.loads((IMAGE_ROOT / "index.json").read_text())
+    idx = json.loads((image_root() / "index.json").read_text())
     man = build_manifest(
         cfg, code_commit=_git("rev-parse", "HEAD"),
         tree_dirty=bool(_git("status", "--porcelain")),
@@ -143,15 +156,15 @@ def _check_inputs(cfg: S2Config) -> dict:
     v = (man.get("provenance") or {}).get("video")
     if not v:
         die("manifest records no video — run --prepare first")
-    if not VIDEO.exists():
-        die(f"{VIDEO} missing — run --prepare first")
-    got = _sha256(VIDEO)
+    if not video_path().exists():
+        die(f"{video_path()} missing — run --prepare first")
+    got = _sha256(video_path())
     if got != v["sha256"]:
         die(f"stimulus hash mismatch: manifest {v['sha256'][:16]}..., file "
             f"{got[:16]}... — this is not the video the manifest describes")
     if v.get("placeholders"):
         die("the recorded video was rendered with placeholder frames")
-    live = resolve_stimulus_images(IMAGE_ROOT, cfg)
+    live = resolve_stimulus_images(image_root(), cfg)
     rec = man["provenance"]["images"]["files"]
     drift = [k for k in rec if k not in live or live[k]["sha256"] != rec[k]["sha256"]]
     if drift:
@@ -248,7 +261,7 @@ def infer(cfg: S2Config, stub: bool) -> int:
     print(f"=== S2 infer === design {cfg.fingerprint()}"
           f"{'  [STUB — no GPU, structure only]' if stub else ''}\n")
     print(f"  model      facebook/tribev2 @ {cfg.model_revision[:12]}")
-    print(f"  stimulus   {VIDEO} sha256 {man['provenance']['video']['sha256'][:16]}...")
+    print(f"  stimulus   {video_path()} sha256 {man['provenance']['video']['sha256'][:16]}...")
     print(f"  lags       primary {cfg.primary_lag_trs}, alternative "
           f"{cfg.alternative_lag_trs}, reported {list(cfg.report_lags)}")
     print(f"  gating     {[p.name for p in stop_eligible_parcels()]} "
@@ -273,7 +286,7 @@ def infer(cfg: S2Config, stub: bool) -> int:
                                "data.video_feature.infra.keep_in_ram": False,
                                "data.audio_feature.infra.keep_in_ram": False,
                                "data.text_feature.infra.keep_in_ram": False})
-        preds, segments = predict_single(model, VIDEO)
+        preds, segments = predict_single(model, video_path())
     elapsed = time.time() - t0
     print(f"  inference  {elapsed:.1f}s, preds {np.shape(preds)}, "
           f"{len(segments)} segments")
@@ -317,9 +330,19 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--prepare", action="store_true", help="CPU: render and verify")
     ap.add_argument("--infer", action="store_true", help="run the model and analyse")
+    ap.add_argument("--stimulus-root", default=None,
+                    help="where floc/ and s2_stimulus.mp4 live. Default 'data'; on "
+                         "Kaggle pass /kaggle/input/<dataset-slug>. Env: S2_STIMULUS_ROOT")
     ap.add_argument("--stub", action="store_true",
                     help="with --infer: fake model, CPU only, structure check")
     args = ap.parse_args()
+    if args.stimulus_root:
+        global STIMULUS_ROOT
+        STIMULUS_ROOT = Path(args.stimulus_root)
+    if args.prepare and not os.access(STIMULUS_ROOT, os.W_OK):
+        die(f"--prepare writes the rendered video into {STIMULUS_ROOT}, which is not "
+            "writable. On Kaggle the dataset mount is READ-ONLY: prepare on a machine "
+            "you control, upload the result, and use --infer only.")
     if not (args.prepare or args.infer):
         ap.error("choose --prepare and/or --infer")
     if args.prepare:
