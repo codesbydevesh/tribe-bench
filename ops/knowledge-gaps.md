@@ -352,3 +352,30 @@ with a recorded count, or treat it as maximal evidence with a documented cap) ra
 scoring it 0. Needs a decision, not just a patch. Revisit in Phase C when S2 supplies real
 predictions to check the empirical frequency of near-zero SEs.
 **Status:** OPEN.
+
+---
+
+## G024 — CLOSED 2026-08-25 (D033)
+
+Gate 0 loaded TRIBE **v2**. `tribe_tools/model.py` has hardcoded
+`from_pretrained("facebook/tribev2")` in every commit since the initial commit f03833a
+(2026-06-09), seven weeks before the 2026-07-31 run, and
+`notebooks/03_gate0_v2_validation.ipynb` contains zero independent `from_pretrained` calls.
+Strong but **indirect**: a code-path argument over full git history, not a runtime artifact.
+The results JSON records the tribev2 commit but no tribe-bench SHA. Not upgraded to
+"runtime-proven". The in-silico FFA/PPA/EBA/VWFA claim exists only for v2 and is safe to rely on.
+
+## G016 (partial) — neuralset frame selection RESOLVED 2026-08-25
+
+Read neuralset **0.2.3** from PyPI directly rather than waiting for a GPU session.
+`neuralset/extractors/video.py` works entirely in seconds:
+
+    subtimes = [k / self.num_frames * T for k in reversed(range(self.num_frames))]
+    times    = np.linspace(0, video.duration, expect_frames + 1)[1:]
+    ims      = [_VideoImage(video=video, time=max(0, t - t2)) for t2 in subtimes]
+
+and `_VideoImage._read` does `video.get_frame(self.time)`. `T` is `clip_duration`, so a V-JEPA
+clip spans 4 s of timeline at **any** source fps. **TIMESTAMP-based**, therefore 8 fps is safe
+and the index-based failure mode (64 consecutive frames spanning 8 s instead of 4) does not
+exist. Verified by `scripts/s2_check_frame_sampling.py`: 6 timestamp hits, 0 index hits.
+neuralset is also confirmed pip-installable from PyPI, which G016 had listed as UNVERIFIED.

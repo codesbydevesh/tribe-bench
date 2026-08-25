@@ -1209,3 +1209,107 @@ runtime artifact. The 07-31 results JSON records the tribev2 commit
 (`af58661791a351a448a489042a28f6c37e1c14b7`) but no tribe-bench SHA — the known provenance gap. The
 conclusion is therefore strong but indirect. **The in-silico FFA/PPA/EBA/VWFA claim we are
 replicating exists only for v2, and that claim is safe to rely on.**
+
+---
+
+## D034 — S2 design frozen; the parcel and lag ambiguities and how they are handled (2026-08-25)
+
+**Decision.** Freeze the S2 design as executable code (`neurocheck/s2_design.py`, fingerprint
+`8e743096ac3f2583`) with a human-readable pre-registration (`ops/S2-PREREGISTRATION.md`) and a
+machine-readable manifest (`data/s2_manifest.json`), before any GPU time and before any result
+exists. Retrieved the paper's LaTeX source to settle three questions the HTML renderings could
+not.
+
+**1. The parcel table exists and is misaligned.** Methods §5.9, verbatim:
+
+> FFA, EBA, PPA, VWFA, A5, 45, STS, TPJ, MTG respectively correspond to the following ROI
+> labels: FFC, V4t, PH, A5, 45, STSv, PGi, TE1a.
+
+NINE functional names against EIGHT parcels. `A5` and `45` appear on both sides and must
+self-correspond, which places the omission among the four visual regions. **From the text alone
+no visual mapping is forced** — all four readings are internally consistent order-preserving
+zips. `FFA→FFC` and `EBA→V4t` rest on one *additional* premise: what the Glasser labels denote
+(FFC is the Fusiform Face *Complex*; V4t is lateral occipitotemporal, not parahippocampal). That
+premise is stated as such rather than smuggled in. An earlier version of this note claimed
+positions 1 and 2 were excluded by the text; that claim was FALSE and is withdrawn.
+
+**Consequence:** stop-eligibility is **{FFA, EBA}**. PPA and VWFA both carry the contested `PH`
+and are reported but may not gate. The literature PPA union (PHA1-3 ∪ VMV1-3) is demoted to a
+labelled secondary, since §5.9 names a single parcel. Note also that §2.5 orders the regions
+FFA, PPA, EBA, VWFA while §5.9 orders them FFA, EBA, PPA, VWFA — zipping against the results
+text instead of the methods text swaps PPA and EBA, which is how the Gate-0 EBA proxy came to
+pool V4t with PH.
+
+**2. The lag conflict, resolved by measurement rather than by choosing.** §5.9 reads the
+contrast at `t=5` and calls that the peak; `ops/source-of-truth.md:51` (VERIFIED from
+`FmriExtractor(offset=5)`) says the output is already aligned, so a read at 5 lands on
+BOLD(onset+10) — about 18% of peak. Both cannot hold, and reading the wrong one produces a
+failed replication for a reason unrelated to the model. **One peri-event timecourse yields every
+lag from a single forward pass**, so primary (`t=5`, the paper's) and alternative (`t=0`) both
+come free from the same run and the measured peak adjudicates. Recovering **only** at `t=0` is
+pre-committed to be reported as *"not replicated at the published lag; recovered at the lag
+implied by the model card"* — never as a plain replication.
+
+**3. No GLM for the visual contrast.** §5.9 assigns the GLM to the *language* experiments
+(nilearn `FirstLevelModel`); the visual contrast is peak-minus-mean-of-other-categories with no
+GLM and no z-scoring. Figure 4's caption says otherwise and contradicts its own Methods; the
+Methods text is the more specific statement and is what is implemented. Confirms M4.
+
+**Also frozen:** SOA is an **8 s cycle** (*"one second every eight seconds"*), not the 9 s the
+plan implied — an 11% cost error and a protocol deviation. GPU cost is derived from the actual
+rendered timeline (lead-in, every ISI, tail-out): 3.35 h for 5×25, an **upper bound**, since the
+11.5 s/s anchor was measured with the audio and text extractors running and a silent video runs
+only V-JEPA.
+
+**Verification.** Two independent design reviews, both GO WITH CONDITIONS, all blocking
+conditions closed. They confirmed from TRIBE's own source that window packing **cannot bias** the
+contrast (the shared window mean cancels in category-minus-others) and that TR = 1.0 s, so
+`t=5` really is five seconds.
+
+---
+
+## D035 — Inputs pinned by hash; the freeze put under version control (2026-08-25)
+
+`TribeModel.from_pretrained` has **no `revision` parameter** — it calls
+`hf_hub_download(repo_id, filename)` against the floating branch, so Meta can update the repo
+and a re-run silently gets different weights. It *does* accept a local directory, so the pin is
+applied by `tribe_tools.model.fetch_pinned_checkpoint`: resolve the exact SHA, verify the
+checkpoint hash, hand over a path. A mismatch is **fatal**, not a warning.
+`ops/interface-contracts.md` updated first, per rule 2.
+
+| input | pin |
+|---|---|
+| model | `facebook/tribev2 @ f894e783020944dcd96e5568550afe2aa9743f9f` |
+| checkpoint | `best.ckpt`, 708,856,138 bytes, sha256 `9c79ffff…f321` |
+| stimuli | `VPNL/fLoc @ de6a26cc269a2c7075461a4c839bfd628f225c95` (untagged; the commit IS the version) |
+| images | 125 selected round-robin over sorted subcategory pairs, each sha256'd |
+| video | 8400 frames, 8 fps, 1050.000 s, 256×256, sha256 `5564c010…25ba` |
+
+fLoc states **no licence**: the images and the derived video are gitignored and their identity
+travels as hashes in the manifest, which is therefore the only possible carrier.
+
+**Caught while confirming the record:** neither the pre-registration nor the manifest was in
+git — `.notes/` and `data/` are both gitignored — so the entire freeze existed on one untracked
+disk. For a pre-registration that defeats the purpose, since its value is being fixed and
+timestamped *before* any result. Pre-registration moved to `ops/`, manifest force-added,
+decision rules folded into the manifest, and three gates assert all of it.
+
+---
+
+## D036 — Go/no-go failures are classified by kind (2026-08-25)
+
+Running `scripts/s2_go_no_go.py` on Kaggle produced 53/57. **All four red items were defects in
+the checker**, not in the design: the image gate hardcoded `data/floc` and so failed on a
+read-only mount; that failure also failed the checkpoint gate because the two shared one `try`
+block; and two gates required `data/s2_dry_run/`, gitignored scratch on the preparing machine
+that never reaches the GPU box.
+
+The deeper problem is that "53/57" *read* as "the experiment is broken". Every checklist item
+now declares what kind of failure it would represent — **design / environment / checker /
+local-only** — and the report groups outstanding items by kind. Nine regression tests in
+`tests/test_s2_go_no_go.py` pin all four defects; one of them caught a further miss while being
+written (the `except` branch of the image gate was still unclassified). Nothing was weakened to
+make a check pass: the substitute evidence for the dry-run gates is the committed stub report,
+and a test asserts that report contains per-parcel results at **both** lags.
+
+**57/57 GPU GO**, verified on the Kaggle box itself.
