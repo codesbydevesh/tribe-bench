@@ -234,7 +234,8 @@ def main() -> int:
               else f"{len(drift)} drifted", kind="environment")
     except Exception as exc:
         check("Provenance", "manifest image hashes match the files on disk", False,
-              f"{type(exc).__name__}: {exc} (pass --stimulus-root)")
+              f"{type(exc).__name__}: {exc} (pass --stimulus-root)",
+              kind="environment")
     check("Provenance", "checkpoint revision + hash recorded in the manifest",
           bool((rec.get("checkpoint") or {}).get("sha256")) and bool(rec.get("model_revision")),
           str(rec.get("model_revision", ""))[:12])
