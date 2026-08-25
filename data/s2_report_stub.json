@@ -1,0 +1,1690 @@
+{
+  "schema_version": 1,
+  "stub": true,
+  "design_fingerprint": "8e743096ac3f2583",
+  "provenance": {
+    "model_id": "facebook/tribev2",
+    "code_commit": "3c5f299b8788ddaa034a96916d3b0de736bb98b2",
+    "code_tree_dirty": true,
+    "model_revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
+    "stimulus_set": "fLoc",
+    "stimulus_set_version": "de6a26cc269a2c7075461a4c839bfd628f225c95",
+    "stimulus_set_doi": "10.1523/JNEUROSCI.0803-15.2015",
+    "images": {
+      "source_repo": "VPNL/fLoc",
+      "commit": "de6a26cc269a2c7075461a4c839bfd628f225c95",
+      "selection_rule": "round_robin_over_subcategories_sorted_by_name",
+      "licence": "none stated by VPNL/fLoc \u2014 DO NOT REDISTRIBUTE",
+      "n": 125,
+      "files": {
+        "faces_000": {
+          "path": "data/floc/faces/adult-1.jpg",
+          "sha256": "be467c0ae30927a25d618650d328b983c843bcc532f6390a8368921cf9004e78",
+          "bytes": 130264
+        },
+        "faces_001": {
+          "path": "data/floc/faces/adult-10.jpg",
+          "sha256": "e9077853af5a2952da76a8b3e56a183a7965e5275921b9432b20a28cfbf7fbf1",
+          "bytes": 80952
+        },
+        "faces_002": {
+          "path": "data/floc/faces/adult-100.jpg",
+          "sha256": "89ff1b648e4e85bf0a68ade01b4a3bbb1c877cedd90104496d89a0f878be7d23",
+          "bytes": 123575
+        },
+        "faces_003": {
+          "path": "data/floc/faces/adult-101.jpg",
+          "sha256": "545a6abc2d407565dedd9026bfc93c7774a5e986d6eecfe0df08645a3618c4fb",
+          "bytes": 115018
+        },
+        "faces_004": {
+          "path": "data/floc/faces/adult-102.jpg",
+          "sha256": "0761496f120842bbde665838a49f87afe6c9bf0adacf7985caa37d7a4b522cd6",
+          "bytes": 126651
+        },
+        "faces_005": {
+          "path": "data/floc/faces/adult-103.jpg",
+          "sha256": "23e33ae6127ef368ae36c109a14cf658a1a5098e716e7c75f7148e3606b274b7",
+          "bytes": 110860
+        },
+        "faces_006": {
+          "path": "data/floc/faces/adult-104.jpg",
+          "sha256": "3103cf31bbb652ceea66a997d196fcfc5ef9b6f7249193353ee95c9b928a1d43",
+          "bytes": 101909
+        },
+        "faces_007": {
+          "path": "data/floc/faces/adult-105.jpg",
+          "sha256": "9537cf69ea4cb2cfd941dfb082d170e324af10390b3c0c91cf7879800879ca2c",
+          "bytes": 79532
+        },
+        "faces_008": {
+          "path": "data/floc/faces/adult-106.jpg",
+          "sha256": "0074b7ba5c18b0e5b52cc0ae108bdce146f374afd78f27bc5486310424bb19d3",
+          "bytes": 69216
+        },
+        "faces_009": {
+          "path": "data/floc/faces/adult-107.jpg",
+          "sha256": "592251f45e3718bfc9b6b3f16634d8646f0fafcf23d2d866b65cbbac3c22d6f4",
+          "bytes": 97048
+        },
+        "faces_010": {
+          "path": "data/floc/faces/adult-108.jpg",
+          "sha256": "aa48f860bf225a0959e54b88d49a3e68b1c40f71e00131fb901479f7f1b26a03",
+          "bytes": 107057
+        },
+        "faces_011": {
+          "path": "data/floc/faces/adult-109.jpg",
+          "sha256": "2d0b7e338bf7c0dbf9fe8c8b5f1a2c2b948b8dd43779f271bee5d782e3054627",
+          "bytes": 120871
+        },
+        "faces_012": {
+          "path": "data/floc/faces/adult-11.jpg",
+          "sha256": "e93533285aed543df2a17e2e8f12918ae6b91c585504dab48f858fc8d1e214ed",
+          "bytes": 105418
+        },
+        "faces_013": {
+          "path": "data/floc/faces/child-1.jpg",
+          "sha256": "2678596846323f5acaa6a4274ea31a759d57ee3cbe61c88edaa7673675bede1a",
+          "bytes": 122402
+        },
+        "faces_014": {
+          "path": "data/floc/faces/child-10.jpg",
+          "sha256": "97ce07618310fc72e2b24ab169396a6dedd7041fc4e929893589c37d861a04bb",
+          "bytes": 100257
+        },
+        "faces_015": {
+          "path": "data/floc/faces/child-100.jpg",
+          "sha256": "31b00318717dd32f13c0ddb8b7941849941f6a811f7309813c53eaf7dfdaf102",
+          "bytes": 96045
+        },
+        "faces_016": {
+          "path": "data/floc/faces/child-101.jpg",
+          "sha256": "07034d1733e3c2fe02181ee58ba0e24c082dde6bc370497e83a4cc888ec9cc4a",
+          "bytes": 81595
+        },
+        "faces_017": {
+          "path": "data/floc/faces/child-102.jpg",
+          "sha256": "974d42d6bbeaa2717ae6476c1e77811b666937ce33d296dd54f12d8c9753e9f7",
+          "bytes": 125412
+        },
+        "faces_018": {
+          "path": "data/floc/faces/child-103.jpg",
+          "sha256": "77ee7429e3e49ed35d8ba5dcf7eb4c967a54816dccc092b8866317d8449826b3",
+          "bytes": 129499
+        },
+        "faces_019": {
+          "path": "data/floc/faces/child-104.jpg",
+          "sha256": "31c6970a90dcc1487beab20ca2f218f203e332716872d74eae155be9ed5b351f",
+          "bytes": 105870
+        },
+        "faces_020": {
+          "path": "data/floc/faces/child-105.jpg",
+          "sha256": "c8845ea2eac1ef178476b0ad571bff7bb17990f6f6fb5b0d79f34c07ddace605",
+          "bytes": 80034
+        },
+        "faces_021": {
+          "path": "data/floc/faces/child-106.jpg",
+          "sha256": "dfe3c8d067d5562d78867fe5f4c91863c38f6c12630d673e9b1af6a1a5fdb114",
+          "bytes": 104416
+        },
+        "faces_022": {
+          "path": "data/floc/faces/child-107.jpg",
+          "sha256": "de0afcaa42b6892cc4eeafda6b38c254be98da8acf4df1addf6badabc3aed0b2",
+          "bytes": 103957
+        },
+        "faces_023": {
+          "path": "data/floc/faces/child-108.jpg",
+          "sha256": "e59ee32ddf025d90c404bc3b59d9263139fa87c0bf043c5b93526bc619c1ad89",
+          "bytes": 103773
+        },
+        "faces_024": {
+          "path": "data/floc/faces/child-109.jpg",
+          "sha256": "6239aaf97d6356539d7c1c3acf601997e20f3ee1e228cd400cf8e44e233eabd2",
+          "bytes": 106567
+        },
+        "bodies_000": {
+          "path": "data/floc/bodies/body-1.jpg",
+          "sha256": "75a785146e842ff7f5ca5ec6f4cf0fed74d8a87a5059892238dd2a174eabeeb6",
+          "bytes": 109954
+        },
+        "bodies_001": {
+          "path": "data/floc/bodies/body-10.jpg",
+          "sha256": "2d1a2f955b62a1c16e3c917e21a2b5f412ec4f97d97d9b7156a9d67066a8c377",
+          "bytes": 122810
+        },
+        "bodies_002": {
+          "path": "data/floc/bodies/body-100.jpg",
+          "sha256": "1c8e5d2c1a69827779e22aea2f856932ff2133d4fab57d3cd7fe095e2ed8296e",
+          "bytes": 126820
+        },
+        "bodies_003": {
+          "path": "data/floc/bodies/body-101.jpg",
+          "sha256": "96a266e162fba9fbada78fdb57b3cb3d869c6d1c3f4fa181c53176be7486c922",
+          "bytes": 85388
+        },
+        "bodies_004": {
+          "path": "data/floc/bodies/body-102.jpg",
+          "sha256": "128f9ca141a1001b6d27d8be58f172363b3f030933733372d402b5e527a06892",
+          "bytes": 131405
+        },
+        "bodies_005": {
+          "path": "data/floc/bodies/body-103.jpg",
+          "sha256": "67529cb3ae7fc8a5a1aeeb4d9193c3574db5ff40ee7b94a7f7cdb11ccf2e7e7a",
+          "bytes": 156353
+        },
+        "bodies_006": {
+          "path": "data/floc/bodies/body-104.jpg",
+          "sha256": "f77a5e67c61905f123b1c9bb587c95f0e1915fe8b9b7b75e64fc124675058db4",
+          "bytes": 83292
+        },
+        "bodies_007": {
+          "path": "data/floc/bodies/body-105.jpg",
+          "sha256": "5d2a32e1302abaf6c8947c0921521a28ea2814a12340d1103a968f0b052824ee",
+          "bytes": 128214
+        },
+        "bodies_008": {
+          "path": "data/floc/bodies/body-106.jpg",
+          "sha256": "c36008dcaacc9e55b1b67d3e9d3c3337d611dd30dcd1d2f726504c8b4bf146ea",
+          "bytes": 75886
+        },
+        "bodies_009": {
+          "path": "data/floc/bodies/body-107.jpg",
+          "sha256": "be92985bbb5f7c17c1c1035813f2961a8759b35bc16e743355f968aef2258098",
+          "bytes": 86140
+        },
+        "bodies_010": {
+          "path": "data/floc/bodies/body-108.jpg",
+          "sha256": "fa6435803772789c7eb0849a3a09598e8ea7cf4a35d8651a943363ee9d0b03ab",
+          "bytes": 120077
+        },
+        "bodies_011": {
+          "path": "data/floc/bodies/body-109.jpg",
+          "sha256": "9b9aa86c453b9b9468537fb07339e062258bd5c5f0622801b187f4d8ea85aff7",
+          "bytes": 94505
+        },
+        "bodies_012": {
+          "path": "data/floc/bodies/body-11.jpg",
+          "sha256": "1353e4ef2f651be8419452d0c928020f119d658589d9ab7f7d2fa75c4eb68a18",
+          "bytes": 139194
+        },
+        "bodies_013": {
+          "path": "data/floc/bodies/limb-1.jpg",
+          "sha256": "9ba22f1362371defcbc3c30bc4aa0eeebad11c420df4bd546484a437d412c21d",
+          "bytes": 120364
+        },
+        "bodies_014": {
+          "path": "data/floc/bodies/limb-10.jpg",
+          "sha256": "a0740977b0b3926c731666c572aeb8bfee20db0c7f3cbc34070c3034218d4e36",
+          "bytes": 147176
+        },
+        "bodies_015": {
+          "path": "data/floc/bodies/limb-100.jpg",
+          "sha256": "908db4ee021950541ab7ecba7c7091dc0dc0c9f60d8a2fc4387019be12035f35",
+          "bytes": 163799
+        },
+        "bodies_016": {
+          "path": "data/floc/bodies/limb-101.jpg",
+          "sha256": "6cdd962aaf01795efdf6d1436a9669c951df552e0e626d4fdbce67ba3ee94297",
+          "bytes": 159797
+        },
+        "bodies_017": {
+          "path": "data/floc/bodies/limb-102.jpg",
+          "sha256": "50eeed1d3ea91675f57983f5f3590678282cb4971859afe982a12e4436d46edf",
+          "bytes": 129554
+        },
+        "bodies_018": {
+          "path": "data/floc/bodies/limb-103.jpg",
+          "sha256": "a5c952f4b3ff18160b54672db15a0fb3ef2a9813d08ff3cd93ac6a0b28246398",
+          "bytes": 150884
+        },
+        "bodies_019": {
+          "path": "data/floc/bodies/limb-104.jpg",
+          "sha256": "947267903784eff215eb186a6f974ba361f747fad11d3127b77c48ce053e69a2",
+          "bytes": 119928
+        },
+        "bodies_020": {
+          "path": "data/floc/bodies/limb-105.jpg",
+          "sha256": "00dc528bb0679b2a42a61779a0a0d9c24fc439e69053b433afee8e91c5af5908",
+          "bytes": 131547
+        },
+        "bodies_021": {
+          "path": "data/floc/bodies/limb-106.jpg",
+          "sha256": "11f3f732af2b7474ca2e0759ada0cc4892fcbb1f319fb30aaf81d5d1c033baf1",
+          "bytes": 154440
+        },
+        "bodies_022": {
+          "path": "data/floc/bodies/limb-107.jpg",
+          "sha256": "e458d5ec006dfb19febca36425118963d13e2d1303269b729d4b3b4ea63f5a8f",
+          "bytes": 95626
+        },
+        "bodies_023": {
+          "path": "data/floc/bodies/limb-108.jpg",
+          "sha256": "973bc01fcafb236ca374d8f7577d5009aa1d61f48bdf21200e787b0d676ef718",
+          "bytes": 107840
+        },
+        "bodies_024": {
+          "path": "data/floc/bodies/limb-109.jpg",
+          "sha256": "071573dfb75a8880f2e9b299347831f92d6640df430da20a0b6ab569dcb07b74",
+          "bytes": 151929
+        },
+        "places_000": {
+          "path": "data/floc/places/corridor-1.jpg",
+          "sha256": "6fb53c59b502a44877e891169cbb749af9c344b03439a1c4b584156f8467c009",
+          "bytes": 128715
+        },
+        "places_001": {
+          "path": "data/floc/places/corridor-10.jpg",
+          "sha256": "6bcacaba148401d5525a107cce8c03e3cd1d21ebbc17d41d026210dc7d9b0c55",
+          "bytes": 98132
+        },
+        "places_002": {
+          "path": "data/floc/places/corridor-100.jpg",
+          "sha256": "cd732986ce7efb1e4837078e445fd569a6d463725196528338651ad057f46471",
+          "bytes": 101799
+        },
+        "places_003": {
+          "path": "data/floc/places/corridor-101.jpg",
+          "sha256": "653baa5f0d07f15f7846535801a985965090821a081a79b6762c2534b345cbce",
+          "bytes": 141359
+        },
+        "places_004": {
+          "path": "data/floc/places/corridor-102.jpg",
+          "sha256": "85c3adc781328cd68402e8645f7814e466c3e7822ac6cf725fa1b981e63936cd",
+          "bytes": 105528
+        },
+        "places_005": {
+          "path": "data/floc/places/corridor-103.jpg",
+          "sha256": "f55a13459e362db121b3bba668737487d2bb7422348685002d62359673ea9f8f",
+          "bytes": 125213
+        },
+        "places_006": {
+          "path": "data/floc/places/corridor-104.jpg",
+          "sha256": "87fcb7969ec6a21a3447139616fe34a5c8b4e4a85c34cfe9be433c992af7e2fa",
+          "bytes": 119435
+        },
+        "places_007": {
+          "path": "data/floc/places/corridor-105.jpg",
+          "sha256": "4d6d5a27f3269175c9605f31e35dd90f9633e8655f7c5faf19485b6b635312b7",
+          "bytes": 125032
+        },
+        "places_008": {
+          "path": "data/floc/places/corridor-106.jpg",
+          "sha256": "0d41c3edc1b39e15d8471edfc32b2d8d496700d0562ce48579437a915d0555e7",
+          "bytes": 85202
+        },
+        "places_009": {
+          "path": "data/floc/places/corridor-107.jpg",
+          "sha256": "aa1536fcf02bedb57b449558a8398d848df5542ff7ef6f4a1a5cca962779ae62",
+          "bytes": 92193
+        },
+        "places_010": {
+          "path": "data/floc/places/corridor-108.jpg",
+          "sha256": "1f2efc69a84d4207007cc246c5b886e06aa198946c68c45f584cd57b7408f801",
+          "bytes": 127033
+        },
+        "places_011": {
+          "path": "data/floc/places/corridor-109.jpg",
+          "sha256": "bc43dcf3f64085c991f74a032ab108ba86f2f0f059dc6df1a29eeecaa8a29a38",
+          "bytes": 97783
+        },
+        "places_012": {
+          "path": "data/floc/places/house-1.jpg",
+          "sha256": "05a84406a77f637acd8dfdb97f9e41ee3390df1250d834f218fff1c11474be45",
+          "bytes": 149336
+        },
+        "places_013": {
+          "path": "data/floc/places/house-10.jpg",
+          "sha256": "536c73b71e8bb1303e61043ec30d954ca5ae2ded90c14d93c282ff96209f91d8",
+          "bytes": 148695
+        },
+        "places_014": {
+          "path": "data/floc/places/house-100.jpg",
+          "sha256": "adfcbcb0c87608691733e61dd9815287c80a8f17577fbe0d3f9927a146b6c700",
+          "bytes": 151085
+        },
+        "places_015": {
+          "path": "data/floc/places/house-101.jpg",
+          "sha256": "4c83cd4012de9b3fae04726f45718441c5abedd9bd957239742b419f2eacc52f",
+          "bytes": 99308
+        },
+        "places_016": {
+          "path": "data/floc/places/house-102.jpg",
+          "sha256": "f48f3e50f3d3c68a5e043c3c60866a302caf5d82ab2c085b4f7b71374f635233",
+          "bytes": 111406
+        },
+        "places_017": {
+          "path": "data/floc/places/house-103.jpg",
+          "sha256": "c71fb5445a463757377a959678d840dabaa3070f7a3d7288b0ae7b398c776767",
+          "bytes": 151818
+        },
+        "places_018": {
+          "path": "data/floc/places/house-104.jpg",
+          "sha256": "b6b55b1ef3eb9eccc031574ec21c4ad0ce8101b51491811bed0e1f9ce3871c5c",
+          "bytes": 128335
+        },
+        "places_019": {
+          "path": "data/floc/places/house-105.jpg",
+          "sha256": "27d1f405fa09aeba7c1ffaddc8c5a97638ebc5d07192c6c7f2514d494bb80302",
+          "bytes": 99814
+        },
+        "places_020": {
+          "path": "data/floc/places/house-106.jpg",
+          "sha256": "d7be40c63dbf54020be3bb53e098999c519ddbfe5e3f4ab1a654c87e991dbe81",
+          "bytes": 151608
+        },
+        "places_021": {
+          "path": "data/floc/places/house-107.jpg",
+          "sha256": "60796e481a0e0769adcc9098c25ea6358e079661fd65146daf2dcbfaf8f13efe",
+          "bytes": 95167
+        },
+        "places_022": {
+          "path": "data/floc/places/house-108.jpg",
+          "sha256": "7375eaaee56798b640ffaf01998350ab9881cb214451889a175d5978f9b9f24c",
+          "bytes": 143202
+        },
+        "places_023": {
+          "path": "data/floc/places/house-109.jpg",
+          "sha256": "861e4d2b69d75f86e58206a324122b7a8c351d55b3c03ee66754212d497fdbc6",
+          "bytes": 126707
+        },
+        "places_024": {
+          "path": "data/floc/places/house-11.jpg",
+          "sha256": "ae1a85290414c8e4066bb284f978bfb2488bedc7ec72e24235796acbafbd8b44",
+          "bytes": 159917
+        },
+        "objects_000": {
+          "path": "data/floc/objects/car-1.jpg",
+          "sha256": "a1127a8c20c8bb3a8b744b066cad5dafc83adb1a532e5955b399533d178dd95d",
+          "bytes": 117318
+        },
+        "objects_001": {
+          "path": "data/floc/objects/car-10.jpg",
+          "sha256": "3b4ffdf417046a18bcc0c470f90de93e288f1476aab1e6cfe28b555667e23c9c",
+          "bytes": 102546
+        },
+        "objects_002": {
+          "path": "data/floc/objects/car-100.jpg",
+          "sha256": "5dc1d44c034e801e8e43a13dd50c32748f96a2b17cec90b5332f0753bcd18ab2",
+          "bytes": 81724
+        },
+        "objects_003": {
+          "path": "data/floc/objects/car-101.jpg",
+          "sha256": "4fa0cabcad168b5d3b780b2016ebba27bc60e7f95ebefdcb7247fae828a73bc2",
+          "bytes": 134170
+        },
+        "objects_004": {
+          "path": "data/floc/objects/car-102.jpg",
+          "sha256": "2bcfc1d7e3b08e28000cc28cfee416cd0d8b7760cf8056b248b26b84e82b68ed",
+          "bytes": 147960
+        },
+        "objects_005": {
+          "path": "data/floc/objects/car-103.jpg",
+          "sha256": "9a3b64b63ff56220f8f6804aa02616e7aa417de94181bbca7e63d827524c068f",
+          "bytes": 103732
+        },
+        "objects_006": {
+          "path": "data/floc/objects/car-104.jpg",
+          "sha256": "20159cdf23049e32fe379713bd97a0d3f81b8480cd5d9c487c50661280cafc79",
+          "bytes": 113698
+        },
+        "objects_007": {
+          "path": "data/floc/objects/car-105.jpg",
+          "sha256": "a327a7478c37c8c7d2c4a52bdeafca8629cabec5d3749f10696e5aef5cd998e5",
+          "bytes": 128344
+        },
+        "objects_008": {
+          "path": "data/floc/objects/car-106.jpg",
+          "sha256": "d5b9d9d2233f8f1514467cf95dd6d4b56cfbd64c2333d5ab7e09cba18a417659",
+          "bytes": 149165
+        },
+        "objects_009": {
+          "path": "data/floc/objects/car-107.jpg",
+          "sha256": "6b60fa5aa5af7b5eb9c723127750b2e7dbf45b8bc0d1142aef48297cdfe63c3e",
+          "bytes": 98473
+        },
+        "objects_010": {
+          "path": "data/floc/objects/car-108.jpg",
+          "sha256": "085c9740a8a37b9ca962cc4abeba5201460079b1b70effc1a08f411f9a5a4203",
+          "bytes": 158169
+        },
+        "objects_011": {
+          "path": "data/floc/objects/car-109.jpg",
+          "sha256": "43444e79b5f45b09c53627b3d54358bd8e107c46f76a1636d3e1ec9841b1d8f8",
+          "bytes": 73815
+        },
+        "objects_012": {
+          "path": "data/floc/objects/car-11.jpg",
+          "sha256": "392b0e1b8b8feadeb49e2f2455c7e5677de90ab91003f5b47fa98f12ae3e72ae",
+          "bytes": 163631
+        },
+        "objects_013": {
+          "path": "data/floc/objects/instrument-1.jpg",
+          "sha256": "db83c197fed61fa8090bdca60f19e53bcfcee80db49bec3e88932b8bba030592",
+          "bytes": 147178
+        },
+        "objects_014": {
+          "path": "data/floc/objects/instrument-10.jpg",
+          "sha256": "3eaddf81fe11bddb7da2617ab6912592026872288191c81cf96654f11b2fd10c",
+          "bytes": 128908
+        },
+        "objects_015": {
+          "path": "data/floc/objects/instrument-100.jpg",
+          "sha256": "a8934f22c848824ec6df7b98f9be2aa6f008d4576771dbbca105b628121f5cdb",
+          "bytes": 108667
+        },
+        "objects_016": {
+          "path": "data/floc/objects/instrument-101.jpg",
+          "sha256": "5a923c49b70345a41d3aa7535ca291d4e1017f5352f2e51d7b489bd2fe147060",
+          "bytes": 159996
+        },
+        "objects_017": {
+          "path": "data/floc/objects/instrument-102.jpg",
+          "sha256": "fe8ff1ba7565060702aef19ca7b094b65ee1f60d8c27f5815252aec7cb069949",
+          "bytes": 147965
+        },
+        "objects_018": {
+          "path": "data/floc/objects/instrument-103.jpg",
+          "sha256": "3b6f084417130bec10eb68030eb934f15eed9718a0ec91056226b6d82d29216d",
+          "bytes": 107982
+        },
+        "objects_019": {
+          "path": "data/floc/objects/instrument-104.jpg",
+          "sha256": "2c1e9b3e87dd8385b92ea9c03bc76f34720b0225b885b4930c119d778c351e9c",
+          "bytes": 151789
+        },
+        "objects_020": {
+          "path": "data/floc/objects/instrument-105.jpg",
+          "sha256": "ce3cca7a3d244423ee5e2eb3d1f01f0bf1780f532e513d41cfd52351ab50a036",
+          "bytes": 135740
+        },
+        "objects_021": {
+          "path": "data/floc/objects/instrument-106.jpg",
+          "sha256": "00694ff6bf2017fdc69777b00d72a70b07706a0b8ab2fc0f46a6b82d0b7bda30",
+          "bytes": 85325
+        },
+        "objects_022": {
+          "path": "data/floc/objects/instrument-107.jpg",
+          "sha256": "0ae24acf4ded7472739d6bd5631a82c1283206c31357e4734836de9cf57926eb",
+          "bytes": 77086
+        },
+        "objects_023": {
+          "path": "data/floc/objects/instrument-108.jpg",
+          "sha256": "ef8b3edeff449efa7d43c8277660fe878b45a9fdb8f2459b883415d0660ca764",
+          "bytes": 147549
+        },
+        "objects_024": {
+          "path": "data/floc/objects/instrument-109.jpg",
+          "sha256": "965ab6d78bfeb38503f8f11573913fa1aca0628f2064e824a073bea6def5772a",
+          "bytes": 174543
+        },
+        "characters_000": {
+          "path": "data/floc/characters/number-1.jpg",
+          "sha256": "13d4536af32d10b3c0eb754b98b995e0cc0f52e6ac9309856aca7619b5a643df",
+          "bytes": 159849
+        },
+        "characters_001": {
+          "path": "data/floc/characters/number-10.jpg",
+          "sha256": "7332ec6d75e7958e5b5d91f54551727c21e51c99934836f819762e59aa3a3e4f",
+          "bytes": 107994
+        },
+        "characters_002": {
+          "path": "data/floc/characters/number-100.jpg",
+          "sha256": "a3750f91451bdcb2ec89ab8c86f57f340e72575fbcff7a8332b440feabd5498d",
+          "bytes": 134129
+        },
+        "characters_003": {
+          "path": "data/floc/characters/number-101.jpg",
+          "sha256": "30645ec594fb5ff07addc5b62424a5df69e62dbb06236fbe7cb78ca517ea3464",
+          "bytes": 140004
+        },
+        "characters_004": {
+          "path": "data/floc/characters/number-102.jpg",
+          "sha256": "91be3020f620d178829d754d53471e07b1e1fd91478a2f2f3d166a2a14aebf5d",
+          "bytes": 85151
+        },
+        "characters_005": {
+          "path": "data/floc/characters/number-103.jpg",
+          "sha256": "9f23fa982b9bc231c6a22c21676b40b1bcdc179b7a4a88fe803e5f5b64419c45",
+          "bytes": 124133
+        },
+        "characters_006": {
+          "path": "data/floc/characters/number-104.jpg",
+          "sha256": "883a0b42a1ca5858bd6c157e2a882414954ce2c4d925cdcca8f6db0face29617",
+          "bytes": 135242
+        },
+        "characters_007": {
+          "path": "data/floc/characters/number-105.jpg",
+          "sha256": "74dd9177962581c445a006c94d93e133c8a1a910d8473c34028e16e56ff2bf11",
+          "bytes": 141079
+        },
+        "characters_008": {
+          "path": "data/floc/characters/number-106.jpg",
+          "sha256": "8a49dc13d734e3a8610d428ec64ecd68ff1a99146e9dfa339bd33b4eb9f0872d",
+          "bytes": 124586
+        },
+        "characters_009": {
+          "path": "data/floc/characters/number-107.jpg",
+          "sha256": "39cb79846b46465cbaf6b0e3992b26f2c6aa65644f7d90fc3cbd87597ce248cd",
+          "bytes": 180743
+        },
+        "characters_010": {
+          "path": "data/floc/characters/number-108.jpg",
+          "sha256": "31d370de2ff253f1b2b9f7c0a96dcef71d7934b9b9d38dba2efe320b9c649e40",
+          "bytes": 78788
+        },
+        "characters_011": {
+          "path": "data/floc/characters/number-109.jpg",
+          "sha256": "d29fdb134b7c69dda873e64f131dadbf330659022ef54e1a296c295025111844",
+          "bytes": 93761
+        },
+        "characters_012": {
+          "path": "data/floc/characters/word-1.jpg",
+          "sha256": "c309f643cf261cfb220059c623cd2f2c7d89c9cd3cd763c5bc8975c307943407",
+          "bytes": 169538
+        },
+        "characters_013": {
+          "path": "data/floc/characters/word-10.jpg",
+          "sha256": "55c7e977892a9cbf0220c8a88a70fc720551f609142ae09dc6c99e865f82cedf",
+          "bytes": 144609
+        },
+        "characters_014": {
+          "path": "data/floc/characters/word-100.jpg",
+          "sha256": "c0152797556f8adb4f69007f5bcc2fa590fd3920f6530b9c52c5f8a4369d8933",
+          "bytes": 137222
+        },
+        "characters_015": {
+          "path": "data/floc/characters/word-101.jpg",
+          "sha256": "93fda059679e27a9d53d659bfffa36f61ba815b03e507e562adff56f8826fa27",
+          "bytes": 92875
+        },
+        "characters_016": {
+          "path": "data/floc/characters/word-102.jpg",
+          "sha256": "7604c0a2903ec3d142df80d3f5960412641f13d478b03de327b42ed042073937",
+          "bytes": 79576
+        },
+        "characters_017": {
+          "path": "data/floc/characters/word-103.jpg",
+          "sha256": "2778b622771976fddb973a55fb777f203af378800ecc5065c7af9dbcc23de24f",
+          "bytes": 109840
+        },
+        "characters_018": {
+          "path": "data/floc/characters/word-104.jpg",
+          "sha256": "ba8306526327626a55128f8153623e5dd7a3e25bc8e38136ebffcfc87ec3deb1",
+          "bytes": 141550
+        },
+        "characters_019": {
+          "path": "data/floc/characters/word-105.jpg",
+          "sha256": "73952bde829e1137219a7ef3446a58a89659b28943c77f8a49bb6e20d3efc8ad",
+          "bytes": 99364
+        },
+        "characters_020": {
+          "path": "data/floc/characters/word-106.jpg",
+          "sha256": "eb9383d0c2d6846b52870a56b307f50321b53e01f3134cc8a5204dc494f81e42",
+          "bytes": 144862
+        },
+        "characters_021": {
+          "path": "data/floc/characters/word-107.jpg",
+          "sha256": "e7a4f56442b00e34972fee3586bf7c0dd015495e4c98e655609cb161b2f4b860",
+          "bytes": 139542
+        },
+        "characters_022": {
+          "path": "data/floc/characters/word-108.jpg",
+          "sha256": "0692f42ca35ee6ca6755c73ec6a5564904dec9f15b731b2052b570791c5eacf9",
+          "bytes": 92043
+        },
+        "characters_023": {
+          "path": "data/floc/characters/word-109.jpg",
+          "sha256": "bcb0ba8a3ce0c5443a6ae7d152c65b8c5d3389fd61c566e707446a37b72d589b",
+          "bytes": 84632
+        },
+        "characters_024": {
+          "path": "data/floc/characters/word-11.jpg",
+          "sha256": "ccd193f1e32f3794e17bc619000068445a0a6da034ea7bee7b036d2b6bcf0c86",
+          "bytes": 121440
+        }
+      }
+    },
+    "video": {
+      "path": "data/s2_stimulus.mp4",
+      "sha256": "5564c0104e2bff552714cdc02a1e47377ccbf5ec8365333eaa1bf77301ff25ba",
+      "bytes": 2738154,
+      "n_frames": 8400,
+      "fps": 8,
+      "duration_s": 1050.0,
+      "width": 256,
+      "height": 256,
+      "stimulus_frames": 1000,
+      "grey_frames": 7400,
+      "placeholders": false
+    },
+    "atlas": null,
+    "features_to_use": null,
+    "environment": {
+      "python": "3.12.3",
+      "platform": "Linux-6.17.0-1021-azure-x86_64-with-glibc2.39",
+      "numpy": "2.5.1",
+      "torch": null,
+      "transformers": null,
+      "cv2": "4.10.0",
+      "mne": "1.12.1",
+      "nilearn": "0.13.1",
+      "pandas": "3.0.3",
+      "cuda": null,
+      "gpu": null
+    },
+    "roi_mapping_status": "Methods \u00a75.9 (arXiv 2605.04326, from the LaTeX source; the HTML renderings truncate before\nthis section) states verbatim:\n\n    \"To extract regions of interest, we used the Glasser Multimodal parcellation. FFA, EBA,\n     PPA, VWFA, A5, 45, STS, TPJ, MTG respectively correspond to the following ROI labels:\n     FFC, V4t, PH, A5, 45, STSv, PGi, TE1a.\"\n\nNINE functional names against EIGHT parcel labels. Exactly one name has no parcel.\n\nWhere the gap must be, argued from the text alone: `A5` and `45` appear on BOTH sides and\nmust correspond to themselves. A5 is left-position 5 but right-position 4, so the off-by-one\nis already present by position 5 -- the omission therefore lies among the first four, the\nvisual regions. The tail is then consistent: STS->STSv, TPJ->PGi, MTG->TE1a.\n\nConsequences, with the two premises kept SEPARATE:\n\n  * FROM THE TEXT ALONE, four readings survive -- the omission may be at any of the four\n    visual positions -- and each is an internally consistent order-preserving zip:\n        omit FFA :  EBA->FFC   PPA->V4t   VWFA->PH\n        omit EBA :  FFA->FFC   PPA->V4t   VWFA->PH\n        omit PPA :  FFA->FFC   EBA->V4t   VWFA->PH\n        omit VWFA:  FFA->FFC   EBA->V4t   PPA->PH\n    So NO visual mapping is forced by the text. An earlier version of this note claimed the\n    remaining assignments \"cannot absorb\" an omission at position 1 or 2. That is FALSE --\n    they absorb it perfectly -- and the claim is withdrawn.\n\n  * ONE ADDITIONAL PREMISE, from the meaning of the Glasser labels rather than from the\n    paper: FFC is the Fusiform Face *Complex*, so EBA->FFC is untenable; and V4t is lateral\n    occipitotemporal while PPA is medial parahippocampal, so PPA->V4t is untenable. That\n    excludes the first two readings and leaves FFA->FFC and EBA->V4t in both survivors.\n    The conclusion is well supported; it is NOT text-only, and is labelled as such.\n\n  * PH remains contested between PPA and VWFA, so neither may gate. Note the asymmetry:\n    VWFA->PH holds in three of the four textual readings and PPA->PH in only one, which\n    mildly favours PPA being the omitted name. Not acted on -- recorded.\n\nAlso: \u00a72.5 orders the regions FFA, PPA, EBA, VWFA while \u00a75.9 orders them FFA, EBA, PPA,\nVWFA. Zipping against the results text instead of the methods text silently swaps PPA and\nEBA -- which is how our Gate-0 EBA proxy came to pool V4t with PH.",
+    "packing_attenuation": "The 100 s window is a full self-attention context, so each event's prediction mixes in a window mean shared by every event in that window. That shared term CANCELS in 'category minus mean of others', so packing cannot bias the contrast or flip its sign -- but it scales the MAGNITUDE by an unmeasured factor <= 1. The paper may have fed each static image as its own clip, in which case its contrast is undiluted and ours is not directly comparable in effect size. Because `recovered` requires effect > floor, a false 'Not recovered' is therefore a live failure mode. A null under this protocol means 'not recovered under continuous packing', NOT 'TRIBE fails'. Written down before the answer is seen.",
+    "checkpoint": {
+      "repo": "facebook/tribev2",
+      "revision": "f894e783020944dcd96e5568550afe2aa9743f9f",
+      "file": "best.ckpt",
+      "sha256": "9c79ffff6b642b7b0c71d558c935fb3fa33f2788bfb509feead94fafbba2f321",
+      "bytes": 708856138
+    },
+    "inference_seconds": 1.0,
+    "run_environment": {
+      "python": "3.12.3",
+      "platform": "Linux-6.17.0-1021-azure-x86_64-with-glibc2.39",
+      "numpy": "2.5.1",
+      "torch": null,
+      "transformers": null,
+      "cv2": "4.10.0",
+      "mne": "1.12.1",
+      "nilearn": "0.13.1",
+      "pandas": "3.0.3",
+      "cuda": null,
+      "gpu": null
+    }
+  },
+  "lag_conflict": "The single most decision-critical ambiguity in S2, resolved by measurement rather than by\nchoosing a side in advance.\n\n  Methods \u00a75.9, verbatim:\n    \"we obtain contrast maps by simply selecting the predicted response at t=5 after the\n     image is shown (which is the peak of the response as shown in Figure 4A), and\n     substracting the average responses at t=5 for the other categories.\"   [sic]\n\n  ops/source-of-truth.md:51, VERIFIED from the model source:\n    FmriExtractor(offset=5) means the model learns stimulus(t) -> BOLD(t+5), so the output is\n    ALREADY hemodynamically aligned and an event-locked read at onset+5 lands on\n    BOLD(onset+10) -- about 18% of peak (canonical HRF h(10)/h(5) = 0.183).\n\nBoth cannot hold: the paper says its predicted response PEAKS at t=5; if the output were\nalready aligned the peak would sit at t=0. Reading the wrong one costs roughly 5.5x in\namplitude and would produce a failed replication for a reason unrelated to the model.\n\nThis is NOT resolved by picking one. A single peri-event timecourse yields every lag from\none forward pass, so both reads come free from the same run. The primary follows the paper\n(we are replicating it), the alternative is pre-specified, and the MEASURED peak adjudicates.\nSee DecisionRules.lag_adjudication.\n\nConsequence for the contrast: \u00a75.9 also settles M4. The GLM belongs to the LANGUAGE\nexperiments (\"we fit a General Linear Model ... nilearn FirstLevelModel\"); the visual\ncontrast is the plain peak-minus-mean-of-other-categories subtraction above, with no GLM and\nno z-scoring. Figure 4's caption says otherwise and contradicts its own Methods; the Methods\ntext is the more specific statement and is the one implemented here.",
+  "decision_rules": {
+    "blocking_gate": "speech -> auditory cortex must be strongly positive. Both TRIBE papers report auditory/language at near-ceiling and our v3b run got p=0.1448. Controlled by: p_value(A1, speech contrast) < alpha AND effect > detection_floor(A1). If this fails the pipeline is broken and NOTHING downstream is interpretable.",
+    "recovered": "A parcel is RECOVERED iff p_one_sided < alpha AND the observed effect exceeds its OWN detection floor -- computed from that parcel's own noise and n, not a shared constant. Controlled by: (p, effect, floor) at a NAMED lag. Every parcel is scored at BOTH pre-specified lags; 'recovered' without qualification means at the PRIMARY lag, and recovery only at the alternative is a distinct status.",
+    "not_recovered_stop": "Fires iff EVERY stop-eligible parcel produced a USABLE result AND every one failed `recovered`. Controlled by the stop_eligible set ONLY -- currently FFA and EBA, the two parcels \u00a75.9 maps unambiguously. PPA, VWFA and every secondary parcel are structurally incapable of firing it (Parcel.stop_eligible=False, asserted in _validate_parcels). A parcel that did not run, or that returned a non-finite p, effect or floor, makes the evidence INCOMPLETE -- reported as such and blocking the stop rule, because ending GPU spend requires having measured the thing.",
+    "secondary_reporting": "Gate-0 unions, V1 control, the ISI-baseline read and all secondary statistics are REPORTED ALWAYS and DECIDE NOTHING. They may not be promoted to primary after the results are seen.",
+    "packing_attenuation": "The 100 s window is a full self-attention context, so each event's prediction mixes in a window mean shared by every event in that window. That shared term CANCELS in 'category minus mean of others', so packing cannot bias the contrast or flip its sign -- but it scales the MAGNITUDE by an unmeasured factor <= 1. The paper may have fed each static image as its own clip, in which case its contrast is undiluted and ours is not directly comparable in effect size. Because `recovered` requires effect > floor, a false 'Not recovered' is therefore a live failure mode. A null under this protocol means 'not recovered under continuous packing', NOT 'TRIBE fails'. Written down before the answer is seen.",
+    "estimand_note": "The primary estimand is the published contrast: category response minus the mean of the other categories, at the primary lag, in the record parcels. The C2 ISI-baseline variant answers a DIFFERENT question (response vs rest, not vs other categories) and is therefore secondary by construction, not by outcome.",
+    "lag_policy": "PRIMARY = the paper's t=5 (\u00a75.9). ALTERNATIVE = t=0, implied by FmriExtractor(offset=5). Both are fixed in advance and both are read from the SAME peri-event timecourse, so no extra GPU is needed and neither can be chosen after the fact. peak_lag_trs is computed and REPORTED as a diagnostic, never used to select the lag the test is run at -- selecting a lag on the same data inflates type-I to a measured 0.2032. Adjudication rule below.",
+    "lag_adjudication": "If PRIMARY (t=5) recovers -> the replication succeeds on the paper's own protocol; report the t=0 read as a secondary. If PRIMARY fails, ALTERNATIVE (t=0) recovers, AND the measured peak lag is ~0 -> that is evidence for the double-lag hypothesis (source-of-truth.md:51), and it must be reported as 'not replicated at the published lag; recovered at the lag implied by the model card' -- NOT as a plain replication. If BOTH fail -> 'Not recovered' for that parcel, and the stop rule applies. The measured peak lag is reported in every case, since it is the quantity that adjudicates the conflict."
+  },
+  "results": {
+    "FFA": {
+      "by_lag": {
+        "5": {
+          "p": 0.24957504249575044,
+          "effect": 0.03328514236323576,
+          "floor": 0.10592163158627896,
+          "n_target": 25,
+          "noise_sd": 0.12851155301463227
+        },
+        "0": {
+          "p": 0.10278972102789721,
+          "effect": 0.04065354186743176,
+          "floor": 0.1165312413621003,
+          "n_target": 25,
+          "noise_sd": 0.14138387577581837
+        }
+      },
+      "peak_lag_trs": 4,
+      "statistic": "event_locked_contrast"
+    },
+    "EBA": {
+      "by_lag": {
+        "5": {
+          "p": 0.35166483351664835,
+          "effect": 0.0005485291137803609,
+          "floor": 0.1441942422452357,
+          "n_target": 25,
+          "noise_sd": 0.17494656879042814
+        },
+        "0": {
+          "p": 0.7976202379762024,
+          "effect": -0.03455451625292912,
+          "floor": 0.14373952561493952,
+          "n_target": 25,
+          "noise_sd": 0.17439487467973705
+        }
+      },
+      "peak_lag_trs": 7,
+      "statistic": "event_locked_contrast"
+    },
+    "PPA": {
+      "by_lag": {
+        "5": {
+          "p": 0.39976002399760024,
+          "effect": 0.006975778276323541,
+          "floor": 0.06305320083307889,
+          "n_target": 25,
+          "noise_sd": 0.07613971421352922
+        },
+        "0": {
+          "p": 0.8201179882011799,
+          "effect": -0.015574339985167102,
+          "floor": 0.07939623258023085,
+          "n_target": 25,
+          "noise_sd": 0.09587469594593914
+        }
+      },
+      "peak_lag_trs": 2,
+      "statistic": "event_locked_contrast"
+    },
+    "VWFA": {
+      "by_lag": {
+        "5": {
+          "p": 0.43385661433856615,
+          "effect": 0.003679303797256464,
+          "floor": 0.09022256321999923,
+          "n_target": 25,
+          "noise_sd": 0.10894800086943303
+        },
+        "0": {
+          "p": 0.7357264273572642,
+          "effect": -0.021253296468926403,
+          "floor": 0.10026175854542876,
+          "n_target": 25,
+          "noise_sd": 0.12107080277183851
+        }
+      },
+      "peak_lag_trs": 9,
+      "statistic": "event_locked_contrast"
+    },
+    "PPA_literature": {
+      "by_lag": {
+        "5": {
+          "p": 0.1441855814418558,
+          "effect": 0.012859021222889804,
+          "floor": 0.05125968394020031,
+          "n_target": 25,
+          "noise_sd": 0.0618984862674117
+        },
+        "0": {
+          "p": 0.1698830116988301,
+          "effect": 0.012451240251953509,
+          "floor": 0.04819031324380031,
+          "n_target": 25,
+          "noise_sd": 0.05819207636987208
+        }
+      },
+      "peak_lag_trs": 6,
+      "statistic": "event_locked_contrast"
+    },
+    "EBA_gate0_union": {
+      "by_lag": {
+        "5": {
+          "p": 0.7078292170782922,
+          "effect": -0.014030757906429513,
+          "floor": 0.04818610260543591,
+          "n_target": 25,
+          "noise_sd": 0.05818699182543205
+        },
+        "0": {
+          "p": 0.16728327167283272,
+          "effect": 0.017904154990027316,
+          "floor": 0.07041578014746958,
+          "n_target": 25,
+          "noise_sd": 0.08503037602713308
+        }
+      },
+      "peak_lag_trs": 8,
+      "statistic": "event_locked_contrast"
+    },
+    "V1_control": {
+      "by_lag": {
+        "5": {
+          "p": 0.9699030096990301,
+          "effect": -0.018363755973989055,
+          "floor": 0.03396539958321346,
+          "n_target": 25,
+          "noise_sd": 0.04101482213822002
+        },
+        "0": {
+          "p": 0.8642135786421358,
+          "effect": -0.011857127370269482,
+          "floor": 0.036639377789144105,
+          "n_target": 25,
+          "noise_sd": 0.044243776952928734
+        }
+      },
+      "peak_lag_trs": -2,
+      "statistic": "event_locked_contrast"
+    }
+  },
+  "diagnostics": {
+    "FFA": {
+      "n_vertices": 58,
+      "target_category": "faces",
+      "timecourse_by_category": {
+        "faces": [
+          0.013148261348933689,
+          0.0006412098868268279,
+          0.05176253346019778,
+          0.012537468245377407,
+          0.010626242334215805,
+          -0.013808746070396323,
+          -0.0008835349625361876,
+          0.011086599776754153,
+          0.037122970795567985,
+          -0.015807868053329757,
+          0.023317536838636955,
+          0.024826897309816055
+        ],
+        "bodies": [
+          -0.011988017449440473,
+          -0.005507681143554408,
+          0.06470372696737442,
+          0.001413395867195253,
+          -0.0015286407292949033,
+          0.008392207545493245,
+          -0.0003201561015709561,
+          -0.015305660662385798,
+          -0.018300070546864503,
+          0.03173610288071735,
+          0.01667758284554143,
+          -0.012236134685768656
+        ],
+        "places": [
+          -0.012592636031356585,
+          0.014116785901052689,
+          -0.038054960278296385,
+          0.023816647980330057,
+          -0.017983753623768035,
+          0.056707675619440255,
+          0.050586309316101426,
+          -0.01265794634449713,
+          -0.03523320575275333,
+          0.0025201653404932104,
+          0.033104139029265144,
+          -0.00878367247220514
+        ],
+        "objects": [
+          0.011279411480565365,
+          -0.00870605272176707,
+          0.004797726756339122,
+          0.013846419261294778,
+          0.009015175828786467,
+          0.05896285813113128,
+          0.060152116728166796,
+          -0.010218174089597352,
+          -0.013796910344169406,
+          0.023088907162269474,
+          0.03325681094577986,
+          -0.017187998093035402
+        ],
+        "characters": [
+          -0.03810515497301319,
+          0.0028606823433776642,
+          0.012989472925646929,
+          -0.05365766682358487,
+          0.02847527303704831,
+          -0.022858933529345885,
+          -0.009515023764279564,
+          -0.05061238924944613,
+          -0.00891500645132479,
+          -0.02809592957415715,
+          -0.013358582448663898,
+          0.014199029409792256
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "EBA": {
+      "n_vertices": 29,
+      "target_category": "bodies",
+      "timecourse_by_category": {
+        "faces": [
+          -0.031125084496472555,
+          -0.012108268622180516,
+          -0.04344291224634147,
+          -0.004056042729122242,
+          0.005301521366124905,
+          -0.02574304506407473,
+          0.11046421973986136,
+          0.04421491100854271,
+          0.05281675318607273,
+          0.005559035187972514,
+          0.00905007782809693,
+          -0.021636237161282188
+        ],
+        "bodies": [
+          0.033765496807754966,
+          -0.0050524321214520706,
+          0.0019011731143912327,
+          0.027493844407225215,
+          -0.020094566260040976,
+          0.01646546862826779,
+          0.015370431394990662,
+          0.014732152968921091,
+          0.029130024243756346,
+          0.0239562790327031,
+          0.014058537528336303,
+          -0.02626659714488376
+        ],
+        "places": [
+          -0.002518288981157417,
+          0.07598583154428494,
+          0.042469870396729184,
+          -0.016004568871817185,
+          0.023070088705160367,
+          -0.005207988472077357,
+          -0.05412100926105833,
+          0.011768971369561647,
+          -0.03407274362059102,
+          0.014966767466755524,
+          0.04455437046098362,
+          0.02629855538477543
+        ],
+        "objects": [
+          0.04587451902309992,
+          0.08754168369389813,
+          0.061157444016686796,
+          -0.004483982534709804,
+          0.052555276014247976,
+          0.10738319365725177,
+          -0.036159190215363075,
+          0.00878017274959912,
+          0.026076359522031165,
+          0.06197567388094191,
+          0.06477407059343208,
+          -0.020431763200924314
+        ],
+        "characters": [
+          -0.0031325843297587376,
+          0.007696468340361422,
+          0.0856383553022069,
+          -0.042629973245302925,
+          -0.01713302420897827,
+          0.05845643415581435,
+          -0.016504835271886703,
+          -0.008029559707140614,
+          -0.027562974030839422,
+          0.04806197422171204,
+          0.01829420199971004,
+          -0.009336935867443044
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "PPA": {
+      "n_vertices": 113,
+      "target_category": "places",
+      "timecourse_by_category": {
+        "faces": [
+          -0.0001557039065426656,
+          0.015103009269094768,
+          0.0015590052078302908,
+          0.007684971229471122,
+          0.009781158187259732,
+          -0.0035206512886200485,
+          0.018264319527589314,
+          0.005792566370002646,
+          -0.01585092951721085,
+          -0.0035826135484040176,
+          0.029587251923584783,
+          0.011186557306261087
+        ],
+        "bodies": [
+          -0.042192182430803825,
+          -0.021276734934345023,
+          0.03408770863640542,
+          0.0012204536898638566,
+          0.018339375359566666,
+          0.028714858105605,
+          0.011671760424802108,
+          -0.017181864199970347,
+          0.02641258918305249,
+          -0.004427311573820434,
+          0.012924233854797757,
+          0.030385205436386814
+        ],
+        "places": [
+          -0.023627603734659015,
+          -0.004357914954704124,
+          -0.0034653632095606323,
+          0.004263014533161392,
+          0.013027559915656404,
+          -0.006917802278502056,
+          -0.014802934787178458,
+          0.002616634293744216,
+          -0.00353546700142613,
+          -0.05095826348815263,
+          0.011167471245398946,
+          0.011388980001010273
+        ],
+        "objects": [
+          0.038719182609007655,
+          -0.023206758276019576,
+          0.026147934669109505,
+          -0.0026356039126506623,
+          -0.0075298480368301704,
+          -0.03420994096433545,
+          0.020971951306969095,
+          -0.017268427486708638,
+          -0.01791930853945525,
+          0.01366143001540177,
+          0.02764009526536242,
+          -0.017601822896518505
+        ],
+        "characters": [
+          0.03135322171261594,
+          0.016901691665345456,
+          -0.013358741410919337,
+          0.01948986469843195,
+          0.016456857022388416,
+          -0.004410788275320002,
+          0.012092706375668831,
+          0.011221149386359026,
+          0.003662505861674643,
+          0.02644772194367133,
+          -0.03574073886808907,
+          0.005710441102417993
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "VWFA": {
+      "n_vertices": 62,
+      "target_category": "characters",
+      "timecourse_by_category": {
+        "faces": [
+          -0.008297813871214468,
+          0.06434212732692099,
+          -0.0019025637060047084,
+          0.0011249068844859538,
+          0.013966472834825603,
+          0.004325525003228142,
+          0.03521727568402345,
+          0.022962642295000654,
+          -0.031019931304106123,
+          0.018916782067690582,
+          0.022875860394222746,
+          0.01853453798275892
+        ],
+        "bodies": [
+          -0.053590408749127336,
+          -0.009605343153272123,
+          0.041983966945873336,
+          0.0059976424317010855,
+          -0.02102348320043435,
+          -7.660691708986866e-05,
+          0.02317088325432364,
+          -0.032284958423115316,
+          0.03746925527432692,
+          0.011614311241935339,
+          0.03240138322122455,
+          0.06528901149921386
+        ],
+        "places": [
+          -0.02431475781144635,
+          0.005159913604297948,
+          -0.0041796329565758124,
+          0.050132598257323184,
+          -0.004468226981229117,
+          -0.01909293209473441,
+          -0.02894996901305632,
+          0.028582675263474338,
+          0.002097910952513975,
+          -0.036736131366642735,
+          -0.011853561043127197,
+          0.0193864873770508
+        ],
+        "objects": [
+          0.024972795543351002,
+          -0.013200306212229113,
+          0.006259986010395111,
+          -0.0008145589735396508,
+          0.008794812298147006,
+          -0.04936483357015306,
+          0.029183696056415718,
+          -0.024494882882835585,
+          -0.032154040170698284,
+          0.02105842846911399,
+          0.02916445202496583,
+          -0.006004209014767362
+        ],
+        "characters": [
+          0.04946203684220711,
+          0.01421014298354426,
+          -0.010712857395504422,
+          0.05848444771767039,
+          0.021621587455926107,
+          -0.01735480475218801,
+          0.012554849490125275,
+          0.0023706728603874877,
+          -0.0022254670729049512,
+          0.04659469360756058,
+          -0.04037265673229065,
+          0.03153019383452052
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "PPA_literature": {
+      "n_vertices": 330,
+      "target_category": "places",
+      "timecourse_by_category": {
+        "faces": [
+          -0.0035273631235119827,
+          -0.0022024225672886886,
+          -0.01611709958263258,
+          -0.007056136480847437,
+          0.007003858757178849,
+          0.004064017525625372,
+          -0.021341603415974974,
+          -0.005764515046312502,
+          0.012860867909349814,
+          -0.009337495715854773,
+          -0.007562264719841934,
+          0.0020535053517748846
+        ],
+        "bodies": [
+          0.010136322671725677,
+          0.003085922687847139,
+          0.01249704822006231,
+          0.0013307950499469286,
+          0.024499816005440538,
+          -0.004783632835143979,
+          -0.006364656914750493,
+          -0.02478210572651976,
+          0.025321076916257325,
+          0.006658181068856335,
+          -0.0007940563663424022,
+          -0.004087969832559766
+        ],
+        "places": [
+          0.007371288872718151,
+          -0.0015694744020954444,
+          0.007042460395866357,
+          0.011756248366739426,
+          0.0014013952804803412,
+          -0.0009449934868127025,
+          -0.008809973521377697,
+          0.0010397324980321258,
+          0.001292369860529574,
+          -0.001784992401251766,
+          -0.004321966654885646,
+          -0.0015819678319341185
+        ],
+        "objects": [
+          0.0021431984349672517,
+          0.0018451720460524851,
+          -0.015943091569090257,
+          0.010202360217174633,
+          -0.014987565089278208,
+          -0.0060950404156712035,
+          0.005657761192965234,
+          0.009857758840959638,
+          0.0018398315603721375,
+          -0.002086203461362994,
+          -0.00047207380406017016,
+          0.008948029522004427
+        ],
+        "characters": [
+          0.007528806357104757,
+          0.004535900585425693,
+          -0.0020719764926880905,
+          0.0003766279272227145,
+          0.0007446195510512391,
+          -0.010175411412464173,
+          0.007321550072288971,
+          -0.026588292967558092,
+          -0.01632424741441333,
+          0.011232847486791962,
+          0.0010191720455834665,
+          0.011442031153585325
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "EBA_gate0_union": {
+      "n_vertices": 142,
+      "target_category": "bodies",
+      "timecourse_by_category": {
+        "faces": [
+          -0.006480436562232568,
+          0.0095457764603132,
+          -0.007631527229993518,
+          0.005287158519617547,
+          0.008866302780126562,
+          -0.008059027482198819,
+          0.03709387661319416,
+          0.013639383232803084,
+          -0.0018272478383712458,
+          -0.0017156571163271176,
+          0.02539304031253445,
+          0.004483310548805066
+        ],
+        "bodies": [
+          -0.026679698642647437,
+          -0.017963320979599278,
+          0.027514402086134922,
+          0.006586146160310896,
+          0.01049019009922426,
+          0.026213222226430494,
+          0.012427122806037798,
+          -0.010664212806323504,
+          0.026967558315168075,
+          0.001369337212018878,
+          0.013155887421928872,
+          0.01881547110640901
+        ],
+        "places": [
+          -0.019316546496267854,
+          0.012050314964103501,
+          0.005915776048061936,
+          0.0001238601758066088,
+          0.01507849889379454,
+          -0.0065686149518378555,
+          -0.022832682390999,
+          0.004485773555706923,
+          -0.009771953071537264,
+          -0.037494700828347424,
+          0.01798592249365216,
+          0.014433893283610198
+        ],
+        "objects": [
+          0.04018048370766029,
+          -0.0005891187187828579,
+          0.033297764042910495,
+          -0.0030130896875782344,
+          0.004741057579235086,
+          -0.005293033189504263,
+          0.009304323812971683,
+          -0.011948642931406345,
+          -0.008934277738165764,
+          0.0235284234808994,
+          0.035223794452080875,
+          -0.01817976845164364
+        ],
+        "characters": [
+          0.024310345830722523,
+          0.015021751690524774,
+          0.006858975523451511,
+          0.006803418921190314,
+          0.009596951700489586,
+          0.008428292362024333,
+          0.00625236336313988,
+          0.0072896665433203655,
+          -0.002714528764261328,
+          0.030861900225806413,
+          -0.024705434042975163,
+          0.002637385242375949
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    "V1_control": {
+      "n_vertices": 523,
+      "target_category": "faces",
+      "timecourse_by_category": {
+        "faces": [
+          0.006095635244056557,
+          -0.006866931140448566,
+          -0.00995767924939634,
+          0.011788181224900364,
+          -0.0070705511352362515,
+          0.0044842287097201896,
+          0.011912276602408145,
+          -0.01659567575259125,
+          -0.007755773776194372,
+          0.010959049311379037,
+          0.0038998484101982742,
+          0.005835051228206367
+        ],
+        "bodies": [
+          0.01153460691980683,
+          0.012396360791944849,
+          0.007686969275855864,
+          -0.0022012623863237506,
+          -0.008006463087700649,
+          0.013739525318086986,
+          0.001039927960803063,
+          -0.0007181651415109144,
+          -0.0006069766448113534,
+          -0.004862457229964046,
+          -0.00809156641275809,
+          0.004997821502593087
+        ],
+        "places": [
+          0.014736506218107568,
+          0.012551707347776959,
+          -0.0004431506187152421,
+          -0.011103153342679839,
+          -0.0006116956269059585,
+          0.004963440002267423,
+          -0.005432376954456333,
+          -0.010323300475315758,
+          0.007070714596258948,
+          0.0014187602141982121,
+          0.0008608766121179455,
+          0.002303572805172339
+        ],
+        "objects": [
+          -0.009060514212688822,
+          -0.002675983730396374,
+          0.0025665910630961936,
+          -0.0030273508890015528,
+          -0.00234865470164392,
+          -0.005829034856534841,
+          -0.00515603820079842,
+          0.004462521004068438,
+          0.009223433901407755,
+          1.0697154332567696e-05,
+          0.0025849195546414944,
+          -0.009544369299821718
+        ],
+        "characters": [
+          -0.0005980665079233619,
+          -0.003771712951490179,
+          -0.0022126172367442415,
+          0.02120551247043029,
+          0.0021140337828057056,
+          0.003369614918279194,
+          0.00014764352162821792,
+          0.013651265498349443,
+          0.012027630351899958,
+          0.0035645404226083434,
+          0.0013895345707756759,
+          0.01256166747924861
+        ]
+      },
+      "lag_grid": [
+        -2,
+        -1,
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    }
+  },
+  "verdict": {
+    "per_parcel": {
+      "FFA": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.24957504249575044,
+            "effect": 0.03328514236323576,
+            "floor": 0.10592163158627896,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.10278972102789721,
+            "effect": 0.04065354186743176,
+            "floor": 0.1165312413621003,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 4,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": true,
+        "provenance": "record"
+      },
+      "EBA": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.35166483351664835,
+            "effect": 0.0005485291137803609,
+            "floor": 0.1441942422452357,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.7976202379762024,
+            "effect": -0.03455451625292912,
+            "floor": 0.14373952561493952,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 7,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": true,
+        "provenance": "record"
+      },
+      "PPA": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.39976002399760024,
+            "effect": 0.006975778276323541,
+            "floor": 0.06305320083307889,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.8201179882011799,
+            "effect": -0.015574339985167102,
+            "floor": 0.07939623258023085,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 2,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": false,
+        "provenance": "record"
+      },
+      "VWFA": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.43385661433856615,
+            "effect": 0.003679303797256464,
+            "floor": 0.09022256321999923,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.7357264273572642,
+            "effect": -0.021253296468926403,
+            "floor": 0.10026175854542876,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 9,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": false,
+        "provenance": "record"
+      },
+      "PPA_literature": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.1441855814418558,
+            "effect": 0.012859021222889804,
+            "floor": 0.05125968394020031,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.1698830116988301,
+            "effect": 0.012451240251953509,
+            "floor": 0.04819031324380031,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 6,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": false,
+        "provenance": "secondary"
+      },
+      "EBA_gate0_union": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.7078292170782922,
+            "effect": -0.014030757906429513,
+            "floor": 0.04818610260543591,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.16728327167283272,
+            "effect": 0.017904154990027316,
+            "floor": 0.07041578014746958,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": 8,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": false,
+        "provenance": "secondary"
+      },
+      "V1_control": {
+        "status": "not_recovered",
+        "by_lag": {
+          "5": {
+            "status": "not_recovered",
+            "p": 0.9699030096990301,
+            "effect": -0.018363755973989055,
+            "floor": 0.03396539958321346,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          },
+          "0": {
+            "status": "not_recovered",
+            "p": 0.8642135786421358,
+            "effect": -0.011857127370269482,
+            "floor": 0.036639377789144105,
+            "cleared_alpha": false,
+            "cleared_floor": false
+          }
+        },
+        "primary_lag_trs": 5,
+        "alternative_lag_trs": 0,
+        "peak_lag_trs": -2,
+        "statistic": "event_locked_contrast",
+        "stop_eligible": false,
+        "provenance": "secondary"
+      }
+    },
+    "stop_eligible": [
+      "FFA",
+      "EBA"
+    ],
+    "lags_evaluated": [
+      5,
+      0
+    ],
+    "any_record_recovered": false,
+    "incomplete": [],
+    "warnings": [],
+    "stop": true,
+    "rule": "Fires iff EVERY stop-eligible parcel produced a USABLE result AND every one failed `recovered`. Controlled by the stop_eligible set ONLY -- currently FFA and EBA, the two parcels \u00a75.9 maps unambiguously. PPA, VWFA and every secondary parcel are structurally incapable of firing it (Parcel.stop_eligible=False, asserted in _validate_parcels). A parcel that did not run, or that returned a non-finite p, effect or floor, makes the evidence INCOMPLETE -- reported as such and blocking the stop rule, because ending GPU spend requires having measured the thing."
+  }
+}
