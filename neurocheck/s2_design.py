@@ -562,6 +562,12 @@ def build_manifest(cfg: S2Config = S2, *, code_commit: str | None = None,
         "grey_intervals_s": greys,
         "window_packing": window_packing(cfg) if cfg.log_window_packing else None,
         "compute": gpu_cost_estimate(cfg),
+        # The pre-registered commitments travel WITH the manifest. The prose
+        # pre-registration lives under .notes/, which is gitignored, so without
+        # this the freeze would exist only on one disk -- and an untimestamped
+        # pre-registration is not a pre-registration.
+        "decision_rules": asdict(RULES),
+        "lag_conflict": LAG_CONFLICT.strip(),
     }
 
 

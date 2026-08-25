@@ -184,6 +184,18 @@ def main() -> int:
     check("Provenance", "load_model pins the revision rather than the floating branch",
           "fetch_pinned_checkpoint" in Path("tribe_tools/model.py").read_text()
           and "revision=revision" in Path("tribe_tools/model.py").read_text())
+    def _tracked(path):
+        return subprocess.run(["git", "ls-files", "--error-unmatch", path],
+                              capture_output=True).returncode == 0
+    # A pre-registration that exists only on one untracked disk is not a
+    # pre-registration: its value is being fixed and timestamped BEFORE any result.
+    # Both .notes/ and data/ are gitignored, so this must be asserted, not assumed.
+    check("Provenance", "the frozen manifest is version-controlled",
+          _tracked("data/s2_manifest.json"), "data/ is gitignored; force-added")
+    check("Provenance", "the pre-registration is version-controlled",
+          _tracked("ops/S2-PREREGISTRATION.md"), ".notes/ is gitignored")
+    check("Provenance", "the manifest carries the decision rules",
+          bool(json.loads(Path("data/s2_manifest.json").read_text()).get("decision_rules")))
     check("Provenance", "stimulus images are gitignored (fLoc states no licence)",
           subprocess.run(["git", "check-ignore", "-q", "data/floc/faces"]).returncode == 0)
     check("Provenance", "image resolver is deterministic and hashes every file",
