@@ -147,13 +147,36 @@ def test_a_failing_environment_item_is_not_reported_as_a_design_failure(tmp_path
 
 # ------------------------------------------------------------------ end to end
 
-def test_the_full_gate_passes_on_this_machine():
-    """All 57, from scratch — not just the four that were red."""
+def test_the_full_gate_runs_all_items_and_no_design_item_fails():
+    """All 57 from scratch — but assert the right invariant.
+
+    An earlier version asserted a flat 57/57, which coupled the test to git state:
+    "working tree is clean at freeze time" is legitimately environment-dependent,
+    so the test failed on every uncommitted edit and would have cried wolf
+    constantly. What must hold at all times is that NO DESIGN item fails; a dirty
+    tree is an environment condition to fix before the real run, not a defect."""
     r = _run("--review-clean", "--neuralset-timestamp")
-    tail = r.stdout.strip().split("\n")[-12:]
-    assert "GPU GO." in r.stdout, "\n".join(tail)
-    assert r.returncode == 0
     total = [l for l in r.stdout.split("\n") if "checklist items satisfied" in l][0]
     n, d = total.strip().split()[0].split("/")
-    assert n == d, total
     assert int(d) >= 57, f"expected at least 57 items, got {d}"
+
+    if "GPU GO." in r.stdout:
+        assert n == d and r.returncode == 0, total
+        return
+    # not clean: every outstanding item must be environment-kind, never design
+    assert "DESIGN FAILURE" not in r.stdout, (
+        "a DESIGN item failed — the frozen experiment is wrong:\n"
+        + r.stdout.split("NO-GO")[-1])
+    assert "CHECKER DEFECT" not in r.stdout, (
+        "a CHECKER item failed:\n" + r.stdout.split("NO-GO")[-1])
+
+
+def test_a_clean_tree_yields_a_flat_gpu_go():
+    """And when the tree IS clean, it must be a flat pass — no partial credit."""
+    dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True,
+                           text=True, cwd=REPO).stdout.strip()
+    if dirty:
+        pytest.skip(f"working tree has {len(dirty.splitlines())} uncommitted change(s)")
+    r = _run("--review-clean", "--neuralset-timestamp")
+    assert "GPU GO." in r.stdout, r.stdout.strip().split("\n")[-12:]
+    assert r.returncode == 0
