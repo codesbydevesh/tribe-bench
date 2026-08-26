@@ -255,6 +255,35 @@ def _validate_parcel_categories() -> None:
         die(f"target categories not in the design: {bad}")
 
 
+def model_config_update() -> dict:
+    """Dotted config payload for TribeModel.from_pretrained.
+
+    A pure function so the EFFECTIVE config can be asserted in a test without
+    tribev2 installed. It exists because the previous attempt at this could only
+    be checked by grepping the source, and that check passed over a real bug.
+
+    ``data.num_workers`` MUST carry the ``data.`` prefix. num_workers is a field of
+    tribev2's ``Data`` sub-model (main.py:112), consumed at main.py:270; it is not a
+    field of the experiment root. exca's ConfDict nests strictly on dots
+    (confdict.py:54-58), so a bare ``num_workers`` writes a new root key and leaves
+    ``data.num_workers`` at the checkpoint's 20 (= N_CPUS on Meta's training
+    cluster, grids/defaults.py:20,131). Meta's own grid spells it the dotted way:
+    grids/test_run.py:18. Demonstrated against exca 0.5.20:
+
+        {"num_workers": 0}      -> effective data.num_workers = 20  (+ stray root key)
+        {"data.num_workers": 0} -> effective data.num_workers = 0
+
+    ``keep_in_ram: False`` bounds RSS (MASTER-PLAN 3.6). NOTE: it is only safe
+    alongside a real feature-cache folder; that half is not fixed here.
+    """
+    return {
+        "data.num_workers": 0,
+        "data.video_feature.infra.keep_in_ram": False,
+        "data.audio_feature.infra.keep_in_ram": False,
+        "data.text_feature.infra.keep_in_ram": False,
+    }
+
+
 def infer(cfg: S2Config, stub: bool) -> int:
     _validate_parcel_categories()
     man = _check_inputs(cfg)
@@ -282,23 +311,7 @@ def infer(cfg: S2Config, stub: bool) -> int:
         from tribe_tools.inference import predict_single
         from tribe_tools.model import load_model
         model = load_model(device="cuda", revision=cfg.model_revision,
-                           config_update={
-                               # RSS grows linearly with stimuli otherwise; this is
-                               # the hard ceiling on corpus size (MASTER-PLAN §3.6).
-                               "data.video_feature.infra.keep_in_ram": False,
-                               "data.audio_feature.infra.keep_in_ram": False,
-                               "data.text_feature.infra.keep_in_ram": False,
-                               # num_workers=0 is REQUIRED, not a tuning choice.
-                               # neuralset's SegmentDataset.__getitem__ runs the
-                               # video extractor, which moves V-JEPA onto the GPU.
-                               # With workers > 0 the torch DataLoader FORKS, and a
-                               # forked child cannot initialise CUDA:
-                               #   RuntimeError: Cannot re-initialize CUDA in forked
-                               #   subprocess ... must use the 'spawn' start method
-                               # That killed the first Kaggle run. Loading in the
-                               # main process costs nothing here: the bottleneck is
-                               # the ViT-giant forward pass, not the data loader.
-                               "num_workers": 0})
+                           config_update=model_config_update())
         preds, segments = predict_single(model, video_path())
     elapsed = time.time() - t0
     print(f"  inference  {elapsed:.1f}s, preds {np.shape(preds)}, "
