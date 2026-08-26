@@ -283,9 +283,22 @@ def infer(cfg: S2Config, stub: bool) -> int:
         from tribe_tools.model import load_model
         model = load_model(device="cuda", revision=cfg.model_revision,
                            config_update={
+                               # RSS grows linearly with stimuli otherwise; this is
+                               # the hard ceiling on corpus size (MASTER-PLAN §3.6).
                                "data.video_feature.infra.keep_in_ram": False,
                                "data.audio_feature.infra.keep_in_ram": False,
-                               "data.text_feature.infra.keep_in_ram": False})
+                               "data.text_feature.infra.keep_in_ram": False,
+                               # num_workers=0 is REQUIRED, not a tuning choice.
+                               # neuralset's SegmentDataset.__getitem__ runs the
+                               # video extractor, which moves V-JEPA onto the GPU.
+                               # With workers > 0 the torch DataLoader FORKS, and a
+                               # forked child cannot initialise CUDA:
+                               #   RuntimeError: Cannot re-initialize CUDA in forked
+                               #   subprocess ... must use the 'spawn' start method
+                               # That killed the first Kaggle run. Loading in the
+                               # main process costs nothing here: the bottleneck is
+                               # the ViT-giant forward pass, not the data loader.
+                               "num_workers": 0})
         preds, segments = predict_single(model, video_path())
     elapsed = time.time() - t0
     print(f"  inference  {elapsed:.1f}s, preds {np.shape(preds)}, "

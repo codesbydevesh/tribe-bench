@@ -381,3 +381,26 @@ def test_events_dataframe_is_built_from_the_schedule_not_from_audio():
     assert len(df) == S2.n_events
     assert list(df["onset"]) == [e.onset_s for e in build_schedule()]
     assert set(df["trial_type"]) == set(S2.categories)
+
+
+def test_the_run_script_disables_dataloader_workers():
+    """REGRESSION: the first Kaggle run died here.
+
+    neuralset's SegmentDataset.__getitem__ runs the video extractor, which moves
+    V-JEPA onto the GPU. With num_workers > 0 the torch DataLoader forks, and a
+    forked child cannot initialise CUDA:
+
+        RuntimeError: Cannot re-initialize CUDA in forked subprocess.
+        To use CUDA with multiprocessing, you must use the 'spawn' start method
+
+    num_workers=0 is therefore required, not a tuning preference. It costs nothing:
+    the bottleneck is the ViT-giant forward pass, not data loading.
+    """
+    import pathlib
+    src = pathlib.Path(__file__).resolve().parent.parent.joinpath(
+        "scripts", "s2_run.py").read_text()
+    assert '"num_workers": 0' in src, \
+        "the DataLoader will fork and CUDA will fail in the worker"
+    # and it must sit in the real inference call, not a comment or the stub path
+    infer = src.split("from tribe_tools.model import load_model")[1]
+    assert '"num_workers": 0' in infer.split("elapsed = time.time()")[0]
