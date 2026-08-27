@@ -534,6 +534,427 @@ def iut_pass(p_a: float, p_b: float, alpha: float = 0.025) -> bool
 
 ---
 
+## tribe_tools/atlas_preflight.py
+
+Added 2026-08-26. Moves every static-asset dependency ahead of the GPU. Previously the
+first HCP-MMP1 parcel resolution happened inside `analyse()`, AFTER ~5 h of encoding
+(`scripts/s2_run.py` -> `tribe_tools/atlas.py:127` -> `tribev2/utils.py:219-222`), and it
+passed on the dev box only because `~/mne_data` already existed.
+
+**The trap this closes:** `mne.datasets.sample.data_path()` performs NO hash or version
+check. An EMPTY `MNE-sample-data/` directory returns successfully in 1.37 s. "The
+directory exists" is worthless as a readiness check, so identity is verified by md5
+against MNE's own pinned constants (`mne/datasets/utils.py:487-489`) BEFORE `import mne`.
+
+```python
+def preflight_atlas(parcels, cache_path, *, allow_download: bool,
+                    mne_root=None, mesh="fsaverage5") -> dict:
+    """Verify assets exist AND are identity-correct, resolve every parcel through
+    mne, compare against the frozen answer, write the cache atomically.
+
+    allow_download=True permits ONLY the two 1.3 MB figshare annots -- never
+    data_path()'s 2.8 GB tarball. A present-but-wrong-md5 annot is never overwritten
+    by a download."""
+
+def load_frozen_parcels(cache_path) -> dict[str, np.ndarray]:
+    """Reads the ~18 KB frozen cache. Verifies schema, mesh, key set, per-parcel
+    size, per-parcel sha256 and index range. No mne import, and NO fallback branch."""
+
+def assert_atlas_ready(cache_path, parcels=None) -> dict:
+    """The cheap gate: 0.14 s, 34 MB, `mne` never enters sys.modules."""
+
+class AtlasPreflightError(RuntimeError): ...
+# AtlasAssetsMissing / AtlasIdentityMismatch / AtlasUnresolvable /
+# AtlasDownloadForbidden / AtlasCacheMissing / AtlasCacheCorrupt
+```
+
+Parcel->vertex resolution depends only on the two `.annot` files -- proven by writing
+randomised `.white` geometry and getting identical indices -- so the answer can be
+frozen. That also solves the fact that `~/mne_data` does not survive a Kaggle session.
+
+| | wall | RSS |
+|---|---|---|
+| `preflight_atlas` cold, incl. `import mne` | 1.9-2.5 s | 178 MB |
+| `assert_atlas_ready` + `load_frozen_parcels` | 0.14 s | 34 MB |
+| frozen cache | 18,042 B | 7 parcels, 1257 indices |
+
+**Not proven:** Kaggle behaviour; the real figshare download success branch (only the
+blocked-socket path is exercised); cross-mne-version stability (digests confirmed
+against 1.12.1 only, while `pyproject.toml` allows `mne>=1.4`); and `.white` files are
+checked for existence and non-emptiness but not hashed, because MNE pins no hash for
+them and they provably cannot affect the indices.
+
+---
+
+## tribe_tools/provenance.py
+
+Added 2026-08-26. Answers "which exact weights and preprocessing produced these
+tensors?" -- a question the 2026-08-25 pipeline could not answer at all, because
+neuralset passes no `revision=` anywhere (`extractors/video.py:394,399`,
+`image.py:74,87,94`) and exca's cache uid contains the model NAME but never its
+identity.
+
+**A revision is not a weight identity.** A branch can move under a fixed name. The
+identity recorded here is the LFS sha256 of `model.safetensors`.
+
+```python
+def resolve_weight_identity(repo_id=VJEPA2_REPO, *, allow_network: bool,
+                            filenames=VJEPA2_FILENAMES, revision=None,
+                            cache_dir=None, expected_commit=None) -> WeightIdentity:
+    """Local HF cache first -- 0 bytes, 0 network, huggingface_hub not even imported,
+    because hfh names blobs by their digest so basename(realpath(path)) IS the sha256.
+    Then one HfApi().model_info(files_metadata=True) if allow_network. Never calls a
+    download API."""
+
+def verify_local_weights(path_or_cache, expected, *, filename=None,
+                         force_hash=False) -> WeightVerification:
+    """stat size first, then either the free blob-filename route or the paid
+    full-hash route. Returns WHICH route it took -- measured vs trusted is exactly
+    the fact a provenance manifest must record. Raises; never returns a bool."""
+
+def feature_uid_fields(*, stimulus, weights, extractor, chunking, preprocessing,
+                       versions=None, schema=1) -> dict[str, str]:
+    """The 57-field identity consumed by feature_artifact.verify_artifact.
+    A missing or illegally-None required field raises; extras are kept, never dropped."""
+
+def exca_infra_version(identity, *, base="release") -> str:
+    """'release+vjepa2-f205e77aa2ad+id-eb6ff952e3c4'. Bind into
+    data.video_feature.infra.version so exca's OWN cache self-invalidates when
+    weights or preprocessing move -- no code change needed; Meta already sets that
+    field to "release" (grids/defaults.py:94)."""
+
+def library_versions(names=UID_DISTRIBUTIONS, *, metadata=None) -> dict[str, str]:
+    """importlib.metadata, because neuralset defines no __version__ (its module
+    __getattr__ raises) and tribev2's is a permanent "0.1.0" -- the commit comes from
+    PEP 610 direct_url.json, rendered "<ver>+g<40-hex>". An absent distribution is
+    recorded as "absent", never omitted."""
+```
+
+Identity covers stimulus bytes AND decode-relevant geometry (fps/width/height:
+`video.py:285` samples by timestamp, so a re-encode at unchanged duration changes
+every tensor); the hard-coded `ChunkEvents("Video", 60, 30)` literals
+(`demo_utils.py:78`) that decide the 18-item set; `num_frames_effective` as the
+RESOLVED value, because with `num_frames=None` the operative value is the literal 64
+at `video.py:404-405` which `exclude_defaults=True` hides from exca entirely; the 12
+flattened preprocessing values as well as the config digest; and the versions that
+move numerics -- `transformers` above all (674 diff lines in
+`video_processing_utils.py` between 4.53 and 5.15, completely unconstrained upstream).
+
+Deliberately EXCLUDED and recorded instead: `device`, dtype, GPU model, TF32. Keying
+on those would invalidate 226 MiB on every Kaggle base-image bump.
+
+**Residual risk, stated rather than hidden.** The fast path trusts the cache blob
+FILENAME; HF never verified the download and neither do we unless `force_hash=True`
+-- so run that once at Stage-1 build. Run-to-run GPU non-determinism is uncoverable by
+any uid. `ffmpeg` is not a Python distribution and cannot be reached by
+`importlib.metadata`, yet it decodes every frame. And `feature_uid_fields` enforces
+PRESENCE, not truth: passing a value neuralset did not use yields a confidently wrong
+uid, so the call site must read these off the constructed extractor object rather
+than from literals.
+
+---
+
+## tribe_tools/durable_store.py
+
+Added 2026-08-26. Makes a finished feature artifact outlive the Kaggle session that
+produced it. `/kaggle/temp` is rejected: it is per-session, so an artifact written
+there buys nothing after a crash or a 12-hour wall.
+
+The invariant: **for a given feature identity, encoding happens at most once ACROSS
+sessions.** This module owns finding and persisting; it deliberately owns no
+verification logic of its own and delegates every integrity decision to
+`feature_artifact.verify_artifact`.
+
+There is no function, parameter or branch here that turns a cache miss into a
+computation. A miss is `None` or a typed raise. Two tests pin that -- one at the
+signature level, one by snapshotting the filesystem after a missed lookup.
+
+```python
+def feature_set_uid(identity: dict, *, schema: int = 1) -> str:
+    """'s2v1-<sha16>' over canonical JSON. Floats are rendered '%.6f' as strings so
+    repr drift across interpreters cannot invalidate a valid cache."""
+
+@dataclass(frozen=True)
+class ArtifactIdentity:
+    identity: dict
+    expected_item_uids: tuple[str, ...]
+    schema: int = 1
+    # refuses an empty item set or a non-JSON-able field at construction
+
+# read path -- never writes, works on a chmod 555 mount such as /kaggle/input
+def resolve_artifact(ident, *, search_paths, reader_factory,
+                     sidecar_probe=None, max_depth=2) -> Resolution: ...
+def resolve_artifact_location(...) -> Path | None: ...
+def require_artifact_location(...) -> Path:      # raises ArtifactNotFound
+def verify_location(dir, ident, *, reader_factory, sidecar_probe): ...
+
+# write path
+def publish(artifact_dir, ident, backend, *, reader_factory,
+            sidecar_probe=None) -> PublishResult:
+    """Re-verifies the SOURCE before touching a backend, and the backend verifies
+    its own copy before a single os.replace of the directory."""
+
+class DurableBackend(ABC):
+    def store(self, artifact_dir, ident, verify) -> StoreOutcome: ...
+    def search_roots(self) -> Sequence[Path]: ...
+
+class LocalDirectoryBackend(DurableBackend): ...      # + prune_incomplete()
+class KaggleDatasetBackend(DurableBackend): ...       # all CLI behind an injected runner
+
+# content-addressed staging: exca's item uid embeds the ABSOLUTE stimulus path, so
+# staging at <workdir>/s2_stim/<sha16>/ makes exca's own keys mount-independent
+def stage_stimulus(src, workdir, sha256) -> Path: ...
+def file_sha256(path) -> str: ...
+
+class DurableStoreError(RuntimeError): ...
+class ArtifactNotFound(DurableStoreError): ...
+class PublishRefused(DurableStoreError): ...
+class BackendUnavailable(DurableStoreError): ...
+class StimulusStagingError(DurableStoreError): ...
+class StimulusDigestMismatch(StimulusStagingError): ...
+```
+
+Partial publishes are written to dot-prefixed `.incoming-*` and excluded from
+candidate scanning, so an interrupted publish is never even a candidate. An occupied
+destination is resolved first: if it verifies the publish is a no-op; if it does not
+it is moved aside to `.rejected-<uid>-<ms>` rather than overwritten.
+
+**Not provable offline** (declared, not skipped): real Kaggle API behaviour
+(`status` return codes, `--dir-mode zip` round-tripping a nested tree, quotas), that a
+real exca `CacheDict` slots into `reader_factory`, real `/kaggle/input` semantics
+(simulated with `chmod 555`, which does not deny under root), and fsync durability.
+
+---
+
+## tribe_tools/s2_pipeline.py
+
+Added 2026-08-26. The two-stage orchestration. Every expensive or environment-touching
+operation is INJECTED, so the whole control flow -- including "does Stage 2 ever reach
+the extractor?" -- is testable on a box with no GPU and no tribev2.
+
+The boundary is the point. Before this, extraction and consumption happened inside one
+`predict()` call, which is why "did the second stage recompute?" was unanswerable.
+
+```python
+@dataclass(frozen=True)
+class Stage1Deps:
+    """Everything Stage 1 needs from the outside world."""
+    load_model: Callable[..., Any]        # -> a model whose extractor exca-caches
+    build_events: Callable[[Any], Any]    # model -> events dataframe
+    extract: Callable[[Any, Any], list[str]]   # (model, events) -> item uids, MATERIALISED
+    read_item: Callable[[str], "np.ndarray"]   # uid -> the array READ BACK from cache
+    sidecars: Callable[[], dict]
+
+@dataclass(frozen=True)
+class Stage2Deps:
+    load_model: Callable[..., Any]
+    build_events: Callable[[Any], Any]
+    predict: Callable[[Any, Any], tuple]  # (model, events) -> (preds, segments)
+    read_item: Callable[[str], "np.ndarray"]
+    analyse: Callable[..., dict]
+
+
+def stage1_extract(cfg, identity, artifact_dir, expected_uids, deps, ledger,
+                   *, counter_factory=EncodeCounter) -> dict:
+    """Extract features, READ THEM BACK, digest them, finalize the artifact.
+
+    Reading back is not defensive duplication: neuralset/extractors/base.py:201
+    discards the generator exca returns, so Stage 1 otherwise never touches the
+    bytes it just wrote and cannot attest to them.
+
+    Order is load-bearing:
+      begin_stage1 (clears any stale COMPLETE) -> EXTRACT_STARTED -> extract ->
+      read back + digest -> write_artifact (COMPLETE last) -> ARTIFACT_FINALIZED
+
+    Raises rather than returning a partial artifact. Records ABORTED on failure.
+    """
+
+
+def stage2_infer(cfg, identity, artifact_dir, expected_uids, deps, ledger,
+                 *, counter_factory=EncodeCounter) -> dict:
+    """Verify the artifact, then consume it. CANNOT extract.
+
+    verify_artifact runs BEFORE load_model -- an unusable artifact must cost seconds,
+    not a model download. The predict call is wrapped in an EncodeCounter and a
+    non-zero item count raises `ConsumeStageRecomputed`, which is the last line of
+    defence if exca's read-only mode is ever misconfigured.
+
+    Never asserts `encodes == 0` alone: zero is also the signature of a poisoned
+    cache and of a silently deleted extractor. It is always paired with the digest
+    verification above and the modality check below.
+    """
+
+
+class ConsumeStageRecomputed(RuntimeError):
+    """Stage 2 encoded something. The read-only firewall failed."""
+
+class ModalityContractViolation(RuntimeError):
+    """A required modality was absent or zero-filled.
+
+    tribev2/main.py:206-212 DELETES an extractor with no matching events and
+    tribev2/model.py:188-192 substitutes torch.zeros. With time_pos_embedding on,
+    the resulting run is finite, non-zero, time-varying and statistically within 2%
+    of a real one -- plausible, not obviously broken. An object-presence check does
+    not catch it: `model.data.video_feature is not None` PASSES after the deletion,
+    because the deletion is from a local dict.
+    """
+
+
+def assert_modality_contract(features: dict, required: Sequence[str],
+                             expected_absent: Sequence[str]) -> None:
+    """Two-sided. Required modalities must be present AND not exactly zero across
+    a whole timestep; expected-absent ones must actually be absent. A real V-JEPA
+    activation is never exactly 0.0 across all 1408 dims; `_missing_default` is.
+    """
+```
+
+---
+
+## tribe_tools/ledger.py
+
+Added 2026-08-26. An append-only execution record for a GPU session, written so that a
+process which dies between stages leaves an UNAMBIGUOUS resume state. The 2026-08-25
+incident left nothing on disk at all: 4h45m of V-JEPA and no way to tell afterwards
+whether the encoding had been reused, repeated, or discarded.
+
+```python
+class Event(str, Enum):
+    """The fixed vocabulary. A stage that invents an event name is a bug."""
+    PREFLIGHT_STARTED = "preflight_started"
+    PREFLIGHT_PASSED = "preflight_passed"
+    EXTRACT_STARTED = "extract_started"
+    EXTRACT_COMPLETED = "extract_completed"
+    ARTIFACT_FINALIZED = "artifact_finalized"
+    ARTIFACT_VERIFIED = "artifact_verified"
+    ARTIFACT_REJECTED = "artifact_rejected"
+    INFER_STARTED = "infer_started"
+    INFER_COMPLETED = "infer_completed"
+    REPORT_WRITTEN = "report_written"
+    ABORTED = "aborted"
+
+
+class Ledger:
+    """Append-only JSONL. Every record is flushed AND fsynced before returning.
+
+    Unsynced records are the whole point of failure: a ledger that loses its last
+    line during a SIGKILL is worse than none, because it certifies the wrong state.
+    """
+    def __init__(self, path: Path): ...
+    def record(self, event: Event, **payload) -> dict: ...
+    def records(self) -> list[dict]: ...
+
+
+@dataclass(frozen=True)
+class ResumeState:
+    """What a fresh process may assume. `action` is the only field a caller needs."""
+    action: str          # "run_preflight" | "extract" | "verify_then_infer" | "done"
+    reason: str
+    identity: dict | None
+    last_event: str | None
+
+
+def resume_state(path: Path, identity: dict) -> ResumeState:
+    """Derive the resume action from the ledger alone.
+
+    An identity mismatch always yields "extract" -- a ledger describing a DIFFERENT
+    stimulus/model must never authorise reuse. An EXTRACT_STARTED with no matching
+    ARTIFACT_FINALIZED always yields "extract": a half-written artifact is not a
+    checkpoint. The ledger never authorises skipping verification.
+    """
+
+
+class EncodeCounter:
+    """Context manager counting V-JEPA items actually encoded.
+
+    Patches exca.map.MapInfra._call_and_store -- the single funnel through which
+    every exca recomputation passes, on both the pool branch and the in-process
+    branch. Counts ITEMS, not calls, because the operator's invariant is expressed
+    in encodes.
+
+    Exposes .items and .calls. Never assert `.items == 0` alone: zero is the shared
+    signature of success, of a poisoned cache, and of a silently deleted extractor.
+    Pair it with a digest check.
+    """
+    def __enter__(self) -> "EncodeCounter": ...
+    def __exit__(self, *exc) -> None: ...
+```
+
+---
+
+## tribe_tools/feature_artifact.py
+
+Added 2026-08-26 after the S2 incident (`ops/S2-INCIDENT-2026-08-25.md`). The V-JEPA
+feature cache is a scientific intermediate result, not a performance optimisation.
+
+**Why digests and not presence.** exca's `__contains__` consults its JSONL index and
+never the payload. An artifact can therefore satisfy every presence-based check --
+`COMPLETE` marker present, key count correct, exca `missing == 0`, `mode="read-only"`
+raising nothing, encode count 0 -- while half the tensors are unreadable. Verification
+here READS EVERY PAYLOAD and compares a sha256 recorded at write time. There is no
+fast path, and `verify_artifact` never returns a boolean: a boolean invites
+`if not ok: recompute`, which is the failure being prevented.
+
+```python
+MANIFEST = "S2_FEATURES.json"     # per-item digests + identity
+COMPLETE = "S2_FEATURES.COMPLETE" # zero-byte marker, written LAST
+SCHEMA_VERSION = 1
+
+class FeatureArtifactError(RuntimeError):
+    """Base. Every subclass message must name a remedy."""
+class ArtifactMissing(FeatureArtifactError): ...
+class ArtifactIncomplete(FeatureArtifactError): ...
+class ArtifactCorrupt(FeatureArtifactError): ...
+class ArtifactStale(FeatureArtifactError): ...
+
+
+def item_digest(arr: "np.ndarray") -> str:
+    """sha256 over dtype | shape | C-contiguous bytes.
+
+    dtype and shape are inside the hash so a reshape- or dtype-preserving
+    corruption still changes the digest.
+    """
+
+def begin_stage1(cache_root: Path) -> None:
+    """Stage 1's FIRST act: remove any COMPLETE marker.
+
+    An artifact under construction must not carry an earlier session's
+    certificate. Found by execution: COMPLETE survived a failed read-back.
+    """
+
+def write_artifact(cache_root: Path, identity: dict,
+                   materialised: dict[str, "np.ndarray"],
+                   sidecars: dict | None = None) -> dict:
+    """Stage 1's LAST act. Returns the manifest it wrote.
+
+    `materialised` maps item uid -> the array READ BACK from the cache, never the
+    array held in RAM. neuralset/extractors/base.py:201 discards the generator exca
+    returns, so Stage 1 otherwise never touches its own bytes.
+
+    Writes MANIFEST then COMPLETE, each via a temp file created INSIDE cache_root
+    (os.replace cannot cross filesystems -- EXDEV -- and cannot target a non-empty
+    directory -- ENOTEMPTY).
+    """
+
+def verify_artifact(cache_root: Path, identity: dict, expected_uids: Sequence[str],
+                    read_item: Callable[[str], "np.ndarray"],
+                    sidecars: dict | None = None) -> dict:
+    """Raise exactly one typed error, or return the manifest. Never returns a bool.
+
+    `read_item` is the only way payload bytes enter this function. Every expected
+    uid is read and hashed.
+    """
+
+def sidecar_digests(uid_folder: Path) -> dict[str, str | None]:
+    """Digests of exca's own uid.yaml / full-uid.yaml / config.yaml.
+
+    All four can be deleted and exca still serves the cache; a read-only stage then
+    RE-CREATES uid.yaml from its own config, laundering the provenance. Recording
+    them at write time and checking at read time is the only defence.
+    """
+```
+
+---
+
 ## brainlens/
 
 ```python
